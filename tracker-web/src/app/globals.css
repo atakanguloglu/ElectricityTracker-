@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Admin Layout Custom Styles */
+.admin-layout-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.admin-sidebar {
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.admin-main-content {
+  background: transparent;
+  overflow-x: hidden;
+}
+
+.admin-header {
+  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  z-index: 999;
+}
+
+.admin-content-area {
+  padding: 24px;
+  min-height: calc(100vh - 70px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.admin-content-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f1f5f9;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.admin-content-card:hover {
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .admin-content-area {
+    padding: 16px;
+  }
+  
+  .admin-content-card {
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-content-area {
+    padding: 12px;
+  }
+  
+  .admin-content-card {
+    border-radius: 8px;
+  }
+  
+  .admin-header {
+    padding: 0 16px !important;
+  }
+}
+
+/* Smooth transitions */
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Custom scrollbar for admin content */
+.admin-content-area::-webkit-scrollbar {
+  width: 8px;
+}
+
+.admin-content-area::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.admin-content-area::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.admin-content-area::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Loading animation improvements */
+.admin-loading {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-loading-spinner {
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid #ffffff;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: admin-spin 1s linear infinite;
+}
+
+@keyframes admin-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
