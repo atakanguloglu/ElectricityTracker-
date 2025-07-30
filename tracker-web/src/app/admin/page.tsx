@@ -19,7 +19,10 @@ import {
   RiseOutlined,
   BarChartOutlined,
   SettingOutlined,
-  BellOutlined
+  BellOutlined,
+  DesktopOutlined,
+  HddOutlined,
+  ThunderboltOutlined
 } from '@ant-design/icons'
 
 const { Title, Text } = Typography
@@ -32,28 +35,36 @@ export default function AdminOverviewPage() {
       value: 12,
       icon: <TeamOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />,
       color: '#3b82f6',
-      gradient: 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
+      gradient: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+      change: '+2',
+      changeType: 'increase'
     },
     {
       title: 'Aktif Kullanıcı',
       value: 156,
       icon: <UserOutlined style={{ fontSize: '24px', color: '#10b981' }} />,
       color: '#10b981',
-      gradient: 'linear-gradient(135deg, #10b981, #059669)'
+      gradient: 'linear-gradient(135deg, #10b981, #059669)',
+      change: '+12',
+      changeType: 'increase'
     },
     {
       title: 'Toplam Log',
       value: '2,847',
       icon: <FileTextOutlined style={{ fontSize: '24px', color: '#8b5cf6' }} />,
       color: '#8b5cf6',
-      gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)'
+      gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+      change: '+156',
+      changeType: 'increase'
     },
     {
       title: 'Güvenlik Skoru',
       value: '85/100',
       icon: <SafetyOutlined style={{ fontSize: '24px', color: '#f59e0b' }} />,
       color: '#f59e0b',
-      gradient: 'linear-gradient(135deg, #f59e0b, #d97706)'
+      gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+      change: '+5',
+      changeType: 'increase'
     }
   ]
 
@@ -119,6 +130,37 @@ export default function AdminOverviewPage() {
     }
   ]
 
+  const systemResources = [
+    {
+      name: 'CPU Kullanımı',
+      value: 45,
+      icon: <DesktopOutlined style={{ fontSize: '16px', color: '#3b82f6' }} />,
+      color: '#3b82f6',
+      status: 'Normal'
+    },
+    {
+      name: 'RAM Kullanımı',
+      value: 68,
+      icon: <ThunderboltOutlined style={{ fontSize: '16px', color: '#10b981' }} />,
+      color: '#10b981',
+      status: 'Normal'
+    },
+    {
+      name: 'Disk Kullanımı',
+      value: 82,
+      icon: <HddOutlined style={{ fontSize: '16px', color: '#f59e0b' }} />,
+      color: '#f59e0b',
+      status: 'Uyarı'
+    },
+    {
+      name: 'Network',
+      value: 23,
+      icon: <BarChartOutlined style={{ fontSize: '16px', color: '#8b5cf6' }} />,
+      color: '#8b5cf6',
+      status: 'Normal'
+    }
+  ]
+
   return (
     <PageContainer
       header={{
@@ -163,7 +205,14 @@ export default function AdminOverviewPage() {
                   <div className="stat-info">
                     <div className="stat-value">{stat.value}</div>
                     <div className="stat-title">{stat.title}</div>
-        </div>
+                    <div className="stat-change" style={{ 
+                      color: stat.changeType === 'increase' ? '#10b981' : '#ef4444',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}>
+                      {stat.change}
+                    </div>
+                  </div>
       </div>
                 <div className="stat-card-overlay"></div>
             </Card>
@@ -332,6 +381,59 @@ export default function AdminOverviewPage() {
             </ProCard>
         </Col>
       </Row>
+
+        {/* System Resources */}
+        <Row gutter={[16, 16]} className="mb-6" style={{ marginTop: '32px' }}>
+          <Col span={24}>
+            <ProCard
+              title={
+                <div className="flex items-center space-x-2">
+                  <DesktopOutlined style={{ color: '#6366f1', fontSize: '18px' }} />
+                  <span style={{ color: '#1e293b', fontWeight: 600 }}>Sistem Kaynak Kullanımı</span>
+                </div>
+              }
+              className="resources-card"
+              style={{
+                borderRadius: '12px',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                border: '1px solid #e2e8f0',
+                padding: '24px'
+              }}
+            >
+              <Row gutter={[16, 16]}>
+                {systemResources.map((resource, index) => (
+                  <Col xs={24} sm={12} lg={6} key={index}>
+                    <div className="resource-item">
+                      <div className="resource-header">
+                        <div className="resource-info">
+                          <div className="resource-icon" style={{ color: resource.color }}>
+                            {resource.icon}
+                          </div>
+                          <div>
+                            <div className="resource-name">{resource.name}</div>
+                            <div className="resource-status" style={{ color: resource.color }}>
+                              {resource.status}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="resource-value" style={{ color: resource.color }}>
+                          {resource.value}%
+                        </div>
+                      </div>
+                      <Progress 
+                        percent={resource.value} 
+                        strokeColor={resource.color}
+                        strokeWidth={6}
+                        showInfo={false}
+                        className="resource-progress"
+                      />
+                    </div>
+                  </Col>
+                ))}
+              </Row>
+            </ProCard>
+          </Col>
+        </Row>
 
         <style jsx>{`
           .admin-overview-container {
@@ -509,6 +611,74 @@ export default function AdminOverviewPage() {
             font-size: 12px;
             display: flex;
             align-items: center;
+          }
+
+          /* System Resources Styles */
+          .resources-card {
+            transition: all 0.3s ease;
+          }
+          
+          .resources-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
+          }
+          
+          .resource-item {
+            padding: 20px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+            margin-bottom: 8px;
+          }
+          
+          .resource-item:hover {
+            background: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+          }
+          
+          .resource-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+          }
+          
+          .resource-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+          }
+          
+          .resource-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(59, 130, 246, 0.1);
+          }
+          
+          .resource-name {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 2px;
+          }
+          
+          .resource-status {
+            font-size: 12px;
+            font-weight: 500;
+          }
+          
+          .resource-value {
+            font-weight: bold;
+            font-size: 18px;
+          }
+          
+          .resource-progress {
+            border-radius: 4px;
           }
           
           @media (max-width: 768px) {

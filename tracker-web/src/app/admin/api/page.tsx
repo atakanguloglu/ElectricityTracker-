@@ -1,1120 +1,1073 @@
-'use client'
+'use client';
 
-import React, { useState } from 'react'
-import { 
-  Card, 
-  Row, 
-  Col, 
-  Table, 
-  Button, 
-  Tag, 
-  Progress, 
-  Statistic, 
-  Typography, 
-  Divider,
-  Space,
-  Tooltip,
+import React, { useState, useMemo, useCallback } from 'react';
+import {
+  Table,
+  Card,
+  Row,
+  Col,
+  Button,
+  Tag,
   Badge,
   Modal,
   Form,
   Input,
   Select,
   Switch,
+  Popconfirm,
+  Space,
+  Typography,
+  Divider,
+  Tooltip,
+  Progress,
+  Statistic,
+  Tabs,
+  List,
+  Descriptions,
+  DatePicker,
   InputNumber,
   Alert,
-  Descriptions,
-  Timeline
-} from 'antd'
-import { 
-  ProCard,
-  PageContainer 
-} from '@ant-design/pro-components'
-import { 
+  Collapse,
+  App
+} from 'antd';
+import {
   ApiOutlined,
   KeyOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
   EyeOutlined,
   EyeInvisibleOutlined,
   CopyOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  PlusOutlined,
+  ReloadOutlined,
+  BarChartOutlined,
+  SettingOutlined,
+  SafetyOutlined,
+  GlobalOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
+  CloseCircleOutlined,
   ExclamationCircleOutlined,
   ThunderboltOutlined,
-  DatabaseOutlined,
-  CloudOutlined,
-  HddOutlined,
-  CalendarOutlined,
-  UserOutlined,
-  RiseOutlined,
-  FallOutlined,
-  ReloadOutlined,
-  SettingOutlined,
-  LockOutlined,
-  UnlockOutlined,
-  SafetyOutlined,
-  GlobalOutlined
-} from '@ant-design/icons'
+  ClockCircleOutlined,
+  WarningOutlined,
+  LinkOutlined,
+  DownloadOutlined,
+  UploadOutlined
+} from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
 
-const { Title, Text, Paragraph } = Typography
-const { Option } = Select
-const { TextArea } = Input
+const { Title, Text, Paragraph } = Typography;
+const { Option } = Select;
+const { TabPane } = Tabs;
+const { Panel } = Collapse;
+
+// Mock data
+const mockTenants = [
+  { id: 1, name: 'ABC Şirketi', domain: 'abc.com' },
+  { id: 2, name: 'XYZ Ltd.', domain: 'xyz.com' },
+  { id: 3, name: 'Tech Solutions', domain: 'techsolutions.com' },
+  { id: 4, name: 'Global Corp', domain: 'globalcorp.com' },
+  { id: 5, name: 'Startup Inc', domain: 'startupinc.com' }
+];
+
+const mockApiKeys = [
+  {
+    id: 1,
+    name: 'ABC Production API',
+    key: 'abc_prod_sk_live_1234567890abcdef',
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    status: 'active',
+    permissions: ['read', 'write', 'delete'],
+    rateLimit: 1000,
+    rateLimitPeriod: 'minute',
+    createdAt: '2023-06-15T09:00:00Z',
+    lastUsed: '2024-01-15T10:30:00Z',
+    totalCalls: 15420,
+    errorRate: 0.02,
+    webhookUrl: 'https://webhook.abc.com/api/events',
+    webhookStatus: 'active'
+  },
+  {
+    id: 2,
+    name: 'ABC Development API',
+    key: 'abc_dev_sk_test_0987654321fedcba',
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    status: 'active',
+    permissions: ['read', 'write'],
+    rateLimit: 500,
+    rateLimitPeriod: 'minute',
+    createdAt: '2023-08-20T14:30:00Z',
+    lastUsed: '2024-01-14T16:45:00Z',
+    totalCalls: 8234,
+    errorRate: 0.05,
+    webhookUrl: null,
+    webhookStatus: null
+  },
+  {
+    id: 3,
+    name: 'XYZ Production API',
+    key: 'xyz_prod_sk_live_abcdef1234567890',
+    tenantId: 2,
+    tenantName: 'XYZ Ltd.',
+    status: 'active',
+    permissions: ['read', 'write', 'delete', 'admin'],
+    rateLimit: 2000,
+    rateLimitPeriod: 'minute',
+    createdAt: '2023-05-10T11:20:00Z',
+    lastUsed: '2024-01-15T08:15:00Z',
+    totalCalls: 28756,
+    errorRate: 0.01,
+    webhookUrl: 'https://api.xyz.com/webhooks/events',
+    webhookStatus: 'active'
+  },
+  {
+    id: 4,
+    name: 'Tech Solutions API',
+    key: 'tech_sol_sk_live_1234567890abcdef',
+    tenantId: 3,
+    tenantName: 'Tech Solutions',
+    status: 'inactive',
+    permissions: ['read'],
+    rateLimit: 100,
+    rateLimitPeriod: 'minute',
+    createdAt: '2023-09-05T15:45:00Z',
+    lastUsed: '2024-01-10T12:00:00Z',
+    totalCalls: 1234,
+    errorRate: 0.15,
+    webhookUrl: null,
+    webhookStatus: null
+  },
+  {
+    id: 5,
+    name: 'Global Corp API',
+    key: 'global_corp_sk_live_abcdef1234567890',
+    tenantId: 4,
+    tenantName: 'Global Corp',
+    status: 'active',
+    permissions: ['read', 'write'],
+    rateLimit: 1500,
+    rateLimitPeriod: 'minute',
+    createdAt: '2023-04-12T10:15:00Z',
+    lastUsed: '2024-01-15T09:30:00Z',
+    totalCalls: 18923,
+    errorRate: 0.03,
+    webhookUrl: 'https://webhooks.globalcorp.com/api/v1/events',
+    webhookStatus: 'error'
+  }
+];
+
+const mockApiUsage = [
+  {
+    id: 1,
+    apiKeyId: 1,
+    date: '2024-01-15',
+    calls: 1250,
+    errors: 25,
+    avgResponseTime: 245,
+    peakHour: '14:00'
+  },
+  {
+    id: 2,
+    apiKeyId: 1,
+    date: '2024-01-14',
+    calls: 1180,
+    errors: 18,
+    avgResponseTime: 230,
+    peakHour: '15:30'
+  },
+  {
+    id: 3,
+    apiKeyId: 2,
+    date: '2024-01-15',
+    calls: 650,
+    errors: 32,
+    avgResponseTime: 280,
+    peakHour: '10:00'
+  },
+  {
+    id: 4,
+    apiKeyId: 3,
+    date: '2024-01-15',
+    calls: 2100,
+    errors: 21,
+    avgResponseTime: 195,
+    peakHour: '16:00'
+  }
+];
+
+const mockWebhooks = [
+  {
+    id: 1,
+    apiKeyId: 1,
+    name: 'ABC Events Webhook',
+    url: 'https://webhook.abc.com/api/events',
+    events: ['user.created', 'data.updated', 'payment.completed'],
+    status: 'active',
+    lastDelivery: '2024-01-15T10:30:00Z',
+    successRate: 0.98,
+    retryCount: 3
+  },
+  {
+    id: 2,
+    apiKeyId: 3,
+    name: 'XYZ Integration Webhook',
+    url: 'https://api.xyz.com/webhooks/events',
+    events: ['all'],
+    status: 'active',
+    lastDelivery: '2024-01-15T08:15:00Z',
+    successRate: 0.99,
+    retryCount: 5
+  },
+  {
+    id: 3,
+    apiKeyId: 5,
+    name: 'Global Corp Events',
+    url: 'https://webhooks.globalcorp.com/api/v1/events',
+    events: ['user.created', 'data.updated'],
+    status: 'error',
+    lastDelivery: '2024-01-14T18:20:00Z',
+    successRate: 0.85,
+    retryCount: 3
+  }
+];
+
+const permissionOptions = [
+  { value: 'read', label: 'Okuma', icon: <EyeOutlined />, color: '#1890ff' },
+  { value: 'write', label: 'Yazma', icon: <EditOutlined />, color: '#52c41a' },
+  { value: 'delete', label: 'Silme', icon: <DeleteOutlined />, color: '#ff4d4f' },
+  { value: 'admin', label: 'Admin', icon: <SettingOutlined />, color: '#722ed1' }
+];
+
+  const rateLimitPeriods = [
+    { value: 'second', label: 'Saniye' },
+    { value: 'minute', label: 'Dakika' },
+    { value: 'hour', label: 'Saat' },
+    { value: 'day', label: 'Gün' }
+  ];
 
 export default function ApiManagementPage() {
-  const [isModalVisible, setIsModalVisible] = useState(false)
-  const [isKeyModalVisible, setIsKeyModalVisible] = useState(false)
-  const [showApiKey, setShowApiKey] = useState(false)
-  const [editingApi, setEditingApi] = useState<any>(null)
-  const [form] = Form.useForm()
-  const [keyForm] = Form.useForm()
+  const { message } = App.useApp();
 
-  // Mock API management data
-  const apiStats = [
+  // Memoized options for better performance
+  const tenantOptions = useMemo(() => 
+    mockTenants.map(tenant => (
+      <Option key={tenant.id} value={tenant.id}>
+        {tenant.name}
+      </Option>
+    )), []
+  );
+
+  const statusOptions = useMemo(() => [
+    <Option key="active" value="active">Aktif</Option>,
+    <Option key="inactive" value="inactive">Pasif</Option>
+  ], []);
+
+  const webhookOptions = useMemo(() => [
+    <Option key="true" value={true}>Webhook Var</Option>,
+    <Option key="false" value={false}>Webhook Yok</Option>
+  ], []);
+
+  // Memoized options for modal dropdowns
+  const modalTenantOptions = useMemo(() => 
+    mockTenants.map(tenant => (
+      <Option key={tenant.id} value={tenant.id}>
+        {tenant.name}
+      </Option>
+    )), []
+  );
+
+  const permissionSelectOptions = useMemo(() => 
+    permissionOptions.map(perm => (
+      <Option key={perm.value} value={perm.value}>
+        <Space>
+          {perm.icon}
+          {perm.label}
+        </Space>
+      </Option>
+    )), []
+  );
+
+  const rateLimitPeriodOptions = useMemo(() => 
+    rateLimitPeriods.map(period => (
+      <Option key={period.value} value={period.value}>
+        {period.label}
+      </Option>
+    )), []
+  );
+
+  const [apiKeys, setApiKeys] = useState(mockApiKeys);
+  const [apiUsage, setApiUsage] = useState(mockApiUsage);
+  const [webhooks, setWebhooks] = useState(mockWebhooks);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isWebhookModalVisible, setIsWebhookModalVisible] = useState(false);
+  const [editingApiKey, setEditingApiKey] = useState<any>(null);
+  const [selectedApiKey, setSelectedApiKey] = useState<any>(null);
+  const [showApiKey, setShowApiKey] = useState<number | null>(null);
+  const [form] = Form.useForm();
+  const [webhookForm] = Form.useForm();
+  const [filters, setFilters] = useState({
+    tenantId: undefined,
+    status: undefined,
+    hasWebhook: undefined
+  });
+
+  // Statistics
+  const stats = useMemo(() => [
     {
       title: 'Toplam API Anahtarı',
-      value: '24',
-      icon: <KeyOutlined style={{ fontSize: '24px', color: '#10b981' }} />,
-      color: '#10b981',
-      gradient: 'linear-gradient(135deg, #10b981, #059669)',
-      change: '+3',
-      changeType: 'increase'
+      value: apiKeys.length,
+      icon: <KeyOutlined />,
+      color: '#1890ff',
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
     },
     {
-      title: 'Aktif Çağrılar',
-      value: '1,250',
-      icon: <ThunderboltOutlined style={{ fontSize: '24px', color: '#f59e0b' }} />,
-      color: '#f59e0b',
-      gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
-      change: '+12.5%',
-      changeType: 'increase'
+      title: 'Aktif API Anahtarları',
+      value: apiKeys.filter(k => k.status === 'active').length,
+      icon: <CheckCircleOutlined />,
+      color: '#52c41a',
+      gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
     },
     {
-      title: 'Başarı Oranı',
-      value: '98.7%',
-      icon: <CheckCircleOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />,
-      color: '#3b82f6',
-      gradient: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-      change: '+0.3%',
-      changeType: 'increase'
+      title: 'Toplam API Çağrısı (30 gün)',
+      value: apiKeys.reduce((sum, key) => sum + key.totalCalls, 0).toLocaleString(),
+      icon: <BarChartOutlined />,
+      color: '#722ed1',
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
     },
     {
-      title: 'Ortalama Yanıt',
-      value: '145ms',
-      icon: <CloudOutlined style={{ fontSize: '24px', color: '#8b5cf6' }} />,
-      color: '#8b5cf6',
-      gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-      change: '-8ms',
-      changeType: 'decrease'
+      title: 'Ortalama Hata Oranı',
+      value: `${(apiKeys.reduce((sum, key) => sum + key.errorRate, 0) / apiKeys.length * 100).toFixed(1)}%`,
+      icon: <ExclamationCircleOutlined />,
+      color: '#ff4d4f',
+      gradient: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)'
     }
-  ]
+  ], [apiKeys]);
 
-  const apiKeys = [
-    {
-      id: 1,
-      name: 'ABC Şirketi API',
-      key: 'sk_live_abc123def456ghi789jkl012mno345pqr678stu901vwx234yz',
-      tenant: 'ABC Şirketi',
-      status: 'active',
-      permissions: ['read', 'write'],
-      rateLimit: 1000,
-      usage: 750,
-      lastUsed: '2024-01-15 14:30',
-      createdAt: '2023-12-01',
-      expiresAt: '2024-12-01'
-    },
-    {
-      id: 2,
-      name: 'XYZ Ltd. API',
-      key: 'sk_live_xyz789abc012def345ghi678jkl901mno234pqr567stu890vwx',
-      tenant: 'XYZ Ltd.',
-      status: 'active',
-      permissions: ['read'],
-      rateLimit: 500,
-      usage: 320,
-      lastUsed: '2024-01-15 13:45',
-      createdAt: '2023-11-15',
-      expiresAt: '2024-11-15'
-    },
-    {
-      id: 3,
-      name: 'DEF Corp. API',
-      key: 'sk_live_def456ghi789jkl012mno345pqr678stu901vwx234yz567abc',
-      tenant: 'DEF Corp.',
-      status: 'suspended',
-      permissions: ['read', 'write', 'admin'],
-      rateLimit: 2000,
-      usage: 1850,
-      lastUsed: '2024-01-14 16:20',
-      createdAt: '2023-10-20',
-      expiresAt: '2024-10-20'
-    },
-    {
-      id: 4,
-      name: 'GHI Inc. API',
-      key: 'sk_live_ghi789jkl012mno345pqr678stu901vwx234yz567abc890def',
-      tenant: 'GHI Inc.',
-      status: 'active',
-      permissions: ['read', 'write'],
-      rateLimit: 800,
-      usage: 420,
-      lastUsed: '2024-01-15 12:15',
-      createdAt: '2023-09-10',
-      expiresAt: '2024-09-10'
-    },
-    {
-      id: 5,
-      name: 'JKL Co. API',
-      key: 'sk_live_jkl012mno345pqr678stu901vwx234yz567abc890def123ghi',
-      tenant: 'JKL Co.',
-      status: 'expired',
-      permissions: ['read'],
-      rateLimit: 300,
-      usage: 150,
-      lastUsed: '2024-01-10 09:30',
-      createdAt: '2023-08-25',
-      expiresAt: '2024-01-10'
-    }
-  ]
-
-  const apiUsageLogs = [
-    {
-      id: 1,
-      endpoint: '/api/consumption',
-      method: 'GET',
-      status: 200,
-      responseTime: 120,
-      tenant: 'ABC Şirketi',
-      timestamp: '2024-01-15 14:30:25',
-      ipAddress: '192.168.1.100'
-    },
-    {
-      id: 2,
-      endpoint: '/api/billing',
-      method: 'POST',
-      status: 201,
-      responseTime: 85,
-      tenant: 'XYZ Ltd.',
-      timestamp: '2024-01-15 14:29:18',
-      ipAddress: '192.168.1.101'
-    },
-    {
-      id: 3,
-      endpoint: '/api/tenants',
-      method: 'GET',
-      status: 403,
-      responseTime: 45,
-      tenant: 'DEF Corp.',
-      timestamp: '2024-01-15 14:28:42',
-      ipAddress: '192.168.1.102'
-    },
-    {
-      id: 4,
-      endpoint: '/api/auth/login',
-      method: 'POST',
-      status: 200,
-      responseTime: 95,
-      tenant: 'GHI Inc.',
-      timestamp: '2024-01-15 14:27:33',
-      ipAddress: '192.168.1.103'
-    },
-    {
-      id: 5,
-      endpoint: '/api/reports',
-      method: 'GET',
-      status: 500,
-      responseTime: 250,
-      tenant: 'JKL Co.',
-      timestamp: '2024-01-15 14:26:15',
-      ipAddress: '192.168.1.104'
-    }
-  ]
+  // Filtered API keys
+  const filteredApiKeys = useMemo(() => {
+    return apiKeys.filter(key => {
+      if (filters.tenantId && key.tenantId !== filters.tenantId) return false;
+      if (filters.status && key.status !== filters.status) return false;
+      if (filters.hasWebhook !== undefined) {
+        const hasWebhook = key.webhookUrl !== null;
+        if (filters.hasWebhook !== hasWebhook) return false;
+      }
+      return true;
+    });
+  }, [apiKeys, filters]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'success'
-      case 'suspended': return 'warning'
-      case 'expired': return 'error'
-      default: return 'default'
+      case 'active': return 'success';
+      case 'inactive': return 'default';
+      case 'error': return 'error';
+      default: return 'default';
     }
-  }
+  };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'active': return 'Aktif'
-      case 'suspended': return 'Askıya Alındı'
-      case 'expired': return 'Süresi Doldu'
-      default: return 'Bilinmiyor'
+      case 'active': return 'Aktif';
+      case 'inactive': return 'Pasif';
+      case 'error': return 'Hata';
+      default: return 'Bilinmiyor';
     }
-  }
+  };
 
-  const getMethodColor = (method: string) => {
-    switch (method) {
-      case 'GET': return 'green'
-      case 'POST': return 'blue'
-      case 'PUT': return 'orange'
-      case 'DELETE': return 'red'
-      default: return 'default'
+  const getWebhookStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'success';
+      case 'inactive': return 'default';
+      case 'error': return 'error';
+      default: return 'default';
     }
-  }
+  };
 
-  const getStatusIcon = (status: number) => {
-    if (status >= 200 && status < 300) return <CheckCircleOutlined style={{ color: '#10b981' }} />
-    if (status >= 400 && status < 500) return <ExclamationCircleOutlined style={{ color: '#f59e0b' }} />
-    if (status >= 500) return <ExclamationCircleOutlined style={{ color: '#ef4444' }} />
-    return <ClockCircleOutlined style={{ color: '#64748b' }} />
-  }
+  const getWebhookStatusText = (status: string) => {
+    switch (status) {
+      case 'active': return 'Aktif';
+      case 'inactive': return 'Pasif';
+      case 'error': return 'Hata';
+      default: return 'Yok';
+    }
+  };
 
-  const apiKeyColumns = [
+  const generateApiKey = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 32; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    message.success('API anahtarı kopyalandı!');
+  };
+
+  const columns: ColumnsType<any> = [
     {
       title: 'API Anahtarı',
       key: 'apiKey',
-      render: (record: any) => (
-        <div className="api-key-info">
-          <div className="api-key-name">
-            <KeyOutlined style={{ marginRight: '8px', color: '#64748b' }} />
-            {record.name}
-          </div>
-          <div className="api-key-preview">
-            <Text code style={{ fontSize: '12px' }}>
-              {record.key.substring(0, 20)}...
-            </Text>
+      width: 250,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500, marginBottom: '4px' }}>{record.name}</div>
+          <div style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace' }}>
+            {showApiKey === record.id ? record.key : `${record.key.substring(0, 20)}...`}
             <Button
               type="text"
-              icon={showApiKey ? <EyeInvisibleOutlined /> : <EyeOutlined />}
               size="small"
-              onClick={() => setShowApiKey(!showApiKey)}
-              className="show-key-button"
+              icon={showApiKey === record.id ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+              onClick={() => setShowApiKey(showApiKey === record.id ? null : record.id)}
+              style={{ marginLeft: '8px' }}
+            />
+            <Button
+              type="text"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() => copyToClipboard(record.key)}
+              style={{ marginLeft: '4px' }}
             />
           </div>
         </div>
-      ),
+      )
     },
     {
       title: 'Tenant',
-      dataIndex: 'tenant',
-      key: 'tenant',
-      render: (tenant: string) => (
-        <div className="tenant-info">
-          <UserOutlined style={{ marginRight: '8px', color: '#64748b' }} />
-          {tenant}
-        </div>
-      ),
+      dataIndex: 'tenantName',
+      key: 'tenantName',
+      width: 150,
+      render: (tenantName) => (
+        <Tag color="blue" icon={<GlobalOutlined />}>
+          {tenantName}
+        </Tag>
+      )
     },
     {
       title: 'Durum',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => (
-        <Badge 
-          status={getStatusColor(status) as any} 
+      width: 100,
+      render: (status) => (
+        <Badge
+          status={getStatusColor(status) as any}
           text={getStatusText(status)}
         />
-      ),
+      )
     },
     {
       title: 'İzinler',
-      dataIndex: 'permissions',
       key: 'permissions',
-      render: (permissions: string[]) => (
-        <Space size="small">
-          {permissions.map(perm => (
-            <Tag 
-              key={perm} 
-              color={perm === 'admin' ? 'red' : perm === 'write' ? 'blue' : 'green'}
-              className="permission-tag"
-            >
-              {perm === 'read' ? 'Okuma' : perm === 'write' ? 'Yazma' : 'Admin'}
-            </Tag>
-          ))}
+      width: 200,
+      render: (_, record) => (
+        <Space wrap>
+          {record.permissions.map((perm: string) => {
+            const permOption = permissionOptions.find(p => p.value === perm);
+            return (
+              <Tag key={perm} color={permOption?.color} icon={permOption?.icon}>
+                {permOption?.label}
+              </Tag>
+            );
+          })}
         </Space>
-      ),
+      )
     },
     {
-      title: 'Kullanım',
-      key: 'usage',
-      render: (record: any) => (
-        <div className="usage-info">
-          <div className="usage-text">
-            {record.usage} / {record.rateLimit}
+      title: 'Rate Limit',
+      key: 'rateLimit',
+      width: 120,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.rateLimit}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>
+            / {record.rateLimitPeriod}
           </div>
-          <Progress 
-            percent={Math.round((record.usage / record.rateLimit) * 100)} 
-            size="small"
-            strokeColor={record.usage / record.rateLimit > 0.8 ? '#ef4444' : 
-                        record.usage / record.rateLimit > 0.6 ? '#f59e0b' : '#10b981'}
-            showInfo={false}
-          />
         </div>
-      ),
+      )
+    },
+    {
+      title: 'Kullanım (30 gün)',
+      key: 'usage',
+      width: 150,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.totalCalls.toLocaleString()}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>
+            Hata: {(record.errorRate * 100).toFixed(1)}%
+          </div>
+        </div>
+      )
+    },
+    {
+      title: 'Webhook',
+      key: 'webhook',
+      width: 120,
+      render: (_, record) => (
+        <Badge
+          status={getWebhookStatusColor(record.webhookStatus) as any}
+          text={getWebhookStatusText(record.webhookStatus)}
+        />
+      )
     },
     {
       title: 'Son Kullanım',
-      dataIndex: 'lastUsed',
       key: 'lastUsed',
-      render: (lastUsed: string) => (
-        <div className="last-used">
-          <CalendarOutlined style={{ marginRight: '4px', color: '#64748b' }} />
-          {lastUsed}
+      width: 150,
+      render: (_, record) => (
+        <div>
+          <div>{new Date(record.lastUsed).toLocaleDateString('tr-TR')}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>
+            {new Date(record.lastUsed).toLocaleTimeString('tr-TR')}
+          </div>
         </div>
-      ),
+      )
     },
     {
       title: 'İşlemler',
       key: 'actions',
-      render: (record: any) => (
-        <Space size="small">
-          <Tooltip title="Kopyala">
-            <Button 
-              type="text" 
-              icon={<CopyOutlined />} 
-              size="small"
-              className="action-button"
+      width: 200,
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="Kullanım İstatistikleri">
+            <Button
+              type="text"
+              icon={<BarChartOutlined />}
+              onClick={() => handleViewStats(record)}
+            />
+          </Tooltip>
+          <Tooltip title="Webhook Yönetimi">
+            <Button
+              type="text"
+              icon={<LinkOutlined />}
+              onClick={() => handleManageWebhook(record)}
             />
           </Tooltip>
           <Tooltip title="Düzenle">
-            <Button 
-              type="text" 
-              icon={<EditOutlined />} 
-              size="small"
-              className="action-button"
+            <Button
+              type="text"
+              icon={<EditOutlined />}
               onClick={() => handleEdit(record)}
             />
           </Tooltip>
-          <Tooltip title={record.status === 'active' ? 'Askıya Al' : 'Etkinleştir'}>
-            <Button 
-              type="text" 
-              icon={record.status === 'active' ? <LockOutlined /> : <UnlockOutlined />} 
-              size="small"
-              className="action-button"
-              style={{ color: record.status === 'active' ? '#ef4444' : '#10b981' }}
+          <Tooltip title="Yeniden Oluştur">
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              onClick={() => handleRegenerate(record)}
             />
           </Tooltip>
-          <Tooltip title="Sil">
-            <Button 
-              type="text" 
-              icon={<DeleteOutlined />} 
-              size="small"
-              className="action-button delete-button"
-            />
-          </Tooltip>
+          <Popconfirm
+            title="API anahtarını silmek istediğinizden emin misiniz?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Evet"
+            cancelText="Hayır"
+          >
+            <Tooltip title="Sil">
+              <Button
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+              />
+            </Tooltip>
+          </Popconfirm>
         </Space>
-      ),
-    },
-  ]
+      )
+    }
+  ];
 
-  const usageLogColumns = [
+  const webhookColumns: ColumnsType<any> = [
     {
-      title: 'Endpoint',
-      dataIndex: 'endpoint',
-      key: 'endpoint',
-      render: (endpoint: string) => (
-        <Text code style={{ fontSize: '12px' }}>{endpoint}</Text>
-      ),
+      title: 'Webhook Adı',
+      dataIndex: 'name',
+      key: 'name',
+      width: 200
     },
     {
-      title: 'Metod',
-      dataIndex: 'method',
-      key: 'method',
-      render: (method: string) => (
-        <Tag color={getMethodColor(method)} className="method-tag">
-          {method}
-        </Tag>
-      ),
+      title: 'URL',
+      dataIndex: 'url',
+      key: 'url',
+      width: 300,
+      render: (url) => (
+        <Text code style={{ fontSize: '12px' }}>
+          {url}
+        </Text>
+      )
+    },
+    {
+      title: 'Olaylar',
+      key: 'events',
+      width: 200,
+      render: (_, record) => (
+        <Space wrap>
+          {record.events.map((event: string) => (
+            <Tag key={event} color="blue">
+              {event}
+            </Tag>
+          ))}
+        </Space>
+      )
     },
     {
       title: 'Durum',
       dataIndex: 'status',
       key: 'status',
-      render: (status: number) => (
-        <div className="status-info">
-          {getStatusIcon(status)}
-          <span className="status-code">{status}</span>
+      width: 100,
+      render: (status) => (
+        <Badge
+          status={getWebhookStatusColor(status) as any}
+          text={getWebhookStatusText(status)}
+        />
+      )
+    },
+    {
+      title: 'Başarı Oranı',
+      key: 'successRate',
+      width: 120,
+      render: (_, record) => (
+        <Progress
+          percent={record.successRate * 100}
+          size="small"
+          status={record.successRate > 0.95 ? 'success' : record.successRate > 0.8 ? 'normal' : 'exception'}
+        />
+      )
+    },
+    {
+      title: 'Son Teslimat',
+      key: 'lastDelivery',
+      width: 150,
+      render: (_, record) => (
+        <div>
+          <div>{new Date(record.lastDelivery).toLocaleDateString('tr-TR')}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>
+            {new Date(record.lastDelivery).toLocaleTimeString('tr-TR')}
+          </div>
         </div>
-      ),
+      )
     },
     {
-      title: 'Yanıt Süresi',
-      dataIndex: 'responseTime',
-      key: 'responseTime',
-      render: (time: number) => (
-        <Text type="secondary">{time}ms</Text>
-      ),
-    },
-    {
-      title: 'Tenant',
-      dataIndex: 'tenant',
-      key: 'tenant',
-      render: (tenant: string) => (
-        <div className="tenant-info">
-          <UserOutlined style={{ marginRight: '8px', color: '#64748b' }} />
-          {tenant}
-        </div>
-      ),
-    },
-    {
-      title: 'IP Adresi',
-      dataIndex: 'ipAddress',
-      key: 'ipAddress',
-      render: (ip: string) => (
-        <Text code style={{ fontSize: '12px' }}>{ip}</Text>
-      ),
-    },
-    {
-      title: 'Zaman',
-      dataIndex: 'timestamp',
-      key: 'timestamp',
-      render: (timestamp: string) => (
-        <div className="timestamp">
-          <CalendarOutlined style={{ marginRight: '4px', color: '#64748b' }} />
-          {timestamp}
-        </div>
-      ),
-    },
-  ]
+      title: 'İşlemler',
+      key: 'actions',
+      width: 120,
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="Düzenle">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => handleEditWebhook(record)}
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Webhook'u silmek istediğinizden emin misiniz?"
+            onConfirm={() => handleDeleteWebhook(record.id)}
+            okText="Evet"
+            cancelText="Hayır"
+          >
+            <Tooltip title="Sil">
+              <Button
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+              />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ];
+
+  const handleAdd = () => {
+    setEditingApiKey(null);
+    form.resetFields();
+    form.setFieldsValue({
+      status: 'active',
+      permissions: ['read'],
+      rateLimit: 1000,
+      rateLimitPeriod: 'minute'
+    });
+    setIsModalVisible(true);
+  };
 
   const handleEdit = (apiKey: any) => {
-    setEditingApi(apiKey)
-    form.setFieldsValue(apiKey)
-    setIsModalVisible(true)
-  }
+    setEditingApiKey(apiKey);
+    form.setFieldsValue({
+      name: apiKey.name,
+      tenantId: apiKey.tenantId,
+      status: apiKey.status,
+      permissions: apiKey.permissions,
+      rateLimit: apiKey.rateLimit,
+      rateLimitPeriod: apiKey.rateLimitPeriod
+    });
+    setIsModalVisible(true);
+  };
+
+  const handleViewStats = (apiKey: any) => {
+    setSelectedApiKey(apiKey);
+    // Burada istatistik modalı açılabilir
+    message.info(`${apiKey.name} için detaylı istatistikler yakında eklenecek`);
+  };
+
+  const handleManageWebhook = (apiKey: any) => {
+    setSelectedApiKey(apiKey);
+    setIsWebhookModalVisible(true);
+  };
+
+  const handleEditWebhook = (webhook: any) => {
+    webhookForm.setFieldsValue({
+      name: webhook.name,
+      url: webhook.url,
+      events: webhook.events,
+      retryCount: webhook.retryCount
+    });
+    // Webhook düzenleme modalı açılabilir
+  };
+
+  const handleRegenerate = (apiKey: any) => {
+    const newKey = generateApiKey();
+    const updatedApiKeys = apiKeys.map(k =>
+      k.id === apiKey.id ? { ...k, key: newKey } : k
+    );
+    setApiKeys(updatedApiKeys);
+    message.success('API anahtarı yeniden oluşturuldu');
+  };
+
+  const handleDelete = (apiKeyId: number) => {
+    setApiKeys(apiKeys.filter(k => k.id !== apiKeyId));
+    message.success('API anahtarı silindi');
+  };
+
+  const handleDeleteWebhook = (webhookId: number) => {
+    setWebhooks(webhooks.filter(w => w.id !== webhookId));
+    message.success('Webhook silindi');
+  };
 
   const handleModalOk = () => {
-    form.validateFields().then((values) => {
-      console.log('Form values:', values)
-      setIsModalVisible(false)
-      setEditingApi(null)
-      form.resetFields()
-    })
-  }
+    form.validateFields().then(values => {
+      if (editingApiKey) {
+        // Update existing API key
+        const updatedApiKeys = apiKeys.map(k =>
+          k.id === editingApiKey.id ? { ...k, ...values } : k
+        );
+        setApiKeys(updatedApiKeys);
+        message.success('API anahtarı güncellendi');
+      } else {
+        // Add new API key
+        const newApiKey = {
+          id: Math.max(...apiKeys.map(k => k.id)) + 1,
+          ...values,
+          key: generateApiKey(),
+          tenantName: mockTenants.find(t => t.id === values.tenantId)?.name,
+          createdAt: new Date().toISOString(),
+          lastUsed: new Date().toISOString(),
+          totalCalls: 0,
+          errorRate: 0,
+          webhookUrl: null,
+          webhookStatus: null
+        };
+        setApiKeys([...apiKeys, newApiKey]);
+        message.success('API anahtarı oluşturuldu');
+      }
+      setIsModalVisible(false);
+    });
+  };
 
-  const handleModalCancel = () => {
-    setIsModalVisible(false)
-    setEditingApi(null)
-    form.resetFields()
-  }
+  const handleFilterChange = useCallback((key: string, value: any) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  }, []);
 
-  const handleKeyModalOk = () => {
-    keyForm.validateFields().then((values) => {
-      console.log('Key form values:', values)
-      setIsKeyModalVisible(false)
-      keyForm.resetFields()
-    })
-  }
-
-  const handleKeyModalCancel = () => {
-    setIsKeyModalVisible(false)
-    keyForm.resetFields()
-  }
+  const clearFilters = useCallback(() => {
+    setFilters({
+      tenantId: undefined,
+      status: undefined,
+      hasWebhook: undefined
+    });
+  }, []);
 
   return (
-    <PageContainer
-      header={{
-        title: (
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg">
-              <ApiOutlined style={{ fontSize: '20px', color: 'white' }} />
-            </div>
-            <div>
-              <Title level={3} style={{ margin: 0, color: '#1e293b' }}>
-                API Yönetimi
-              </Title>
-              <Text type="secondary" style={{ fontSize: '14px' }}>
-                API anahtarlarını yönetin, kullanım istatistiklerini izleyin ve erişim kontrolü sağlayın.
-              </Text>
-            </div>
-          </div>
-        ),
-        breadcrumb: {},
-      }}
-    >
-      <div className="api-management-container">
-        {/* Statistics Cards */}
-        <Row gutter={[16, 16]} className="mb-6">
-          {apiStats.map((stat, index) => (
-            <Col xs={24} sm={12} lg={6} key={index}>
-              <Card 
-                className="stat-card"
-                style={{
-                  background: stat.gradient,
-                  border: 'none',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-                  overflow: 'hidden',
-                  position: 'relative'
-                }}
+    <div style={{ padding: '24px' }}>
+      <Title level={2}>
+        <ApiOutlined /> API Yönetimi
+      </Title>
+
+      {/* Statistics Cards */}
+      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+        {stats.map((stat, index) => (
+          <Col xs={24} sm={12} lg={6} key={index}>
+            <Card
+              style={{
+                background: stat.gradient,
+                color: 'white',
+                border: 'none'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{stat.value}</div>
+                  <div style={{ fontSize: '14px', opacity: 0.9 }}>{stat.title}</div>
+                </div>
+                <div style={{ fontSize: '32px', opacity: 0.8 }}>
+                  {stat.icon}
+                </div>
+              </div>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      {/* Filters */}
+      <Card style={{ marginBottom: '24px' }}>
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} sm={6}>
+            <Select
+              placeholder="Tenant Seçin"
+              style={{ width: '100%' }}
+              value={filters.tenantId}
+              onChange={(value) => handleFilterChange('tenantId', value)}
+              allowClear
+              getPopupContainer={(triggerNode) => triggerNode.parentNode}
+            >
+              {tenantOptions}
+            </Select>
+          </Col>
+          <Col xs={24} sm={6}>
+            <Select
+              placeholder="Durum"
+              style={{ width: '100%' }}
+              value={filters.status}
+              onChange={(value) => handleFilterChange('status', value)}
+              allowClear
+              getPopupContainer={(triggerNode) => triggerNode.parentNode}
+            >
+              {statusOptions}
+            </Select>
+          </Col>
+          <Col xs={24} sm={6}>
+            <Select
+              placeholder="Webhook Durumu"
+              style={{ width: '100%' }}
+              value={filters.hasWebhook}
+              onChange={(value) => handleFilterChange('hasWebhook', value)}
+              allowClear
+              getPopupContainer={(triggerNode) => triggerNode.parentNode}
+            >
+              {webhookOptions}
+            </Select>
+          </Col>
+          <Col xs={24} sm={6}>
+            <Space>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAdd}
               >
-                <div className="stat-card-content">
-                  <div className="stat-icon">
-                    {stat.icon}
-                  </div>
-                  <div className="stat-info">
-                    <div className="stat-value">{stat.value}</div>
-                    <div className="stat-title">{stat.title}</div>
-                    <div className={`stat-change ${stat.changeType}`}>
-                      {stat.change}
-                    </div>
-                  </div>
-                </div>
-                <div className="stat-card-overlay"></div>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-
-        <Row gutter={[16, 16]} className="mb-6">
-          {/* API Keys Management */}
-          <Col xs={24} lg={16}>
-            <ProCard
-              title={
-                <div className="flex items-center space-x-2">
-                  <KeyOutlined style={{ color: '#10b981', fontSize: '18px' }} />
-                  <span style={{ color: '#1e293b', fontWeight: 600 }}>API Anahtarları</span>
-                </div>
-              }
-              extra={
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => setIsKeyModalVisible(true)}
-                  style={{
-                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                    border: 'none',
-                    borderRadius: '8px'
-                  }}
-                >
-                  Yeni API Anahtarı
-                </Button>
-              }
-              className="api-keys-card"
-              style={{
-                borderRadius: '12px',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-                border: '1px solid #e2e8f0'
-              }}
-            >
-              <Table
-                columns={apiKeyColumns}
-                dataSource={apiKeys}
-                rowKey="id"
-                pagination={{
-                  total: apiKeys.length,
-                  pageSize: 10,
-                  showSizeChanger: true,
-                  showQuickJumper: true,
-                  showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} API anahtarı`,
-                }}
-                className="api-keys-table"
-              />
-            </ProCard>
-          </Col>
-
-          {/* Quick Actions & Info */}
-          <Col xs={24} lg={8}>
-            <ProCard
-              title={
-                <div className="flex items-center space-x-2">
-                  <SettingOutlined style={{ color: '#8b5cf6', fontSize: '18px' }} />
-                  <span style={{ color: '#1e293b', fontWeight: 600 }}>Hızlı İşlemler</span>
-                </div>
-              }
-              className="actions-card"
-              style={{
-                borderRadius: '12px',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-                border: '1px solid #e2e8f0'
-              }}
-            >
-              <div className="quick-actions">
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  size="large"
-                  block
-                  onClick={() => setIsKeyModalVisible(true)}
-                  style={{
-                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    marginBottom: '12px'
-                  }}
-                >
-                  Yeni API Anahtarı
-                </Button>
-                <Button
-                  icon={<ReloadOutlined />}
-                  size="large"
-                  block
-                  style={{
-                    border: '2px solid #e2e8f0',
-                    borderRadius: '8px',
-                    marginBottom: '12px'
-                  }}
-                >
-                  Kullanımı Yenile
-                </Button>
-                <Button
-                  icon={<SafetyOutlined />}
-                  size="large"
-                  block
-                  style={{
-                    border: '2px solid #e2e8f0',
-                    borderRadius: '8px',
-                    marginBottom: '12px'
-                  }}
-                >
-                  Güvenlik Raporu
-                </Button>
-                <Button
-                  icon={<GlobalOutlined />}
-                  size="large"
-                  block
-                  style={{
-                    border: '2px solid #e2e8f0',
-                    borderRadius: '8px'
-                  }}
-                >
-                  API Dokümantasyonu
-                </Button>
-              </div>
-
-              <Divider />
-
-              <div className="api-info">
-                <Title level={5} style={{ marginBottom: '16px' }}>API İstatistikleri</Title>
-                <Descriptions column={1} size="small">
-                  <Descriptions.Item label="Toplam Endpoint">24</Descriptions.Item>
-                  <Descriptions.Item label="Aktif Anahtarlar">18</Descriptions.Item>
-                  <Descriptions.Item label="Günlük Çağrı">45,230</Descriptions.Item>
-                  <Descriptions.Item label="Ortalama Yanıt">145ms</Descriptions.Item>
-                </Descriptions>
-              </div>
-            </ProCard>
+                Yeni API Anahtarı
+              </Button>
+              <Button
+                icon={<SettingOutlined />}
+                onClick={clearFilters}
+              >
+                Filtreleri Temizle
+              </Button>
+            </Space>
           </Col>
         </Row>
+      </Card>
 
-        {/* API Usage Logs */}
-        <ProCard
-          title={
-            <div className="flex items-center space-x-2">
-              <CloudOutlined style={{ color: '#f59e0b', fontSize: '18px' }} />
-              <span style={{ color: '#1e293b', fontWeight: 600 }}>API Kullanım Logları</span>
-            </div>
-          }
-          className="logs-card"
-          style={{
-            borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-            border: '1px solid #e2e8f0'
+      {/* API Keys Table */}
+      <Card>
+        <Table
+          columns={columns}
+          dataSource={filteredApiKeys}
+          rowKey="id"
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} / ${total} API anahtarı`
           }}
-        >
-          <Table
-            columns={usageLogColumns}
-            dataSource={apiUsageLogs}
-            rowKey="id"
-            pagination={{
-              total: apiUsageLogs.length,
-              pageSize: 10,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} log`,
-            }}
-            className="usage-logs-table"
-          />
-        </ProCard>
+          scroll={{ x: 1400 }}
+        />
+      </Card>
 
-        {/* Edit API Key Modal */}
-        <Modal
-          title={
-            <div className="flex items-center space-x-2">
-              <EditOutlined style={{ color: '#3b82f6' }} />
-              <span>{editingApi ? 'API Anahtarı Düzenle' : 'Yeni API Anahtarı'}</span>
-            </div>
-          }
-          open={isModalVisible}
-          onOk={handleModalOk}
-          onCancel={handleModalCancel}
-          width={600}
-          okText="Kaydet"
-          cancelText="İptal"
+      {/* Add/Edit API Key Modal */}
+      <Modal
+        title={editingApiKey ? 'API Anahtarı Düzenle' : 'Yeni API Anahtarı Oluştur'}
+        open={isModalVisible}
+        onOk={handleModalOk}
+        onCancel={() => setIsModalVisible(false)}
+        width={700}
+        okText={editingApiKey ? 'Güncelle' : 'Oluştur'}
+        cancelText="İptal"
+      >
+        <Form
+          form={form}
+          layout="vertical"
         >
-          <Form
-            form={form}
-            layout="vertical"
-            className="api-form"
-          >
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="name"
-                  label="API Anahtarı Adı"
-                  rules={[{ required: true, message: 'Ad gerekli!' }]}
-                >
-                  <Input placeholder="API Anahtarı Adı" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="tenant"
-                  label="Tenant"
-                  rules={[{ required: true, message: 'Tenant seçin!' }]}
-                >
-                  <Select placeholder="Tenant seçin">
-                    <Option value="ABC Şirketi">ABC Şirketi</Option>
-                    <Option value="XYZ Ltd.">XYZ Ltd.</Option>
-                    <Option value="DEF Corp.">DEF Corp.</Option>
-                    <Option value="GHI Inc.">GHI Inc.</Option>
-                    <Option value="JKL Co.">JKL Co.</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="rateLimit"
-                  label="Rate Limit (saatlik)"
-                  rules={[{ required: true, message: 'Rate limit girin!' }]}
-                >
-                  <InputNumber 
-                    min={1} 
-                    max={10000} 
-                    style={{ width: '100%' }} 
-                    placeholder="1000"
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="status"
-                  label="Durum"
-                  valuePropName="checked"
-                >
-                  <Switch 
-                    checkedChildren="Aktif" 
-                    unCheckedChildren="Pasif"
-                    defaultChecked
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Form.Item
-              name="permissions"
-              label="İzinler"
-              rules={[{ required: true, message: 'En az bir izin seçin!' }]}
-            >
-              <Select mode="multiple" placeholder="İzinler seçin">
-                <Option value="read">Okuma</Option>
-                <Option value="write">Yazma</Option>
-                <Option value="admin">Admin</Option>
-              </Select>
-            </Form.Item>
-            <Form.Item
-              name="description"
-              label="Açıklama"
-            >
-              <TextArea rows={3} placeholder="API anahtarı açıklaması..." />
-            </Form.Item>
-          </Form>
-        </Modal>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="name"
+                label="API Anahtarı Adı"
+                rules={[{ required: true, message: 'API anahtarı adı gerekli!' }]}
+              >
+                <Input prefix={<KeyOutlined />} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="tenantId"
+                label="Tenant"
+                rules={[{ required: true, message: 'Tenant seçin!' }]}
+              >
+                <Select placeholder="Tenant seçin" getPopupContainer={(triggerNode) => triggerNode.parentNode}>
+                  {modalTenantOptions}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
 
-        {/* Create API Key Modal */}
-        <Modal
-          title={
-            <div className="flex items-center space-x-2">
-              <PlusOutlined style={{ color: '#3b82f6' }} />
-              <span>Yeni API Anahtarı Oluştur</span>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="status"
+                label="Durum"
+              >
+                <Switch checkedChildren="Aktif" unCheckedChildren="Pasif" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="permissions"
+                label="İzinler"
+                rules={[{ required: true, message: 'En az bir izin seçin!' }]}
+              >
+                <Select mode="multiple" placeholder="İzinler seçin" getPopupContainer={(triggerNode) => triggerNode.parentNode}>
+                  {permissionSelectOptions}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="rateLimit"
+                label="Rate Limit"
+                rules={[{ required: true, message: 'Rate limit gerekli!' }]}
+              >
+                <InputNumber
+                  min={1}
+                  max={10000}
+                  style={{ width: '100%' }}
+                  placeholder="İstek sayısı"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="rateLimitPeriod"
+                label="Rate Limit Periyodu"
+                rules={[{ required: true, message: 'Periyot seçin!' }]}
+              >
+                <Select placeholder="Periyot seçin" getPopupContainer={(triggerNode) => triggerNode.parentNode}>
+                  {rateLimitPeriodOptions}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
+
+      {/* Webhook Management Modal */}
+      <Modal
+        title={`${selectedApiKey?.name} - Webhook Yönetimi`}
+        open={isWebhookModalVisible}
+        onCancel={() => setIsWebhookModalVisible(false)}
+        width={1000}
+        footer={null}
+      >
+        <Tabs defaultActiveKey="webhooks">
+          <TabPane tab="Webhook'lar" key="webhooks">
+            <div style={{ marginBottom: '16px' }}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => message.info('Webhook ekleme özelliği yakında eklenecek')}
+              >
+                Yeni Webhook Ekle
+              </Button>
             </div>
-          }
-          open={isKeyModalVisible}
-          onOk={handleKeyModalOk}
-          onCancel={handleKeyModalCancel}
-          width={500}
-          okText="Oluştur"
-          cancelText="İptal"
-        >
-          <Form
-            form={keyForm}
-            layout="vertical"
-            className="key-form"
-          >
-            <Form.Item
-              name="name"
-              label="API Anahtarı Adı"
-              rules={[{ required: true, message: 'Ad gerekli!' }]}
-            >
-              <Input placeholder="API Anahtarı Adı" />
-            </Form.Item>
-            <Form.Item
-              name="tenant"
-              label="Tenant"
-              rules={[{ required: true, message: 'Tenant seçin!' }]}
-            >
-              <Select placeholder="Tenant seçin">
-                <Option value="ABC Şirketi">ABC Şirketi</Option>
-                <Option value="XYZ Ltd.">XYZ Ltd.</Option>
-                <Option value="DEF Corp.">DEF Corp.</Option>
-                <Option value="GHI Inc.">GHI Inc.</Option>
-                <Option value="JKL Co.">JKL Co.</Option>
-              </Select>
-            </Form.Item>
-            <Form.Item
-              name="permissions"
-              label="İzinler"
-              rules={[{ required: true, message: 'En az bir izin seçin!' }]}
-            >
-              <Select mode="multiple" placeholder="İzinler seçin">
-                <Option value="read">Okuma</Option>
-                <Option value="write">Yazma</Option>
-                <Option value="admin">Admin</Option>
-              </Select>
-            </Form.Item>
+            <Table
+              columns={webhookColumns}
+              dataSource={webhooks.filter(w => w.apiKeyId === selectedApiKey?.id)}
+              rowKey="id"
+              pagination={false}
+              size="small"
+            />
+          </TabPane>
+          <TabPane tab="Webhook Ayarları" key="settings">
             <Alert
-              message="Güvenlik Uyarısı"
-              description="API anahtarı oluşturulduktan sonra sadece bir kez gösterilir. Lütfen güvenli bir yerde saklayın."
-              type="warning"
+              message="Webhook Ayarları"
+              description="Webhook'lar için genel ayarlar burada yapılandırılabilir."
+              type="info"
               showIcon
               style={{ marginBottom: '16px' }}
             />
-          </Form>
-        </Modal>
-
-        <style jsx>{`
-          .api-management-container {
-            padding: 0;
-          }
-          
-          .stat-card {
-            transition: all 0.3s ease;
-            cursor: pointer;
-          }
-          
-          .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15) !important;
-          }
-          
-          .stat-card-content {
-            position: relative;
-            z-index: 2;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 20px;
-            color: white;
-          }
-          
-          .stat-icon {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 12px;
-            backdrop-filter: blur(10px);
-          }
-          
-          .stat-info {
-            text-align: right;
-          }
-          
-          .stat-value {
-            font-size: 28px;
-            font-weight: bold;
-            line-height: 1;
-            margin-bottom: 4px;
-          }
-          
-          .stat-title {
-            font-size: 14px;
-            opacity: 0.9;
-            font-weight: 500;
-            margin-bottom: 4px;
-          }
-          
-          .stat-change {
-            font-size: 12px;
-            font-weight: 600;
-          }
-          
-          .stat-change.increase {
-            color: #10b981;
-          }
-          
-          .stat-change.decrease {
-            color: #ef4444;
-          }
-          
-          .stat-card-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
-            z-index: 1;
-          }
-          
-          .api-keys-card, .actions-card, .logs-card {
-            transition: all 0.3s ease;
-          }
-          
-          .api-keys-card:hover, .actions-card:hover, .logs-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
-          }
-          
-          .api-key-info {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-          }
-          
-          .api-key-name {
-            display: flex;
-            align-items: center;
-            font-weight: 600;
-            color: #1e293b;
-          }
-          
-          .api-key-preview {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-          
-          .show-key-button {
-            color: #64748b;
-            transition: all 0.3s ease;
-          }
-          
-          .show-key-button:hover {
-            color: #3b82f6;
-            transform: scale(1.1);
-          }
-          
-          .tenant-info {
-            display: flex;
-            align-items: center;
-            font-weight: 500;
-          }
-          
-          .permission-tag {
-            font-weight: 600;
-            border-radius: 6px;
-          }
-          
-          .usage-info {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-          }
-          
-          .usage-text {
-            font-size: 12px;
-            color: #64748b;
-            font-weight: 500;
-          }
-          
-          .last-used {
-            color: #64748b;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-          }
-          
-          .action-button {
-            transition: all 0.3s ease;
-            border-radius: 6px;
-          }
-          
-          .action-button:hover {
-            transform: scale(1.1);
-            background: rgba(59, 130, 246, 0.1);
-          }
-          
-          .delete-button:hover {
-            background: rgba(239, 68, 68, 0.1) !important;
-          }
-          
-          .method-tag {
-            font-weight: 600;
-            border-radius: 6px;
-          }
-          
-          .status-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          }
-          
-          .status-code {
-            font-weight: 600;
-            font-family: monospace;
-          }
-          
-          .timestamp {
-            color: #64748b;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-          }
-          
-          .quick-actions {
-            padding: 8px 0;
-          }
-          
-          .api-info {
-            padding: 8px 0;
-          }
-          
-          .api-keys-table :global(.ant-table-thead > tr > th),
-          .usage-logs-table :global(.ant-table-thead > tr > th) {
-            background: #f8fafc;
-            font-weight: 600;
-            color: #374151;
-            border-bottom: 2px solid #e2e8f0;
-          }
-          
-          .api-keys-table :global(.ant-table-tbody > tr:hover > td),
-          .usage-logs-table :global(.ant-table-tbody > tr:hover > td) {
-            background: rgba(59, 130, 246, 0.05);
-          }
-          
-          .api-form :global(.ant-form-item-label > label),
-          .key-form :global(.ant-form-item-label > label) {
-            font-weight: 600;
-            color: #374151;
-          }
-          
-          @media (max-width: 768px) {
-            .stat-value {
-              font-size: 24px;
-            }
-            
-            .stat-title {
-              font-size: 12px;
-            }
-            
-            .api-key-info {
-              gap: 4px;
-            }
-            
-            .tenant-info {
-              flex-direction: column;
-              align-items: flex-start;
-            }
-            
-            .tenant-info .anticon {
-              margin-bottom: 4px;
-              margin-right: 0;
-            }
-            
-            .status-info {
-              flex-direction: column;
-              align-items: flex-start;
-              gap: 4px;
-            }
-          }
-        `}</style>
-      </div>
-    </PageContainer>
-  )
+            <Collapse>
+              <Panel header="Genel Ayarlar" key="general">
+                <Form layout="vertical">
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item label="Maksimum Deneme Sayısı">
+                        <InputNumber min={1} max={10} defaultValue={3} />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item label="Timeout (saniye)">
+                        <InputNumber min={5} max={60} defaultValue={30} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item label="Retry Delay (saniye)">
+                        <InputNumber min={1} max={300} defaultValue={60} />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item label="Batch Size">
+                        <InputNumber min={1} max={100} defaultValue={10} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                </Form>
+              </Panel>
+              <Panel header="Güvenlik Ayarları" key="security">
+                <Form layout="vertical">
+                  <Form.Item label="Webhook Secret">
+                    <Input.Password placeholder="Webhook secret girin" />
+                  </Form.Item>
+                  <Form.Item label="IP Whitelist">
+                    <Select 
+                      mode="tags" 
+                      placeholder="IP adresleri ekleyin"
+                      getPopupContainer={(triggerNode) => triggerNode.parentNode}
+                    >
+                      <Option value="192.168.1.0/24">192.168.1.0/24</Option>
+                      <Option value="10.0.0.0/8">10.0.0.0/8</Option>
+                    </Select>
+                  </Form.Item>
+                </Form>
+              </Panel>
+            </Collapse>
+          </TabPane>
+        </Tabs>
+      </Modal>
+    </div>
+  );
 } 

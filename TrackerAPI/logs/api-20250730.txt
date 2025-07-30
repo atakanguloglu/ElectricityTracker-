@@ -98,3 +98,28 @@ RETURNING "Id";
 2025-07-30 18:55:28.159 +03:00 [INF] Executed action ElectricityTrackerAPI.Controllers.AuthController.Login (TrackerAPI) in 203.0503ms
 2025-07-30 18:55:28.161 +03:00 [INF] Executed endpoint 'ElectricityTrackerAPI.Controllers.AuthController.Login (TrackerAPI)'
 2025-07-30 18:55:28.162 +03:00 [INF] Request finished HTTP/1.1 POST http://localhost:5143/api/auth/login - 200 null application/json; charset=utf-8 213.0231ms
+2025-07-30 19:16:34.200 +03:00 [INF] Request starting HTTP/1.1 OPTIONS http://localhost:5143/api/auth/login - null null
+2025-07-30 19:16:34.204 +03:00 [INF] CORS policy execution successful.
+2025-07-30 19:16:34.205 +03:00 [INF] Request finished HTTP/1.1 OPTIONS http://localhost:5143/api/auth/login - 204 null null 4.711ms
+2025-07-30 19:16:34.209 +03:00 [INF] Request starting HTTP/1.1 POST http://localhost:5143/api/auth/login - application/json 72
+2025-07-30 19:16:34.212 +03:00 [INF] CORS policy execution successful.
+2025-07-30 19:16:34.213 +03:00 [INF] Executing endpoint 'ElectricityTrackerAPI.Controllers.AuthController.Login (TrackerAPI)'
+2025-07-30 19:16:34.215 +03:00 [INF] Route matched with {action = "Login", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.ActionResult`1[ElectricityTrackerAPI.DTOs.LoginResponseDto]] Login(ElectricityTrackerAPI.DTOs.LoginDto) on controller ElectricityTrackerAPI.Controllers.AuthController (TrackerAPI).
+2025-07-30 19:16:34.308 +03:00 [INF] Executed DbCommand (28ms) [Parameters=[@__loginDto_Email_0='?'], CommandType='"Text"', CommandTimeout='30']
+SELECT u."Id", u."CreatedAt", u."DepartmentId", u."Email", u."FirstName", u."IsActive", u."LastLoginAt", u."LastName", u."PasswordHash", u."Phone", u."Role", u."TenantId", u."UpdatedAt", t."Id", t."Address", t."CompanyName", t."ContactPerson", t."CreatedAt", t."CustomDomain", t."Email", t."IsActive", t."MaxFacilities", t."MaxUsers", t."Phone", t."Status", t."Subdomain", t."SubscriptionEndDate", t."SubscriptionStartDate", t."TaxNumber", t."TaxOffice", t."UpdatedAt"
+FROM "Users" AS u
+INNER JOIN "Tenants" AS t ON u."TenantId" = t."Id"
+WHERE u."Email" = @__loginDto_Email_0 AND u."IsActive"
+LIMIT 1
+2025-07-30 19:16:34.480 +03:00 [INF] Executed DbCommand (24ms) [Parameters=[@p1='?' (DbType = Int32), @p0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+UPDATE "Users" SET "LastLoginAt" = @p0
+WHERE "Id" = @p1;
+2025-07-30 19:16:34.483 +03:00 [INF] User Activity: Login successful - User: testadmin@example.com
+2025-07-30 19:16:34.488 +03:00 [INF] Executed DbCommand (3ms) [Parameters=[@p0='?', @p1='?' (DbType = DateTime), @p2='?', @p3='?', @p4='?', @p5='?', @p6='?', @p7='?', @p8='?', @p9='?', @p10='?' (DbType = DateTime), @p11='?', @p12='?'], CommandType='"Text"', CommandTimeout='30']
+INSERT INTO "LogEntries" ("AdditionalData", "CreatedAt", "Exception", "IpAddress", "Level", "Message", "RequestMethod", "RequestPath", "Source", "TenantId", "Timestamp", "UserEmail", "UserId")
+VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12)
+RETURNING "Id";
+2025-07-30 19:16:34.492 +03:00 [INF] Executing OkObjectResult, writing value of type 'ElectricityTrackerAPI.DTOs.LoginResponseDto'.
+2025-07-30 19:16:34.495 +03:00 [INF] Executed action ElectricityTrackerAPI.Controllers.AuthController.Login (TrackerAPI) in 278.2158ms
+2025-07-30 19:16:34.497 +03:00 [INF] Executed endpoint 'ElectricityTrackerAPI.Controllers.AuthController.Login (TrackerAPI)'
+2025-07-30 19:16:34.498 +03:00 [INF] Request finished HTTP/1.1 POST http://localhost:5143/api/auth/login - 200 null application/json; charset=utf-8 289.4363ms

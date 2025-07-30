@@ -1,882 +1,1227 @@
-'use client'
+'use client';
 
-import React, { useState } from 'react'
-import { 
-  Card, 
-  Row, 
-  Col, 
-  Table, 
-  Button, 
-  Tag, 
-  Progress, 
-  Statistic, 
-  Typography, 
-  Divider,
-  Space,
-  Tooltip,
+import React, { useState, useMemo } from 'react';
+import {
+  Table,
+  Card,
+  Row,
+  Col,
+  Button,
+  Tag,
   Badge,
+  Modal,
+  Form,
+  Input,
   Select,
-  DatePicker,
+  Switch,
+  message,
+  Popconfirm,
+  Space,
+  Typography,
+  Divider,
+  Tooltip,
+  Progress,
+  Statistic,
   Tabs,
   List,
-  Avatar
-} from 'antd'
-import { 
-  ProCard,
-  PageContainer 
-} from '@ant-design/pro-components'
-import { 
+  Descriptions,
+  DatePicker,
+  InputNumber,
+  Alert,
+  Collapse,
+  Timeline,
+  Avatar,
+  Steps,
+  Upload,
+  Dropdown
+} from 'antd';
+import {
   BarChartOutlined,
-  LineChartOutlined,
   PieChartOutlined,
+  LineChartOutlined,
+  AreaChartOutlined,
+  FileExcelOutlined,
+  FilePdfOutlined,
   DownloadOutlined,
+  FilterOutlined,
+  SearchOutlined,
   EyeOutlined,
-  EditOutlined,
   DeleteOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  ExclamationCircleOutlined,
-  ThunderboltOutlined,
-  DatabaseOutlined,
-  CloudOutlined,
-  HddOutlined,
-  CalendarOutlined,
-  UserOutlined,
-  RiseOutlined,
-  FallOutlined,
   ReloadOutlined,
-  SettingOutlined
-} from '@ant-design/icons'
+  SettingOutlined,
+  GlobalOutlined,
+  UserOutlined,
+  WarningOutlined,
+  InfoCircleOutlined,
+  BugOutlined,
+  LockOutlined,
+  UnlockOutlined,
+  KeyOutlined,
+  TeamOutlined,
+  DollarOutlined,
+  CalendarOutlined,
+  ClearOutlined,
+  ExportOutlined,
+  SecurityScanOutlined,
+  StopOutlined,
+  PlayCircleOutlined,
+  FireOutlined,
+  ThunderboltOutlined,
+  DesktopOutlined,
+  HddOutlined,
+  WifiOutlined,
+  SyncOutlined,
+  BellOutlined,
+  MailOutlined,
+  MessageOutlined,
+  DashboardOutlined,
+  MonitorOutlined,
+  CloudServerOutlined,
+  DatabaseOutlined,
+  ThunderboltOutlined as LightningOutlined,
+  DropboxOutlined,
+  CarOutlined,
+  ToolOutlined,
+  CalculatorOutlined
+} from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
 
-const { Title, Text } = Typography
-const { Option } = Select
-const { RangePicker } = DatePicker
-const { TabPane } = Tabs
+const { Title, Text, Paragraph } = Typography;
+const { Option } = Select;
+const { TabPane } = Tabs;
+const { Panel } = Collapse;
+const { RangePicker } = DatePicker;
+const { TextArea } = Input;
+const { Step } = Steps;
 
-export default function ReportsMonitoringPage() {
-  const [selectedPeriod, setSelectedPeriod] = useState('month')
-  const [selectedTenant, setSelectedTenant] = useState('all')
+// Mock data
+const mockTenants = [
+  { id: 1, name: 'ABC Şirketi', domain: 'abc.com' },
+  { id: 2, name: 'XYZ Ltd.', domain: 'xyz.com' },
+  { id: 3, name: 'Tech Solutions', domain: 'techsolutions.com' },
+  { id: 4, name: 'Global Corp', domain: 'globalcorp.com' },
+  { id: 5, name: 'Startup Inc', domain: 'startupinc.com' }
+];
 
-  // Mock reporting data
-  const reportingStats = [
-    {
-      title: 'Toplam Tüketim',
-      value: '2,450 kWh',
-      icon: <ThunderboltOutlined style={{ fontSize: '24px', color: '#10b981' }} />,
-      color: '#10b981',
-      gradient: 'linear-gradient(135deg, #10b981, #059669)',
-      change: '+15.2%',
-      changeType: 'increase'
-    },
-    {
-      title: 'Maliyet',
-      value: '₺12,450',
-      icon: <BarChartOutlined style={{ fontSize: '24px', color: '#f59e0b' }} />,
-      color: '#f59e0b',
-      gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
-      change: '+8.7%',
-      changeType: 'increase'
-    },
-    {
-      title: 'API Çağrıları',
-      value: '45,230',
-      icon: <CloudOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />,
-      color: '#3b82f6',
-      gradient: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-      change: '+12.3%',
-      changeType: 'increase'
-    },
-    {
-      title: 'Veritabanı Boyutu',
-      value: '2.8 GB',
-      icon: <DatabaseOutlined style={{ fontSize: '24px', color: '#8b5cf6' }} />,
-      color: '#8b5cf6',
-      gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-      change: '+5.1%',
-      changeType: 'increase'
-    }
-  ]
+const mockDepartments = [
+  { id: 1, name: 'IT Departmanı', tenantId: 1 },
+  { id: 2, name: 'Muhasebe', tenantId: 1 },
+  { id: 3, name: 'Satış', tenantId: 1 },
+  { id: 4, name: 'Üretim', tenantId: 2 },
+  { id: 5, name: 'Ar-Ge', tenantId: 2 },
+  { id: 6, name: 'İnsan Kaynakları', tenantId: 3 },
+  { id: 7, name: 'Pazarlama', tenantId: 3 },
+  { id: 8, name: 'Operasyon', tenantId: 4 },
+  { id: 9, name: 'Finans', tenantId: 4 },
+  { id: 10, name: 'Müşteri Hizmetleri', tenantId: 5 }
+];
 
-  const tenantComparison = [
-    {
-      tenant: 'ABC Şirketi',
-      consumption: 850,
-      cost: 4250,
-      users: 25,
-      apiCalls: 12500,
-      status: 'active',
-      trend: 'up'
-    },
-    {
-      tenant: 'XYZ Ltd.',
-      consumption: 720,
-      cost: 3600,
-      users: 18,
-      apiCalls: 8900,
-      status: 'active',
-      trend: 'up'
-    },
-    {
-      tenant: 'DEF Corp.',
-      consumption: 650,
-      cost: 3250,
-      users: 15,
-      apiCalls: 7200,
-      status: 'active',
-      trend: 'down'
-    },
-    {
-      tenant: 'GHI Inc.',
-      consumption: 580,
-      cost: 2900,
-      users: 12,
-      apiCalls: 6500,
-      status: 'inactive',
-      trend: 'stable'
-    },
-    {
-      tenant: 'JKL Co.',
-      consumption: 420,
-      cost: 2100,
-      users: 8,
-      apiCalls: 4800,
-      status: 'active',
-      trend: 'up'
-    }
-  ]
-
-  const apiUsageData = [
-    {
-      endpoint: '/api/auth/login',
-      calls: 1250,
-      avgResponse: 120,
-      successRate: 98.5,
-      status: 'healthy'
-    },
-    {
-      endpoint: '/api/tenants',
-      calls: 890,
-      avgResponse: 85,
-      successRate: 99.2,
-      status: 'healthy'
-    },
-    {
-      endpoint: '/api/consumption',
-      calls: 2100,
-      avgResponse: 150,
-      successRate: 97.8,
-      status: 'warning'
-    },
-    {
-      endpoint: '/api/billing',
-      calls: 650,
-      avgResponse: 200,
-      successRate: 96.5,
-      status: 'error'
-    },
-    {
-      endpoint: '/api/reports',
-      calls: 320,
-      avgResponse: 300,
-      successRate: 99.0,
-      status: 'healthy'
-    }
-  ]
-
-  const systemAlerts = [
-    {
-      id: 1,
-      type: 'warning',
-      title: 'Yüksek CPU Kullanımı',
-      message: 'Sunucu CPU kullanımı %85\'in üzerine çıktı',
-      time: '2 saat önce',
-      tenant: 'ABC Şirketi'
-    },
-    {
-      id: 2,
-      type: 'error',
-      title: 'API Hata Oranı',
-      message: '/api/billing endpoint\'inde %3.5 hata oranı tespit edildi',
-      time: '4 saat önce',
-      tenant: 'Sistem'
-    },
-    {
-      id: 3,
-      type: 'info',
-      title: 'Yeni Tenant Eklendi',
-      message: 'MNO Ltd. sisteme kayıt oldu',
-      time: '6 saat önce',
-      tenant: 'Sistem'
-    },
-    {
-      id: 4,
-      type: 'success',
-      title: 'Backup Tamamlandı',
-      message: 'Günlük veritabanı yedeklemesi başarıyla tamamlandı',
-      time: '8 saat önce',
-      tenant: 'Sistem'
-    }
-  ]
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'healthy': return 'success'
-      case 'warning': return 'processing'
-      case 'error': return 'error'
-      case 'active': return 'success'
-      case 'inactive': return 'default'
-      default: return 'default'
-    }
+const mockMonthlyConsumption = [
+  {
+    id: 1,
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    month: '2024-01',
+    electricity: 1250,
+    water: 450,
+    gas: 320,
+    fuel: 180,
+    other: 95,
+    totalCost: 2850,
+    totalConsumption: 2295
+  },
+  {
+    id: 2,
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    month: '2024-02',
+    electricity: 1180,
+    water: 420,
+    gas: 310,
+    fuel: 175,
+    other: 90,
+    totalCost: 2720,
+    totalConsumption: 2175
+  },
+  {
+    id: 3,
+    tenantId: 2,
+    tenantName: 'XYZ Ltd.',
+    month: '2024-01',
+    electricity: 2100,
+    water: 680,
+    gas: 450,
+    fuel: 320,
+    other: 150,
+    totalCost: 4850,
+    totalConsumption: 3700
+  },
+  {
+    id: 4,
+    tenantId: 2,
+    tenantName: 'XYZ Ltd.',
+    month: '2024-02',
+    electricity: 1950,
+    water: 650,
+    gas: 420,
+    fuel: 300,
+    other: 140,
+    totalCost: 4560,
+    totalConsumption: 3460
+  },
+  {
+    id: 5,
+    tenantId: 3,
+    tenantName: 'Tech Solutions',
+    month: '2024-01',
+    electricity: 890,
+    water: 280,
+    gas: 180,
+    fuel: 120,
+    other: 75,
+    totalCost: 1890,
+    totalConsumption: 1545
   }
+];
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'healthy': return 'Sağlıklı'
-      case 'warning': return 'Uyarı'
-      case 'error': return 'Hata'
-      case 'active': return 'Aktif'
-      case 'inactive': return 'Pasif'
-      default: return 'Bilinmiyor'
-    }
+const mockExpenseByType = [
+  {
+    id: 1,
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    expenseType: 'electricity',
+    expenseTypeName: 'Elektrik',
+    january: 1250,
+    february: 1180,
+    march: 1320,
+    april: 1280,
+    may: 1400,
+    june: 1350,
+    total: 7780,
+    average: 1297,
+    percentage: 45.2
+  },
+  {
+    id: 2,
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    expenseType: 'water',
+    expenseTypeName: 'Su',
+    january: 450,
+    february: 420,
+    march: 480,
+    april: 460,
+    may: 520,
+    june: 490,
+    total: 2820,
+    average: 470,
+    percentage: 16.4
+  },
+  {
+    id: 3,
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    expenseType: 'gas',
+    expenseTypeName: 'Doğalgaz',
+    january: 320,
+    february: 310,
+    march: 350,
+    april: 330,
+    may: 380,
+    june: 360,
+    total: 2050,
+    average: 342,
+    percentage: 11.9
+  },
+  {
+    id: 4,
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    expenseType: 'fuel',
+    expenseTypeName: 'Yakıt',
+    january: 180,
+    february: 175,
+    march: 200,
+    april: 190,
+    may: 220,
+    june: 210,
+    total: 1175,
+    average: 196,
+    percentage: 6.8
+  },
+  {
+    id: 5,
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    expenseType: 'other',
+    expenseTypeName: 'Diğer',
+    january: 95,
+    february: 90,
+    march: 110,
+    april: 105,
+    may: 125,
+    june: 120,
+    total: 645,
+    average: 108,
+    percentage: 3.7
   }
+];
 
-  const getTrendIcon = (trend: string) => {
-    switch (trend) {
-      case 'up': return <RiseOutlined style={{ color: '#10b981' }} />
-      case 'down': return <FallOutlined style={{ color: '#ef4444' }} />
-      case 'stable': return <BarChartOutlined style={{ color: '#64748b' }} />
-      default: return <BarChartOutlined />
-    }
+const mockYearlyComparison = [
+  {
+    year: 2022,
+    totalConsumption: 18500,
+    totalCost: 42500,
+    electricity: 8500,
+    water: 3200,
+    gas: 2800,
+    fuel: 1800,
+    other: 2200
+  },
+  {
+    year: 2023,
+    totalConsumption: 19800,
+    totalCost: 45600,
+    electricity: 9200,
+    water: 3400,
+    gas: 3000,
+    fuel: 1900,
+    other: 2300
+  },
+  {
+    year: 2024,
+    totalConsumption: 17200,
+    totalCost: 39500,
+    electricity: 8000,
+    water: 2900,
+    gas: 2600,
+    fuel: 1700,
+    other: 2000
   }
+];
 
-  const getAlertIcon = (type: string) => {
-    switch (type) {
-      case 'warning': return <ExclamationCircleOutlined style={{ color: '#f59e0b' }} />
-      case 'error': return <ExclamationCircleOutlined style={{ color: '#ef4444' }} />
-      case 'info': return <ClockCircleOutlined style={{ color: '#3b82f6' }} />
-      case 'success': return <CheckCircleOutlined style={{ color: '#10b981' }} />
-      default: return <ClockCircleOutlined />
-    }
+const mockDepartmentReports = [
+  {
+    id: 1,
+    departmentId: 1,
+    departmentName: 'IT Departmanı',
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    month: '2024-01',
+    electricity: 450,
+    water: 120,
+    gas: 80,
+    fuel: 50,
+    other: 30,
+    totalCost: 730,
+    employeeCount: 25,
+    costPerEmployee: 29.2
+  },
+  {
+    id: 2,
+    departmentId: 2,
+    departmentName: 'Muhasebe',
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    month: '2024-01',
+    electricity: 280,
+    water: 90,
+    gas: 60,
+    fuel: 35,
+    other: 25,
+    totalCost: 490,
+    employeeCount: 15,
+    costPerEmployee: 32.7
+  },
+  {
+    id: 3,
+    departmentId: 4,
+    departmentName: 'Üretim',
+    tenantId: 2,
+    tenantName: 'XYZ Ltd.',
+    month: '2024-01',
+    electricity: 1200,
+    water: 350,
+    gas: 220,
+    fuel: 180,
+    other: 80,
+    totalCost: 2030,
+    employeeCount: 80,
+    costPerEmployee: 25.4
   }
+];
 
-  const tenantColumns = [
+const resourceTypes = [
+  { value: 'electricity', label: 'Elektrik', icon: <LightningOutlined />, color: '#faad14' },
+  { value: 'water', label: 'Su', icon: <DropboxOutlined />, color: '#1890ff' },
+  { value: 'gas', label: 'Doğalgaz', icon: <FireOutlined />, color: '#ff4d4f' },
+  { value: 'fuel', label: 'Yakıt', icon: <CarOutlined />, color: '#722ed1' },
+  { value: 'other', label: 'Diğer', icon: <ToolOutlined />, color: '#52c41a' }
+];
+
+const months = [
+  'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+  'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+];
+
+export default function ReportsPage() {
+  const [monthlyConsumption, setMonthlyConsumption] = useState(mockMonthlyConsumption);
+  const [expenseByType, setExpenseByType] = useState(mockExpenseByType);
+  const [yearlyComparison, setYearlyComparison] = useState(mockYearlyComparison);
+  const [departmentReports, setDepartmentReports] = useState(mockDepartmentReports);
+  const [filters, setFilters] = useState({
+    tenantId: undefined,
+    resourceType: undefined,
+    dateRange: undefined,
+    departmentId: undefined
+  });
+
+  // Statistics
+  const stats = useMemo(() => [
+    {
+      title: 'Toplam Tüketim (Bu Ay)',
+      value: monthlyConsumption.reduce((sum, item) => sum + item.totalConsumption, 0).toLocaleString(),
+      icon: <CalculatorOutlined />,
+      color: '#1890ff',
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    },
+    {
+      title: 'Toplam Maliyet (Bu Ay)',
+      value: `₺${monthlyConsumption.reduce((sum, item) => sum + item.totalCost, 0).toLocaleString()}`,
+      icon: <DollarOutlined />,
+      color: '#52c41a',
+      gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
+    },
+    {
+      title: 'Ortalama Tüketim',
+      value: `${Math.round(monthlyConsumption.reduce((sum, item) => sum + item.totalConsumption, 0) / monthlyConsumption.length).toLocaleString()}`,
+      icon: <BarChartOutlined />,
+      color: '#faad14',
+      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+    },
+    {
+      title: 'Aktif Tenant',
+      value: new Set(monthlyConsumption.map(item => item.tenantId)).size,
+      icon: <GlobalOutlined />,
+      color: '#ff4d4f',
+      gradient: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)'
+    }
+  ], [monthlyConsumption]);
+
+  const monthlyConsumptionColumns: ColumnsType<any> = [
     {
       title: 'Tenant',
-      dataIndex: 'tenant',
-      key: 'tenant',
-      render: (tenant: string) => (
-        <div className="tenant-info">
-          <UserOutlined style={{ marginRight: '8px', color: '#64748b' }} />
-          {tenant}
-        </div>
-      ),
-    },
-    {
-      title: 'Tüketim (kWh)',
-      dataIndex: 'consumption',
-      key: 'consumption',
-      render: (consumption: number) => (
-        <Text strong style={{ fontSize: '16px' }}>{consumption.toLocaleString()}</Text>
-      ),
-    },
-    {
-      title: 'Maliyet (₺)',
-      dataIndex: 'cost',
-      key: 'cost',
-      render: (cost: number) => (
-        <Text strong style={{ fontSize: '16px', color: '#f59e0b' }}>₺{cost.toLocaleString()}</Text>
-      ),
-    },
-    {
-      title: 'Kullanıcılar',
-      dataIndex: 'users',
-      key: 'users',
-      render: (users: number) => (
-        <Tag color="blue" className="user-tag">
-          {users}
+      dataIndex: 'tenantName',
+      key: 'tenantName',
+      width: 200,
+      render: (tenantName) => (
+        <Tag color="blue" icon={<GlobalOutlined />}>
+          {tenantName}
         </Tag>
-      ),
+      )
     },
     {
-      title: 'API Çağrıları',
-      dataIndex: 'apiCalls',
-      key: 'apiCalls',
-      render: (calls: number) => (
-        <Text type="secondary">{calls.toLocaleString()}</Text>
-      ),
+      title: 'Ay',
+      dataIndex: 'month',
+      key: 'month',
+      width: 120,
+      render: (month) => {
+        const [year, monthNum] = month.split('-');
+        return `${months[parseInt(monthNum) - 1]} ${year}`;
+      }
     },
     {
-      title: 'Durum',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => (
-        <Badge 
-          status={getStatusColor(status) as any} 
-          text={getStatusText(status)}
-        />
-      ),
-    },
-    {
-      title: 'Trend',
-      dataIndex: 'trend',
-      key: 'trend',
-      render: (trend: string) => (
-        <div className="trend-indicator">
-          {getTrendIcon(trend)}
+      title: 'Elektrik',
+      key: 'electricity',
+      width: 120,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.electricity.toLocaleString()} kWh</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>₺{record.electricity}</div>
         </div>
-      ),
+      )
     },
-  ]
+    {
+      title: 'Su',
+      key: 'water',
+      width: 120,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.water.toLocaleString()} m³</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>₺{record.water}</div>
+        </div>
+      )
+    },
+    {
+      title: 'Doğalgaz',
+      key: 'gas',
+      width: 120,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.gas.toLocaleString()} m³</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>₺{record.gas}</div>
+        </div>
+      )
+    },
+    {
+      title: 'Yakıt',
+      key: 'fuel',
+      width: 120,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.fuel.toLocaleString()} L</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>₺{record.fuel}</div>
+        </div>
+      )
+    },
+    {
+      title: 'Diğer',
+      key: 'other',
+      width: 120,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.other.toLocaleString()}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>₺{record.other}</div>
+        </div>
+      )
+    },
+    {
+      title: 'Toplam Tüketim',
+      key: 'totalConsumption',
+      width: 150,
+      render: (_, record) => (
+        <div style={{ fontWeight: 'bold', color: '#1890ff' }}>
+          {record.totalConsumption.toLocaleString()}
+        </div>
+      )
+    },
+    {
+      title: 'Toplam Maliyet',
+      key: 'totalCost',
+      width: 150,
+      render: (_, record) => (
+        <div style={{ fontWeight: 'bold', color: '#52c41a' }}>
+          ₺{record.totalCost.toLocaleString()}
+        </div>
+      )
+    },
+    {
+      title: 'İşlemler',
+      key: 'actions',
+      width: 120,
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="Detayları Görüntüle">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewDetails(record)}
+            />
+          </Tooltip>
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: 'excel',
+                  label: 'Excel İndir',
+                  icon: <FileExcelOutlined />
+                },
+                {
+                  key: 'pdf',
+                  label: 'PDF İndir',
+                  icon: <FilePdfOutlined />
+                }
+              ],
+              onClick: ({ key }) => handleExport(record, key)
+            }}
+          >
+            <Button type="text" icon={<DownloadOutlined />} />
+          </Dropdown>
+        </Space>
+      )
+    }
+  ];
 
-  const apiColumns = [
+  const expenseByTypeColumns: ColumnsType<any> = [
     {
-      title: 'Endpoint',
-      dataIndex: 'endpoint',
-      key: 'endpoint',
-      render: (endpoint: string) => (
-        <Text code style={{ fontSize: '12px' }}>{endpoint}</Text>
-      ),
+      title: 'Tenant',
+      dataIndex: 'tenantName',
+      key: 'tenantName',
+      width: 150,
+      render: (tenantName) => (
+        <Tag color="blue">{tenantName}</Tag>
+      )
     },
     {
-      title: 'Çağrı Sayısı',
-      dataIndex: 'calls',
-      key: 'calls',
-      render: (calls: number) => (
-        <Text strong>{calls.toLocaleString()}</Text>
-      ),
+      title: 'Gider Türü',
+      dataIndex: 'expenseTypeName',
+      key: 'expenseTypeName',
+      width: 150,
+      render: (name, record) => {
+        const resourceType = resourceTypes.find(t => t.value === record.expenseType);
+        return (
+          <Tag color={resourceType?.color} icon={resourceType?.icon}>
+            {name}
+          </Tag>
+        );
+      }
     },
     {
-      title: 'Ort. Yanıt (ms)',
-      dataIndex: 'avgResponse',
-      key: 'avgResponse',
-      render: (response: number) => (
-        <Text type="secondary">{response}ms</Text>
-      ),
+      title: 'Ocak',
+      dataIndex: 'january',
+      key: 'january',
+      width: 100,
+      render: (value) => `₺${value.toLocaleString()}`
     },
     {
-      title: 'Başarı Oranı',
-      dataIndex: 'successRate',
-      key: 'successRate',
-      render: (rate: number) => (
-        <div className="success-rate">
-          <Progress 
-            percent={rate} 
-            size="small" 
-            strokeColor={rate >= 98 ? '#10b981' : rate >= 95 ? '#f59e0b' : '#ef4444'}
-            showInfo={false}
-          />
-          <Text style={{ marginLeft: '8px', fontSize: '12px' }}>{rate}%</Text>
+      title: 'Şubat',
+      dataIndex: 'february',
+      key: 'february',
+      width: 100,
+      render: (value) => `₺${value.toLocaleString()}`
+    },
+    {
+      title: 'Mart',
+      dataIndex: 'march',
+      key: 'march',
+      width: 100,
+      render: (value) => `₺${value.toLocaleString()}`
+    },
+    {
+      title: 'Nisan',
+      dataIndex: 'april',
+      key: 'april',
+      width: 100,
+      render: (value) => `₺${value.toLocaleString()}`
+    },
+    {
+      title: 'Mayıs',
+      dataIndex: 'may',
+      key: 'may',
+      width: 100,
+      render: (value) => `₺${value.toLocaleString()}`
+    },
+    {
+      title: 'Haziran',
+      dataIndex: 'june',
+      key: 'june',
+      width: 100,
+      render: (value) => `₺${value.toLocaleString()}`
+    },
+    {
+      title: 'Toplam',
+      key: 'total',
+      width: 120,
+      render: (_, record) => (
+        <div style={{ fontWeight: 'bold', color: '#52c41a' }}>
+          ₺{record.total.toLocaleString()}
         </div>
-      ),
+      )
     },
     {
-      title: 'Durum',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => (
-        <Badge 
-          status={getStatusColor(status) as any} 
-          text={getStatusText(status)}
-        />
-      ),
+      title: 'Ortalama',
+      key: 'average',
+      width: 120,
+      render: (_, record) => (
+        <div style={{ color: '#666' }}>
+          ₺{record.average.toLocaleString()}
+        </div>
+      )
     },
-  ]
+    {
+      title: 'Yüzde',
+      key: 'percentage',
+      width: 100,
+      render: (_, record) => (
+        <Tag color="blue">{record.percentage}%</Tag>
+      )
+    }
+  ];
+
+  const yearlyComparisonColumns: ColumnsType<any> = [
+    {
+      title: 'Yıl',
+      dataIndex: 'year',
+      key: 'year',
+      width: 100
+    },
+    {
+      title: 'Toplam Tüketim',
+      key: 'totalConsumption',
+      width: 150,
+      render: (_, record) => (
+        <div style={{ fontWeight: 'bold', color: '#1890ff' }}>
+          {record.totalConsumption.toLocaleString()}
+        </div>
+      )
+    },
+    {
+      title: 'Toplam Maliyet',
+      key: 'totalCost',
+      width: 150,
+      render: (_, record) => (
+        <div style={{ fontWeight: 'bold', color: '#52c41a' }}>
+          ₺{record.totalCost.toLocaleString()}
+        </div>
+      )
+    },
+    {
+      title: 'Elektrik',
+      dataIndex: 'electricity',
+      key: 'electricity',
+      width: 120,
+      render: (value) => `₺${value.toLocaleString()}`
+    },
+    {
+      title: 'Su',
+      dataIndex: 'water',
+      key: 'water',
+      width: 120,
+      render: (value) => `₺${value.toLocaleString()}`
+    },
+    {
+      title: 'Doğalgaz',
+      dataIndex: 'gas',
+      key: 'gas',
+      width: 120,
+      render: (value) => `₺${value.toLocaleString()}`
+    },
+    {
+      title: 'Yakıt',
+      dataIndex: 'fuel',
+      key: 'fuel',
+      width: 120,
+      render: (value) => `₺${value.toLocaleString()}`
+    },
+    {
+      title: 'Diğer',
+      dataIndex: 'other',
+      key: 'other',
+      width: 120,
+      render: (value) => `₺${value.toLocaleString()}`
+    },
+    {
+      title: 'İşlemler',
+      key: 'actions',
+      width: 120,
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="Grafik Görüntüle">
+            <Button
+              type="text"
+              icon={<BarChartOutlined />}
+              onClick={() => handleViewChart(record)}
+            />
+          </Tooltip>
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: 'excel',
+                  label: 'Excel İndir',
+                  icon: <FileExcelOutlined />
+                },
+                {
+                  key: 'pdf',
+                  label: 'PDF İndir',
+                  icon: <FilePdfOutlined />
+                }
+              ],
+              onClick: ({ key }) => handleExport(record, key)
+            }}
+          >
+            <Button type="text" icon={<DownloadOutlined />} />
+          </Dropdown>
+        </Space>
+      )
+    }
+  ];
+
+  const departmentReportColumns: ColumnsType<any> = [
+    {
+      title: 'Departman',
+      key: 'department',
+      width: 200,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.departmentName}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>{record.tenantName}</div>
+        </div>
+      )
+    },
+    {
+      title: 'Ay',
+      dataIndex: 'month',
+      key: 'month',
+      width: 120,
+      render: (month) => {
+        const [year, monthNum] = month.split('-');
+        return `${months[parseInt(monthNum) - 1]} ${year}`;
+      }
+    },
+    {
+      title: 'Elektrik',
+      key: 'electricity',
+      width: 120,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.electricity.toLocaleString()} kWh</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>₺{record.electricity}</div>
+        </div>
+      )
+    },
+    {
+      title: 'Su',
+      key: 'water',
+      width: 120,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.water.toLocaleString()} m³</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>₺{record.water}</div>
+        </div>
+      )
+    },
+    {
+      title: 'Doğalgaz',
+      key: 'gas',
+      width: 120,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.gas.toLocaleString()} m³</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>₺{record.gas}</div>
+        </div>
+      )
+    },
+    {
+      title: 'Yakıt',
+      key: 'fuel',
+      width: 120,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.fuel.toLocaleString()} L</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>₺{record.fuel}</div>
+        </div>
+      )
+    },
+    {
+      title: 'Diğer',
+      key: 'other',
+      width: 120,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.other.toLocaleString()}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>₺{record.other}</div>
+        </div>
+      )
+    },
+    {
+      title: 'Toplam Maliyet',
+      key: 'totalCost',
+      width: 150,
+      render: (_, record) => (
+        <div style={{ fontWeight: 'bold', color: '#52c41a' }}>
+          ₺{record.totalCost.toLocaleString()}
+        </div>
+      )
+    },
+    {
+      title: 'Çalışan Sayısı',
+      dataIndex: 'employeeCount',
+      key: 'employeeCount',
+      width: 120
+    },
+    {
+      title: 'Kişi Başı Maliyet',
+      key: 'costPerEmployee',
+      width: 150,
+      render: (_, record) => (
+        <div style={{ color: '#666' }}>
+          ₺{record.costPerEmployee.toFixed(1)}
+        </div>
+      )
+    },
+    {
+      title: 'İşlemler',
+      key: 'actions',
+      width: 120,
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="Detayları Görüntüle">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewDetails(record)}
+            />
+          </Tooltip>
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: 'excel',
+                  label: 'Excel İndir',
+                  icon: <FileExcelOutlined />
+                },
+                {
+                  key: 'pdf',
+                  label: 'PDF İndir',
+                  icon: <FilePdfOutlined />
+                }
+              ],
+              onClick: ({ key }) => handleExport(record, key)
+            }}
+          >
+            <Button type="text" icon={<DownloadOutlined />} />
+          </Dropdown>
+        </Space>
+      )
+    }
+  ];
+
+  const handleViewDetails = (record: any) => {
+    message.info(`${record.tenantName || record.departmentName} detayları yakında eklenecek`);
+  };
+
+  const handleViewChart = (record: any) => {
+    message.info(`${record.year} yılı grafik görünümü yakında eklenecek`);
+  };
+
+  const handleExport = (record: any, format: string) => {
+    message.success(`${record.tenantName || record.departmentName || record.year} ${format.toUpperCase()} formatında indiriliyor...`);
+  };
+
+  const handleFilterChange = (key: string, value: any) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      tenantId: undefined,
+      resourceType: undefined,
+      dateRange: undefined,
+      departmentId: undefined
+    });
+  };
 
   return (
-    <PageContainer
-      header={{
-        title: (
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg shadow-lg">
-              <BarChartOutlined style={{ fontSize: '20px', color: 'white' }} />
-            </div>
-            <div>
-              <Title level={3} style={{ margin: 0, color: '#1e293b' }}>
-                Raporlama & İzleme
-              </Title>
-              <Text type="secondary" style={{ fontSize: '14px' }}>
-                Sistem performansını izleyin, raporlar oluşturun ve analizler yapın.
-              </Text>
-            </div>
-          </div>
-        ),
-        breadcrumb: {},
-      }}
-    >
-      <div className="reports-monitoring-container">
-        {/* Statistics Cards */}
-        <Row gutter={[16, 16]} className="mb-6">
-          {reportingStats.map((stat, index) => (
-            <Col xs={24} sm={12} lg={6} key={index}>
-              <Card 
-                className="stat-card"
-                style={{
-                  background: stat.gradient,
-                  border: 'none',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-                  overflow: 'hidden',
-                  position: 'relative'
-                }}
-              >
-                <div className="stat-card-content">
-                  <div className="stat-icon">
-                    {stat.icon}
-                  </div>
-                  <div className="stat-info">
-                    <div className="stat-value">{stat.value}</div>
-                    <div className="stat-title">{stat.title}</div>
-                    <div className={`stat-change ${stat.changeType}`}>
-                      {stat.change}
-                    </div>
-                  </div>
+    <div style={{ padding: '24px' }}>
+      <Title level={2}>
+        <BarChartOutlined /> Raporlama
+      </Title>
+
+      {/* Statistics Cards */}
+      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+        {stats.map((stat, index) => (
+          <Col xs={24} sm={12} lg={6} key={index}>
+            <Card
+              style={{
+                background: stat.gradient,
+                color: 'white',
+                border: 'none'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{stat.value}</div>
+                  <div style={{ fontSize: '14px', opacity: 0.9 }}>{stat.title}</div>
                 </div>
-                <div className="stat-card-overlay"></div>
-              </Card>
-            </Col>
-          ))}
+                <div style={{ fontSize: '32px', opacity: 0.8 }}>
+                  {stat.icon}
+                </div>
+              </div>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      {/* Filters */}
+      <Card style={{ marginBottom: '24px' }}>
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} sm={6}>
+            <Select
+              placeholder="Tenant Seçin"
+              style={{ width: '100%' }}
+              value={filters.tenantId}
+              onChange={(value) => handleFilterChange('tenantId', value)}
+              allowClear
+            >
+              {mockTenants.map(tenant => (
+                <Option key={tenant.id} value={tenant.id}>
+                  {tenant.name}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} sm={6}>
+            <Select
+              placeholder="Kaynak Türü"
+              style={{ width: '100%' }}
+              value={filters.resourceType}
+              onChange={(value) => handleFilterChange('resourceType', value)}
+              allowClear
+            >
+              {resourceTypes.map(type => (
+                <Option key={type.value} value={type.value}>
+                  {type.label}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} sm={6}>
+            <RangePicker
+              style={{ width: '100%' }}
+              placeholder={['Başlangıç', 'Bitiş']}
+              value={filters.dateRange}
+              onChange={(dates) => handleFilterChange('dateRange', dates)}
+            />
+          </Col>
+          <Col xs={24} sm={6}>
+            <Space>
+              <Button
+                icon={<FilterOutlined />}
+                onClick={clearFilters}
+              >
+                Temizle
+              </Button>
+              <Button
+                type="primary"
+                icon={<SearchOutlined />}
+              >
+                Filtrele
+              </Button>
+            </Space>
+          </Col>
         </Row>
+      </Card>
 
-        {/* Filters */}
-        <ProCard
-          className="filters-card"
-          style={{
-            borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-            border: '1px solid #e2e8f0',
-            marginBottom: '24px'
-          }}
+      {/* Main Reports Tabs */}
+      <Tabs defaultActiveKey="monthly" size="large">
+        <TabPane
+          tab={
+            <span>
+              <BarChartOutlined />
+              Aylık Tüketim Raporu
+            </span>
+          }
+          key="monthly"
         >
-          <Row gutter={[16, 16]} align="middle">
-            <Col xs={24} sm={8}>
-              <div className="filter-item">
-                <Text strong style={{ marginBottom: '8px', display: 'block' }}>Dönem:</Text>
-                <Select
-                  value={selectedPeriod}
-                  onChange={setSelectedPeriod}
-                  style={{ width: '100%' }}
+          <Card
+            title="Tenant Bazlı Aylık Tüketim Raporu"
+            extra={
+              <Space>
+                <Button
+                  icon={<FileExcelOutlined />}
+                  onClick={() => message.info('Excel raporu indiriliyor...')}
                 >
-                  <Option value="day">Günlük</Option>
-                  <Option value="week">Haftalık</Option>
-                  <Option value="month">Aylık</Option>
-                  <Option value="quarter">Çeyreklik</Option>
-                  <Option value="year">Yıllık</Option>
-                </Select>
-              </div>
-            </Col>
-            <Col xs={24} sm={8}>
-              <div className="filter-item">
-                <Text strong style={{ marginBottom: '8px', display: 'block' }}>Tenant:</Text>
-                <Select
-                  value={selectedTenant}
-                  onChange={setSelectedTenant}
-                  style={{ width: '100%' }}
+                  Excel İndir
+                </Button>
+                <Button
+                  icon={<FilePdfOutlined />}
+                  onClick={() => message.info('PDF raporu indiriliyor...')}
                 >
-                  <Option value="all">Tümü</Option>
-                  <Option value="ABC Şirketi">ABC Şirketi</Option>
-                  <Option value="XYZ Ltd.">XYZ Ltd.</Option>
-                  <Option value="DEF Corp.">DEF Corp.</Option>
-                  <Option value="GHI Inc.">GHI Inc.</Option>
-                  <Option value="JKL Co.">JKL Co.</Option>
-                </Select>
-              </div>
-            </Col>
-            <Col xs={24} sm={8}>
-              <div className="filter-item">
-                <Text strong style={{ marginBottom: '8px', display: 'block' }}>Tarih Aralığı:</Text>
-                <RangePicker style={{ width: '100%' }} />
-              </div>
-            </Col>
-          </Row>
-        </ProCard>
+                  PDF İndir
+                </Button>
+              </Space>
+            }
+          >
+            <Table
+              columns={monthlyConsumptionColumns}
+              dataSource={monthlyConsumption}
+              rowKey="id"
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) =>
+                  `${range[0]}-${range[1]} / ${total} kayıt`
+              }}
+              scroll={{ x: 1400 }}
+            />
+          </Card>
+        </TabPane>
 
-        {/* Main Content Tabs */}
-        <Tabs 
-          defaultActiveKey="1" 
-          className="reports-tabs"
-          items={[
-            {
-              key: '1',
-              label: (
-                <span>
-                  <BarChartOutlined />
-                  Tenant Karşılaştırması
-                </span>
-              ),
-              children: (
-                <ProCard
-                  className="table-card"
-                  style={{
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-                    border: '1px solid #e2e8f0'
-                  }}
+        <TabPane
+          tab={
+            <span>
+              <PieChartOutlined />
+              Gider Türü Raporu
+            </span>
+          }
+          key="expense"
+        >
+          <Card
+            title="Gider Türüne Göre Toplam Maliyet Raporu"
+            extra={
+              <Space>
+                <Button
+                  icon={<FileExcelOutlined />}
+                  onClick={() => message.info('Excel raporu indiriliyor...')}
                 >
-                  <Table
-                    columns={tenantColumns}
-                    dataSource={tenantComparison}
-                    rowKey="tenant"
-                    pagination={{
-                      total: tenantComparison.length,
-                      pageSize: 10,
-                      showSizeChanger: true,
-                      showQuickJumper: true,
-                      showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} tenant`,
-                    }}
-                    className="tenant-table"
-                  />
-                </ProCard>
-              )
-            },
-            {
-              key: '2',
-              label: (
-                <span>
-                  <LineChartOutlined />
-                  API Kullanımı
-                </span>
-              ),
-              children: (
-                <ProCard
-                  className="table-card"
-                  style={{
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-                    border: '1px solid #e2e8f0'
-                  }}
+                  Excel İndir
+                </Button>
+                <Button
+                  icon={<FilePdfOutlined />}
+                  onClick={() => message.info('PDF raporu indiriliyor...')}
                 >
-                  <Table
-                    columns={apiColumns}
-                    dataSource={apiUsageData}
-                    rowKey="endpoint"
-                    pagination={{
-                      total: apiUsageData.length,
-                      pageSize: 10,
-                      showSizeChanger: true,
-                      showQuickJumper: true,
-                      showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} endpoint`,
-                    }}
-                    className="api-table"
-                  />
-                </ProCard>
-              )
-            },
-            {
-              key: '3',
-              label: (
-                <span>
-                  <PieChartOutlined />
-                  Sistem Uyarıları
-                </span>
-              ),
-              children: (
-                <Row gutter={[16, 16]}>
-                  <Col xs={24} lg={16}>
-                    <ProCard
-                      title={
-                        <div className="flex items-center space-x-2">
-                          <ExclamationCircleOutlined style={{ color: '#f59e0b', fontSize: '18px' }} />
-                          <span style={{ color: '#1e293b', fontWeight: 600 }}>Son Uyarılar</span>
-                        </div>
-                      }
-                      className="alerts-card"
-                      style={{
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-                        border: '1px solid #e2e8f0'
-                      }}
-                    >
-                      <List
-                        dataSource={systemAlerts}
-                        renderItem={(alert) => (
-                          <List.Item className="alert-item">
-                            <List.Item.Meta
-                              avatar={
-                                <Avatar 
-                                  icon={getAlertIcon(alert.type)}
-                                  style={{ 
-                                    backgroundColor: alert.type === 'warning' ? '#fef3c7' : 
-                                                   alert.type === 'error' ? '#fee2e2' : 
-                                                   alert.type === 'info' ? '#dbeafe' : '#d1fae5'
-                                  }}
-                                />
-                              }
-                              title={
-                                <div className="alert-title">
-                                  <Text strong>{alert.title}</Text>
-                                  <Tag color={alert.type === 'warning' ? 'orange' : 
-                                             alert.type === 'error' ? 'red' : 
-                                             alert.type === 'info' ? 'blue' : 'green'}>
-                                    {alert.tenant}
-                                  </Tag>
-                                </div>
-                              }
-                              description={
-                                <div className="alert-description">
-                                  <Text type="secondary">{alert.message}</Text>
-                                  <Text type="secondary" style={{ fontSize: '12px' }}>
-                                    {alert.time}
-                                  </Text>
-                                </div>
-                              }
-                            />
-                          </List.Item>
-                        )}
-                        className="alerts-list"
-                      />
-                    </ProCard>
-                  </Col>
-                  <Col xs={24} lg={8}>
-                    <ProCard
-                      title={
-                        <div className="flex items-center space-x-2">
-                          <SettingOutlined style={{ color: '#8b5cf6', fontSize: '18px' }} />
-                          <span style={{ color: '#1e293b', fontWeight: 600 }}>Hızlı İşlemler</span>
-                        </div>
-                      }
-                      className="actions-card"
-                      style={{
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-                        border: '1px solid #e2e8f0'
-                      }}
-                    >
-                      <div className="quick-actions">
-                        <Button
-                          type="primary"
-                          icon={<DownloadOutlined />}
-                          size="large"
-                          block
-                          style={{
-                            background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                            border: 'none',
-                            borderRadius: '8px',
-                            marginBottom: '12px'
-                          }}
-                        >
-                          Rapor İndir
-                        </Button>
-                        <Button
-                          icon={<ReloadOutlined />}
-                          size="large"
-                          block
-                          style={{
-                            border: '2px solid #e2e8f0',
-                            borderRadius: '8px',
-                            marginBottom: '12px'
-                          }}
-                        >
-                          Verileri Yenile
-                        </Button>
-                        <Button
-                          icon={<BarChartOutlined />}
-                          size="large"
-                          block
-                          style={{
-                            border: '2px solid #e2e8f0',
-                            borderRadius: '8px'
-                          }}
-                        >
-                          Detaylı Analiz
-                        </Button>
-                      </div>
-                    </ProCard>
-                  </Col>
-                </Row>
-              )
+                  PDF İndir
+                </Button>
+              </Space>
             }
-          ]}
-        />
+          >
+            <Table
+              columns={expenseByTypeColumns}
+              dataSource={expenseByType}
+              rowKey="id"
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) =>
+                  `${range[0]}-${range[1]} / ${total} kayıt`
+              }}
+              scroll={{ x: 1400 }}
+            />
+          </Card>
+        </TabPane>
 
-        <style jsx>{`
-          .reports-monitoring-container {
-            padding: 0;
+        <TabPane
+          tab={
+            <span>
+              <LineChartOutlined />
+              Yıl Bazlı Karşılaştırma
+            </span>
           }
-          
-          .stat-card {
-            transition: all 0.3s ease;
-            cursor: pointer;
-          }
-          
-          .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15) !important;
-          }
-          
-          .stat-card-content {
-            position: relative;
-            z-index: 2;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 20px;
-            color: white;
-          }
-          
-          .stat-icon {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 12px;
-            backdrop-filter: blur(10px);
-          }
-          
-          .stat-info {
-            text-align: right;
-          }
-          
-          .stat-value {
-            font-size: 28px;
-            font-weight: bold;
-            line-height: 1;
-            margin-bottom: 4px;
-          }
-          
-          .stat-title {
-            font-size: 14px;
-            opacity: 0.9;
-            font-weight: 500;
-            margin-bottom: 4px;
-          }
-          
-          .stat-change {
-            font-size: 12px;
-            font-weight: 600;
-          }
-          
-          .stat-change.increase {
-            color: #10b981;
-          }
-          
-          .stat-change.decrease {
-            color: #ef4444;
-          }
-          
-          .stat-card-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
-            z-index: 1;
-          }
-          
-          .filters-card, .table-card, .alerts-card, .actions-card {
-            transition: all 0.3s ease;
-          }
-          
-          .filters-card:hover, .table-card:hover, .alerts-card:hover, .actions-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
-          }
-          
-          .filter-item {
-            margin-bottom: 16px;
-          }
-          
-          .tenant-info {
-            display: flex;
-            align-items: center;
-            font-weight: 500;
-          }
-          
-          .user-tag {
-            font-weight: 600;
-            border-radius: 6px;
-          }
-          
-          .trend-indicator {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-          }
-          
-          .success-rate {
-            display: flex;
-            align-items: center;
-            width: 100%;
-          }
-          
-          .tenant-table :global(.ant-table-thead > tr > th),
-          .api-table :global(.ant-table-thead > tr > th) {
-            background: #f8fafc;
-            font-weight: 600;
-            color: #374151;
-            border-bottom: 2px solid #e2e8f0;
-          }
-          
-          .tenant-table :global(.ant-table-tbody > tr:hover > td),
-          .api-table :global(.ant-table-tbody > tr:hover > td) {
-            background: rgba(59, 130, 246, 0.05);
-          }
-          
-          .reports-tabs :global(.ant-tabs-tab) {
-            font-weight: 600;
-            color: #64748b;
-          }
-          
-          .reports-tabs :global(.ant-tabs-tab-active) {
-            color: #3b82f6;
-          }
-          
-          .reports-tabs :global(.ant-tabs-ink-bar) {
-            background: #3b82f6;
-          }
-          
-          .alert-item {
-            padding: 16px 0;
-            border-bottom: 1px solid #f1f5f9;
-          }
-          
-          .alert-item:last-child {
-            border-bottom: none;
-          }
-          
-          .alert-title {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 8px;
-          }
-          
-          .alert-description {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-          }
-          
-          .quick-actions {
-            padding: 8px 0;
-          }
-          
-          @media (max-width: 768px) {
-            .stat-value {
-              font-size: 24px;
+          key="yearly"
+        >
+          <Card
+            title="Yıl Bazlı Karşılaştırma Grafikleri"
+            extra={
+              <Space>
+                <Button
+                  icon={<BarChartOutlined />}
+                  onClick={() => message.info('Grafik görünümü yakında eklenecek')}
+                >
+                  Grafik Görüntüle
+                </Button>
+                <Button
+                  icon={<FileExcelOutlined />}
+                  onClick={() => message.info('Excel raporu indiriliyor...')}
+                >
+                  Excel İndir
+                </Button>
+                <Button
+                  icon={<FilePdfOutlined />}
+                  onClick={() => message.info('PDF raporu indiriliyor...')}
+                >
+                  PDF İndir
+                </Button>
+              </Space>
             }
-            
-            .stat-title {
-              font-size: 12px;
-            }
-            
-            .alert-title {
-              flex-direction: column;
-              align-items: flex-start;
-              gap: 8px;
-            }
-            
-            .tenant-info {
-              flex-direction: column;
-              align-items: flex-start;
-            }
-            
-            .tenant-info .anticon {
-              margin-bottom: 4px;
-              margin-right: 0;
-            }
+          >
+            <Table
+              columns={yearlyComparisonColumns}
+              dataSource={yearlyComparison}
+              rowKey="year"
+              pagination={false}
+              scroll={{ x: 1200 }}
+            />
+          </Card>
+        </TabPane>
+
+        <TabPane
+          tab={
+            <span>
+              <TeamOutlined />
+              Departman Raporu
+            </span>
           }
-        `}</style>
-      </div>
-    </PageContainer>
-  )
+          key="department"
+        >
+          <Card
+            title="Departman/Şube Bazlı Raporlama"
+            extra={
+              <Space>
+                <Select
+                  placeholder="Departman Seçin"
+                  style={{ width: 150 }}
+                  value={filters.departmentId}
+                  onChange={(value) => handleFilterChange('departmentId', value)}
+                  allowClear
+                >
+                  {mockDepartments.map(dept => (
+                    <Option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </Option>
+                  ))}
+                </Select>
+                <Button
+                  icon={<FileExcelOutlined />}
+                  onClick={() => message.info('Excel raporu indiriliyor...')}
+                >
+                  Excel İndir
+                </Button>
+                <Button
+                  icon={<FilePdfOutlined />}
+                  onClick={() => message.info('PDF raporu indiriliyor...')}
+                >
+                  PDF İndir
+                </Button>
+              </Space>
+            }
+          >
+            <Table
+              columns={departmentReportColumns}
+              dataSource={departmentReports}
+              rowKey="id"
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) =>
+                  `${range[0]}-${range[1]} / ${total} kayıt`
+              }}
+              scroll={{ x: 1400 }}
+            />
+          </Card>
+        </TabPane>
+      </Tabs>
+
+      {/* Export Options Info */}
+      <Card
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ExportOutlined style={{ color: '#1890ff' }} />
+            Dışa Aktarma Seçenekleri
+          </div>
+        }
+        style={{ marginTop: '24px' }}
+      >
+        <Row gutter={[16, 16]}>
+          <Col xs={24} md={8}>
+            <Alert
+              message="Excel İndirme"
+              description="Tüm raporlar Excel formatında indirilebilir. Grafikler ve hesaplamalar dahil edilir."
+              type="info"
+              showIcon
+            />
+          </Col>
+          <Col xs={24} md={8}>
+            <Alert
+              message="PDF İndirme"
+              description="Raporlar PDF formatında yazdırılabilir. Profesyonel görünüm için optimize edilmiştir."
+              type="warning"
+              showIcon
+            />
+          </Col>
+          <Col xs={24} md={8}>
+            <Alert
+              message="Filtreleme"
+              description="Tenant, kaynak türü, tarih aralığı ve departman bazında filtreleme yapabilirsiniz."
+              type="success"
+              showIcon
+            />
+          </Col>
+        </Row>
+      </Card>
+    </div>
+  );
 } 

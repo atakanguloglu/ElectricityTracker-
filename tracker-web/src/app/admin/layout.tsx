@@ -23,7 +23,11 @@ import {
   FullscreenOutlined,
   QuestionCircleOutlined,
   PlusOutlined,
-  ThunderboltOutlined
+  ThunderboltOutlined,
+  ControlOutlined,
+  ClusterOutlined,
+  ExperimentOutlined,
+  RobotOutlined
 } from '@ant-design/icons'
 import { 
   ProLayout, 
@@ -138,6 +142,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     {
       key: 'management',
       name: 'Yönetim Merkezi',
+      icon: <ControlOutlined className="menu-icon" />,
       children: [
         {
           key: 'tenants',
@@ -162,6 +167,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     {
       key: 'system',
       name: 'Sistem Kontrolü',
+      icon: <ClusterOutlined className="menu-icon" />,
       children: [
         {
           key: 'api',
@@ -192,7 +198,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     {
       key: 'analytics',
       name: 'Analiz & Raporlama',
+      icon: <ExperimentOutlined className="menu-icon" />,
       children: [
+        {
+          key: 'ai-analytics',
+          path: '/admin/ai-analytics',
+          name: 'AI Analiz',
+          icon: <RobotOutlined className="menu-icon" />,
+        },
         {
           key: 'reports',
           path: '/admin/reports',
@@ -207,8 +220,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         }
       ]
     },
-    {
-      key: 'settings',
+            {
+          key: 'chatbot',
+          path: '/admin/chatbot',
+          name: 'Chat Bot',
+          icon: <MessageOutlined className="menu-icon" />,
+        },
+        {
+          key: 'settings',
+          path: '/admin/settings',
+          name: 'Sistem Ayarları',
+          icon: <SettingOutlined className="menu-icon" />,
+        },
+        {
+          key: 'settings-old',
       path: '/admin/settings',
       name: 'Sistem Ayarları',
       icon: <SettingOutlined className="menu-icon" />,
@@ -388,7 +413,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </div>
             </Space>
           )}
-          siderWidth={290}
+          siderWidth={320}
           className="pro-layout"
         >
           <PageContainer
@@ -820,7 +845,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           border: 1px solid rgba(255, 255, 255, 0.2);
           min-height: calc(100vh - 180px);
           transition: all 0.3s ease;
-          overflow: auto;
+          overflow: hidden;
           position: relative;
         }
 
@@ -853,6 +878,26 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           font-size: 18px;
           color: rgba(255, 255, 255, 0.9);
           transition: all 0.3s ease;
+          margin-right: 12px;
+        }
+
+        /* Improved menu icon visibility */
+        :global(.ant-menu-item .menu-icon),
+        :global(.ant-menu-submenu-title .menu-icon) {
+          font-size: 18px;
+          color: rgba(255, 255, 255, 0.9);
+          transition: all 0.3s ease;
+          margin-right: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        :global(.ant-menu-item:hover .menu-icon),
+        :global(.ant-menu-submenu-title:hover .menu-icon) {
+          color: white;
+          transform: scale(1.1);
+          filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.5));
         }
 
         /* Animation Keyframes */
@@ -878,6 +923,120 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             inset -1px 0 0 rgba(255, 255, 255, 0.1);
           border-right: 1px solid rgba(255, 255, 255, 0.1);
           backdrop-filter: blur(20px);
+        }
+
+        /* Collapsed sidebar improvements */
+        :global(.ant-pro-sider-collapsed) {
+          width: 80px !important;
+          min-width: 80px !important;
+        }
+
+        :global(.ant-pro-sider-collapsed .ant-menu-item) {
+          margin: 6px 8px !important;
+          padding: 0 12px !important;
+          border-radius: 10px !important;
+          height: 44px !important;
+          line-height: 44px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+
+        :global(.ant-pro-sider-collapsed .menu-icon) {
+          font-size: 20px !important;
+          margin: 0 !important;
+        }
+
+        :global(.ant-pro-sider-collapsed .ant-menu-submenu-title) {
+          margin: 6px 8px !important;
+          padding: 0 12px !important;
+          border-radius: 10px !important;
+          height: 44px !important;
+          line-height: 44px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+
+        :global(.ant-pro-sider-collapsed .ant-menu-submenu-arrow) {
+          display: none !important;
+        }
+
+        /* Dropdown menu improvements - reduce transparency */
+        :global(.ant-dropdown-menu) {
+          background: rgba(255, 255, 255, 0.95) !important;
+          backdrop-filter: blur(20px) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          box-shadow: 
+            0 20px 40px rgba(0, 0, 0, 0.15),
+            0 8px 16px rgba(0, 0, 0, 0.1) !important;
+          border-radius: 12px !important;
+          padding: 8px 0 !important;
+        }
+
+        :global(.ant-dropdown-menu-item) {
+          color: #1e293b !important;
+          font-weight: 500 !important;
+          padding: 12px 20px !important;
+          margin: 2px 8px !important;
+          border-radius: 8px !important;
+          transition: all 0.3s ease !important;
+          background: transparent !important;
+        }
+
+        :global(.ant-dropdown-menu-item:hover) {
+          background: rgba(99, 102, 241, 0.1) !important;
+          color: #6366f1 !important;
+          transform: translateX(4px) !important;
+        }
+
+        :global(.ant-dropdown-menu-item-danger) {
+          color: #ef4444 !important;
+        }
+
+        :global(.ant-dropdown-menu-item-danger:hover) {
+          background: rgba(239, 68, 68, 0.1) !important;
+          color: #dc2626 !important;
+        }
+
+        :global(.ant-dropdown-menu-item-divider) {
+          background: rgba(0, 0, 0, 0.1) !important;
+          margin: 4px 8px !important;
+        }
+
+        /* Submenu dropdown improvements */
+        :global(.ant-menu-submenu-popup) {
+          background: rgba(255, 255, 255, 0.95) !important;
+          backdrop-filter: blur(20px) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          box-shadow: 
+            0 20px 40px rgba(0, 0, 0, 0.15),
+            0 8px 16px rgba(0, 0, 0, 0.1) !important;
+          border-radius: 12px !important;
+          padding: 8px 0 !important;
+        }
+
+        :global(.ant-menu-submenu-popup .ant-menu-item) {
+          color: #1e293b !important;
+          font-weight: 500 !important;
+          padding: 12px 20px !important;
+          margin: 2px 8px !important;
+          border-radius: 8px !important;
+          transition: all 0.3s ease !important;
+          background: transparent !important;
+          height: auto !important;
+          line-height: 1.5 !important;
+        }
+
+        :global(.ant-menu-submenu-popup .ant-menu-item:hover) {
+          background: rgba(99, 102, 241, 0.1) !important;
+          color: #6366f1 !important;
+          transform: translateX(4px) !important;
+        }
+
+        :global(.ant-menu-submenu-popup .ant-menu-item-selected) {
+          background: rgba(99, 102, 241, 0.15) !important;
+          color: #6366f1 !important;
         }
 
         :global(.ant-pro-layout-header) {
@@ -1140,6 +1299,24 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         @media (max-width: 768px) {
           .header-user-info {
             display: none;
+          }
+
+          /* Mobile collapsed sidebar improvements */
+          :global(.ant-pro-sider-collapsed) {
+            width: 70px !important;
+            min-width: 70px !important;
+          }
+
+          :global(.ant-pro-sider-collapsed .ant-menu-item) {
+            margin: 4px 6px !important;
+            padding: 0 8px !important;
+            border-radius: 8px !important;
+            height: 40px !important;
+            line-height: 40px !important;
+          }
+
+          :global(.ant-pro-sider-collapsed .menu-icon) {
+            font-size: 18px !important;
           }
 
           .header-actions {

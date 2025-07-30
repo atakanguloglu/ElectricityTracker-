@@ -1,182 +1,494 @@
 'use client'
 
-import React, { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { 
-  Card, 
   Row, 
   Col, 
-  Table, 
-  Button, 
-  Tag, 
-  Progress, 
-  Statistic, 
+  Card, 
   Typography, 
-  Divider,
+  Table,
+  Button,
   Space,
-  Tooltip,
-  Badge,
+  Tag,
+  Statistic,
   Modal,
   Form,
   Input,
+  InputNumber,
   Select,
-  DatePicker,
-  Switch
+  message,
+  Popconfirm,
+  Divider,
+  Upload,
+  Progress,
+  Tabs,
+  Badge,
+  Tooltip,
+  Switch,
+  DatePicker
 } from 'antd'
 import { 
-  ProCard,
-  PageContainer 
-} from '@ant-design/pro-components'
-import { 
-  DollarOutlined,
-  CreditCardOutlined,
-  FileTextOutlined,
-  BarChartOutlined,
   PlusOutlined,
-  DownloadOutlined,
-  EyeOutlined,
   EditOutlined,
   DeleteOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  ExclamationCircleOutlined,
+  EyeOutlined,
+  UploadOutlined,
+  DownloadOutlined,
+  FileExcelOutlined,
+  FileTextOutlined,
   ThunderboltOutlined,
-  DatabaseOutlined,
-  CloudOutlined,
-  HddOutlined,
-  CalendarOutlined,
-  UserOutlined
+  DropboxOutlined,
+  FireOutlined,
+  CarOutlined,
+  ToolOutlined,
+  DollarOutlined,
+  CalculatorOutlined,
+  BarChartOutlined,
+  SettingOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  ClockCircleOutlined
 } from '@ant-design/icons'
+import { ProCard } from '@ant-design/pro-components'
 
 const { Title, Text } = Typography
 const { Option } = Select
+const { TabPane } = Tabs
 
-export default function BillingManagementPage() {
-  const [isModalVisible, setIsModalVisible] = useState(false)
-  const [form] = Form.useForm()
+// Mock data for resource types
+const mockResourceTypes = [
+  {
+    id: 1,
+    name: 'Elektrik',
+    icon: '⚡',
+    unit: 'kWh',
+    defaultVAT: 20,
+    defaultCurrency: 'TRY',
+    description: 'Elektrik enerjisi tüketimi',
+    isActive: true,
+    createdAt: '2024-01-15'
+  },
+  {
+    id: 2,
+    name: 'Su',
+    icon: '💧',
+    unit: 'm³',
+    defaultVAT: 8,
+    defaultCurrency: 'TRY',
+    description: 'Su tüketimi',
+    isActive: true,
+    createdAt: '2024-01-15'
+  },
+  {
+    id: 3,
+    name: 'Doğalgaz',
+    icon: '🔥',
+    unit: 'm³',
+    defaultVAT: 18,
+    defaultCurrency: 'TRY',
+    description: 'Doğalgaz tüketimi',
+    isActive: true,
+    createdAt: '2024-01-15'
+  },
+  {
+    id: 4,
+    name: 'Yakıt',
+    icon: '⛽',
+    unit: 'L',
+    defaultVAT: 20,
+    defaultCurrency: 'TRY',
+    description: 'Yakıt tüketimi',
+    isActive: true,
+    createdAt: '2024-01-15'
+  },
+  {
+    id: 5,
+    name: 'Isıtma',
+    icon: '🌡️',
+    unit: 'GJ',
+    defaultVAT: 18,
+    defaultCurrency: 'TRY',
+    description: 'Merkezi ısıtma',
+    isActive: false,
+    createdAt: '2024-01-20'
+  }
+]
 
-  // Mock billing data
-  const billingStats = [
+// Mock data for tenant expenses
+const mockTenantExpenses = [
+  {
+    id: 1,
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    resourceTypeId: 1,
+    resourceType: 'Elektrik',
+    expenseName: 'Ana Bina Elektrik',
+    unit: 'kWh',
+    unitPrice: 1.25,
+    VAT: 20,
+    currency: 'TRY',
+    isActive: true,
+    description: 'Ana bina elektrik gideri',
+    createdAt: '2024-01-15'
+  },
+  {
+    id: 2,
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    resourceTypeId: 2,
+    resourceType: 'Su',
+    expenseName: 'Su Tüketimi',
+    unit: 'm³',
+    unitPrice: 8.50,
+    VAT: 8,
+    currency: 'TRY',
+    isActive: true,
+    description: 'Su tüketim gideri',
+    createdAt: '2024-01-15'
+  },
+  {
+    id: 3,
+    tenantId: 2,
+    tenantName: 'XYZ Ltd.',
+    resourceTypeId: 1,
+    resourceType: 'Elektrik',
+    expenseName: 'Ofis Elektrik',
+    unit: 'kWh',
+    unitPrice: 1.30,
+    VAT: 20,
+    currency: 'TRY',
+    isActive: true,
+    description: 'Ofis elektrik gideri',
+    createdAt: '2024-01-16'
+  },
+  {
+    id: 4,
+    tenantId: 3,
+    tenantName: 'TechCorp',
+    resourceTypeId: 3,
+    resourceType: 'Doğalgaz',
+    expenseName: 'Doğalgaz Isıtma',
+    unit: 'm³',
+    unitPrice: 2.15,
+    VAT: 18,
+    currency: 'TRY',
+    isActive: true,
+    description: 'Doğalgaz ısıtma gideri',
+    createdAt: '2024-01-17'
+  }
+]
+
+// Mock data for company invoices (Şirket → Tenant faturaları)
+const mockCompanyInvoices = [
+  {
+    id: 1,
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    invoiceType: 'subscription', // subscription, usage, service
+    invoiceNumber: 'COMP-INV-2024-001',
+    period: '2024-01',
+    description: 'Premium Paket - Ocak 2024',
+    quantity: 1,
+    unit: 'ay',
+    unitPrice: 299.99,
+    subtotal: 299.99,
+    VAT: 59.99,
+    total: 359.98,
+    currency: 'TRY',
+    status: 'paid',
+    dueDate: '2024-02-15',
+    paidDate: '2024-02-10',
+    createdAt: '2024-01-31',
+    notes: 'Premium paket kullanım ücreti'
+  },
+  {
+    id: 2,
+    tenantId: 2,
+    tenantName: 'XYZ Ltd.',
+    invoiceType: 'subscription',
+    invoiceNumber: 'COMP-INV-2024-002',
+    period: '2024-01',
+    description: 'Standart Paket - Ocak 2024',
+    quantity: 1,
+    unit: 'ay',
+    unitPrice: 199.99,
+    subtotal: 199.99,
+    VAT: 39.99,
+    total: 239.98,
+    currency: 'TRY',
+    status: 'pending',
+    dueDate: '2024-02-15',
+    paidDate: null,
+    createdAt: '2024-01-31',
+    notes: 'Standart paket kullanım ücreti'
+  },
+  {
+    id: 3,
+    tenantId: 3,
+    tenantName: 'TechCorp',
+    invoiceType: 'usage',
+    invoiceNumber: 'COMP-INV-2024-003',
+    period: '2024-01',
+    description: 'Aşım Kullanım - Ek Kullanıcı',
+    quantity: 5,
+    unit: 'kullanıcı',
+    unitPrice: 25.00,
+    subtotal: 125.00,
+    VAT: 25.00,
+    total: 150.00,
+    currency: 'TRY',
+    status: 'overdue',
+    dueDate: '2024-02-15',
+    paidDate: null,
+    createdAt: '2024-01-31',
+    notes: 'Paket limitini aşan kullanıcı ücreti'
+  },
+  {
+    id: 4,
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    invoiceType: 'service',
+    invoiceNumber: 'COMP-INV-2024-004',
+    period: '2024-01',
+    description: 'Özel Entegrasyon Hizmeti',
+    quantity: 1,
+    unit: 'hizmet',
+    unitPrice: 500.00,
+    subtotal: 500.00,
+    VAT: 100.00,
+    total: 600.00,
+    currency: 'TRY',
+    status: 'paid',
+    dueDate: '2024-02-15',
+    paidDate: '2024-02-08',
+    createdAt: '2024-01-31',
+    notes: 'API entegrasyonu ve özelleştirme'
+  }
+]
+
+// Mock data for tenant resource invoices (Tenant → Utility faturaları)
+const mockTenantInvoices = [
+  {
+    id: 1,
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    resourceType: 'Elektrik',
+    invoiceNumber: 'TENANT-INV-2024-001',
+    period: '2024-01',
+    consumption: 1250,
+    unit: 'kWh',
+    unitPrice: 1.25,
+    subtotal: 1562.50,
+    VAT: 312.50,
+    total: 1875.00,
+    currency: 'TRY',
+    status: 'paid',
+    dueDate: '2024-02-15',
+    paidDate: '2024-02-10',
+    createdAt: '2024-01-31',
+    utilityProvider: 'EnerjiSA'
+  },
+  {
+    id: 2,
+    tenantId: 1,
+    tenantName: 'ABC Şirketi',
+    resourceType: 'Su',
+    invoiceNumber: 'TENANT-INV-2024-002',
+    period: '2024-01',
+    consumption: 45,
+    unit: 'm³',
+    unitPrice: 8.50,
+    subtotal: 382.50,
+    VAT: 30.60,
+    total: 413.10,
+    currency: 'TRY',
+    status: 'pending',
+    dueDate: '2024-02-15',
+    paidDate: null,
+    createdAt: '2024-01-31',
+    utilityProvider: 'İSKİ'
+  }
+]
+
+export default function AdminBillingPage() {
+  const [resourceTypes, setResourceTypes] = useState(mockResourceTypes)
+  const [tenantExpenses, setTenantExpenses] = useState(mockTenantExpenses)
+  const [companyInvoices, setCompanyInvoices] = useState(mockCompanyInvoices)
+  const [tenantInvoices, setTenantInvoices] = useState(mockTenantInvoices)
+  
+  // Modal states
+  const [resourceModalVisible, setResourceModalVisible] = useState(false)
+  const [expenseModalVisible, setExpenseModalVisible] = useState(false)
+  const [invoiceModalVisible, setInvoiceModalVisible] = useState(false)
+  const [importModalVisible, setImportModalVisible] = useState(false)
+  
+  const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add')
+  const [selectedItem, setSelectedItem] = useState<any>(null)
+  
+  const [resourceForm] = Form.useForm()
+  const [expenseForm] = Form.useForm()
+  const [invoiceForm] = Form.useForm()
+
+  // Statistics
+  const stats = useMemo(() => [
+    {
+      title: 'Toplam Kaynak Tipi',
+      value: resourceTypes.length,
+      icon: <ThunderboltOutlined />,
+      color: '#1890ff',
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    },
+    {
+      title: 'Aktif Gider Tanımı',
+      value: tenantExpenses.filter(e => e.isActive).length,
+      icon: <CalculatorOutlined />,
+      color: '#52c41a',
+      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+    },
+    {
+      title: 'Şirket Faturaları',
+      value: companyInvoices.length,
+      icon: <FileTextOutlined />,
+      color: '#faad14',
+      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    },
     {
       title: 'Toplam Gelir',
-      value: '₺125,450',
-      icon: <DollarOutlined style={{ fontSize: '24px', color: '#10b981' }} />,
-      color: '#10b981',
-      gradient: 'linear-gradient(135deg, #10b981, #059669)',
-      change: '+12.5%',
-      changeType: 'increase'
-    },
-    {
-      title: 'Bekleyen Ödemeler',
-      value: '₺15,230',
-      icon: <CreditCardOutlined style={{ fontSize: '24px', color: '#f59e0b' }} />,
-      color: '#f59e0b',
-      gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
-      change: '+8.2%',
-      changeType: 'increase'
-    },
-    {
-      title: 'Aktif Abonelikler',
-      value: '89',
-      icon: <FileTextOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />,
-      color: '#3b82f6',
-      gradient: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-      change: '+5.1%',
-      changeType: 'increase'
-    },
-    {
-      title: 'Ortalama Fatura',
-      value: '₺1,410',
-      icon: <BarChartOutlined style={{ fontSize: '24px', color: '#8b5cf6' }} />,
-      color: '#8b5cf6',
-      gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-      change: '-2.3%',
-      changeType: 'decrease'
+      value: `₺${companyInvoices.filter((i: any) => i.status === 'paid').reduce((sum: number, i: any) => sum + i.total, 0).toLocaleString()}`,
+      icon: <DollarOutlined />,
+      color: '#eb2f96',
+      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
     }
-  ]
+  ], [resourceTypes, tenantExpenses, companyInvoices])
 
-  const resourceUsage = [
-    {
-      name: 'CPU Kullanımı',
-      used: 75,
-      total: 100,
-      unit: 'Core',
-      icon: <ThunderboltOutlined style={{ color: '#3b82f6' }} />,
-      color: '#3b82f6'
-    },
-    {
-      name: 'RAM Kullanımı',
-      used: 8.5,
-      total: 16,
-      unit: 'GB',
-      icon: <DatabaseOutlined style={{ color: '#10b981' }} />,
-      color: '#10b981'
-    },
-    {
-      name: 'Depolama',
-      used: 450,
-      total: 1000,
-      unit: 'GB',
-      icon: <HddOutlined style={{ color: '#f59e0b' }} />,
-      color: '#f59e0b'
-    },
-    {
-      name: 'Bandwidth',
-      used: 2.8,
-      total: 10,
-      unit: 'TB',
-      icon: <CloudOutlined style={{ color: '#8b5cf6' }} />,
-      color: '#8b5cf6'
+  // Resource Type handlers
+  const handleAddResourceType = () => {
+    setModalType('add')
+    setSelectedItem(null)
+    resourceForm.resetFields()
+    setResourceModalVisible(true)
+  }
+
+  const handleEditResourceType = (resource: any) => {
+    setModalType('edit')
+    setSelectedItem(resource)
+    resourceForm.setFieldsValue(resource)
+    setResourceModalVisible(true)
+  }
+
+  const handleViewResourceType = (resource: any) => {
+    setModalType('view')
+    setSelectedItem(resource)
+    resourceForm.setFieldsValue(resource)
+    setResourceModalVisible(true)
+  }
+
+  const handleDeleteResourceType = (resource: any) => {
+    setResourceTypes(prev => prev.filter(r => r.id !== resource.id))
+    message.success(`${resource.name} kaynak tipi silindi`)
+  }
+
+  const handleResourceModalOk = async () => {
+    try {
+      const values = await resourceForm.validateFields()
+      
+      if (modalType === 'add') {
+        const newResource = {
+          id: Math.max(...resourceTypes.map(r => r.id)) + 1,
+          ...values,
+          isActive: true,
+          createdAt: new Date().toISOString().split('T')[0]
+        }
+        setResourceTypes(prev => [...prev, newResource])
+        message.success('Kaynak tipi başarıyla eklendi')
+      } else if (modalType === 'edit') {
+        setResourceTypes(prev => prev.map(r => 
+          r.id === selectedItem.id ? { ...r, ...values } : r
+        ))
+        message.success('Kaynak tipi başarıyla güncellendi')
+      }
+      
+      setResourceModalVisible(false)
+    } catch (error) {
+      console.error('Form validation failed:', error)
     }
-  ]
+  }
 
-  const invoices = [
-    {
-      id: 'INV-2024-001',
-      tenant: 'ABC Şirketi',
-      amount: '₺2,450',
-      status: 'paid',
-      dueDate: '2024-01-15',
-      issueDate: '2024-01-01',
-      description: 'Ocak 2024 Elektrik Tüketimi'
-    },
-    {
-      id: 'INV-2024-002',
-      tenant: 'XYZ Ltd.',
-      amount: '₺1,890',
-      status: 'pending',
-      dueDate: '2024-01-20',
-      issueDate: '2024-01-05',
-      description: 'Ocak 2024 Elektrik Tüketimi'
-    },
-    {
-      id: 'INV-2024-003',
-      tenant: 'DEF Corp.',
-      amount: '₺3,120',
-      status: 'overdue',
-      dueDate: '2024-01-10',
-      issueDate: '2023-12-20',
-      description: 'Aralık 2024 Elektrik Tüketimi'
-    },
-    {
-      id: 'INV-2024-004',
-      tenant: 'GHI Inc.',
-      amount: '₺1,650',
-      status: 'paid',
-      dueDate: '2024-01-25',
-      issueDate: '2024-01-10',
-      description: 'Ocak 2024 Elektrik Tüketimi'
-    },
-    {
-      id: 'INV-2024-005',
-      tenant: 'JKL Co.',
-      amount: '₺2,890',
-      status: 'pending',
-      dueDate: '2024-01-30',
-      issueDate: '2024-01-15',
-      description: 'Ocak 2024 Elektrik Tüketimi'
+  // Tenant Expense handlers
+  const handleAddExpense = () => {
+    setModalType('add')
+    setSelectedItem(null)
+    expenseForm.resetFields()
+    setExpenseModalVisible(true)
+  }
+
+  const handleEditExpense = (expense: any) => {
+    setModalType('edit')
+    setSelectedItem(expense)
+    expenseForm.setFieldsValue(expense)
+    setExpenseModalVisible(true)
+  }
+
+  const handleDeleteExpense = (expense: any) => {
+    setTenantExpenses(prev => prev.filter(e => e.id !== expense.id))
+    message.success(`${expense.expenseName} gider tanımı silindi`)
+  }
+
+  const handleExpenseModalOk = async () => {
+    try {
+      const values = await expenseForm.validateFields()
+      
+      if (modalType === 'add') {
+        const newExpense = {
+          id: Math.max(...tenantExpenses.map(e => e.id)) + 1,
+          ...values,
+          isActive: true,
+          createdAt: new Date().toISOString().split('T')[0]
+        }
+        setTenantExpenses(prev => [...prev, newExpense])
+        message.success('Gider tanımı başarıyla eklendi')
+      } else if (modalType === 'edit') {
+        setTenantExpenses(prev => prev.map(e => 
+          e.id === selectedItem.id ? { ...e, ...values } : e
+        ))
+        message.success('Gider tanımı başarıyla güncellendi')
+      }
+      
+      setExpenseModalVisible(false)
+    } catch (error) {
+      console.error('Form validation failed:', error)
     }
-  ]
+  }
 
+  // Invoice handlers
+  const handleViewInvoice = (invoice: any) => {
+    setModalType('view')
+    setSelectedItem(invoice)
+    invoiceForm.setFieldsValue(invoice)
+    setInvoiceModalVisible(true)
+  }
+
+  const handleDeleteCompanyInvoice = (invoice: any) => {
+    setCompanyInvoices((prev: any) => prev.filter((i: any) => i.id !== invoice.id))
+    message.success(`${invoice.invoiceNumber} şirket faturası silindi`)
+  }
+
+  const handleDeleteTenantInvoice = (invoice: any) => {
+    setTenantInvoices((prev: any) => prev.filter((i: any) => i.id !== invoice.id))
+    message.success(`${invoice.invoiceNumber} tenant faturası silindi`)
+  }
+
+  // Import handlers
+  const handleImportInvoices = () => {
+    setImportModalVisible(true)
+  }
+
+  const handleImportModalOk = () => {
+    message.success('Fatura import işlemi başlatıldı')
+    setImportModalVisible(false)
+  }
+
+  // Status helpers
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid': return 'success'
@@ -189,7 +501,7 @@ export default function BillingManagementPage() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'paid': return 'Ödendi'
-      case 'pending': return 'Bekliyor'
+      case 'pending': return 'Beklemede'
       case 'overdue': return 'Gecikmiş'
       default: return 'Bilinmiyor'
     }
@@ -197,591 +509,988 @@ export default function BillingManagementPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'paid': return <CheckCircleOutlined style={{ color: '#10b981' }} />
-      case 'pending': return <ClockCircleOutlined style={{ color: '#3b82f6' }} />
-      case 'overdue': return <ExclamationCircleOutlined style={{ color: '#ef4444' }} />
+      case 'paid': return <CheckCircleOutlined />
+      case 'pending': return <ClockCircleOutlined />
+      case 'overdue': return <ExclamationCircleOutlined />
       default: return <ClockCircleOutlined />
     }
   }
 
-  const columns = [
+  // Resource type columns
+  const resourceColumns = [
+    {
+      title: 'Kaynak Tipi',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text: string, record: any) => (
+        <Space>
+          <span style={{ fontSize: '20px' }}>{record.icon}</span>
+          <span>{text}</span>
+        </Space>
+      )
+    },
+    {
+      title: 'Birim',
+      dataIndex: 'unit',
+      key: 'unit',
+      render: (text: string) => <Tag color="blue">{text}</Tag>
+    },
+    {
+      title: 'Varsayılan KDV',
+      dataIndex: 'defaultVAT',
+      key: 'defaultVAT',
+      render: (text: number) => <Tag color="green">%{text}</Tag>
+    },
+    {
+      title: 'Para Birimi',
+      dataIndex: 'defaultCurrency',
+      key: 'defaultCurrency',
+      render: (text: string) => <Tag color="purple">{text}</Tag>
+    },
+    {
+      title: 'Durum',
+      dataIndex: 'isActive',
+      key: 'isActive',
+      render: (isActive: boolean) => (
+        <Tag color={isActive ? 'success' : 'default'}>
+          {isActive ? 'Aktif' : 'Pasif'}
+        </Tag>
+      )
+    },
+    {
+      title: 'İşlemler',
+      key: 'actions',
+      render: (record: any) => (
+        <Space>
+          <Button
+            type="text"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewResourceType(record)}
+            title="Detayları Görüntüle"
+          />
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleEditResourceType(record)}
+            title="Düzenle"
+          />
+          <Popconfirm
+            title="Bu kaynak tipini silmek istediğinizden emin misiniz?"
+            onConfirm={() => handleDeleteResourceType(record)}
+            okText="Evet"
+            cancelText="Hayır"
+          >
+            <Button
+              type="text"
+              size="small"
+              icon={<DeleteOutlined />}
+              danger
+              title="Sil"
+            />
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ]
+
+  // Tenant expense columns
+  const expenseColumns = [
+    {
+      title: 'Tenant',
+      dataIndex: 'tenantName',
+      key: 'tenantName'
+    },
+    {
+      title: 'Kaynak Tipi',
+      dataIndex: 'resourceType',
+      key: 'resourceType',
+      render: (text: string) => <Tag color="blue">{text}</Tag>
+    },
+    {
+      title: 'Gider Adı',
+      dataIndex: 'expenseName',
+      key: 'expenseName'
+    },
+    {
+      title: 'Birim Fiyat',
+      dataIndex: 'unitPrice',
+      key: 'unitPrice',
+      render: (text: number, record: any) => (
+        <span>{text} ₺/{record.unit}</span>
+      )
+    },
+    {
+      title: 'KDV',
+      dataIndex: 'VAT',
+      key: 'VAT',
+      render: (text: number) => <Tag color="green">%{text}</Tag>
+    },
+    {
+      title: 'Durum',
+      dataIndex: 'isActive',
+      key: 'isActive',
+      render: (isActive: boolean) => (
+        <Tag color={isActive ? 'success' : 'default'}>
+          {isActive ? 'Aktif' : 'Pasif'}
+        </Tag>
+      )
+    },
+    {
+      title: 'İşlemler',
+      key: 'actions',
+      render: (record: any) => (
+        <Space>
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleEditExpense(record)}
+            title="Düzenle"
+          />
+          <Popconfirm
+            title="Bu gider tanımını silmek istediğinizden emin misiniz?"
+            onConfirm={() => handleDeleteExpense(record)}
+            okText="Evet"
+            cancelText="Hayır"
+          >
+            <Button
+              type="text"
+              size="small"
+              icon={<DeleteOutlined />}
+              danger
+              title="Sil"
+            />
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ]
+
+  // Company Invoice columns (Şirket → Tenant)
+  const companyInvoiceColumns = [
     {
       title: 'Fatura No',
-      dataIndex: 'id',
-      key: 'id',
-      render: (id: string) => (
-        <Text strong style={{ color: '#3b82f6' }}>{id}</Text>
-      ),
+      dataIndex: 'invoiceNumber',
+      key: 'invoiceNumber',
+      render: (text: string) => <Text strong>{text}</Text>
     },
     {
       title: 'Tenant',
-      dataIndex: 'tenant',
-      key: 'tenant',
-      render: (tenant: string) => (
-        <div className="tenant-info">
-          <UserOutlined style={{ marginRight: '8px', color: '#64748b' }} />
-          {tenant}
-        </div>
-      ),
+      dataIndex: 'tenantName',
+      key: 'tenantName'
     },
     {
-      title: 'Tutar',
-      dataIndex: 'amount',
-      key: 'amount',
-      render: (amount: string) => (
-        <Text strong style={{ fontSize: '16px' }}>{amount}</Text>
-      ),
+      title: 'Fatura Tipi',
+      dataIndex: 'invoiceType',
+      key: 'invoiceType',
+      render: (type: string) => {
+        const typeConfig = {
+          subscription: { color: 'blue', text: 'Abonelik' },
+          usage: { color: 'orange', text: 'Kullanım' },
+          service: { color: 'purple', text: 'Hizmet' }
+        }
+        const config = typeConfig[type as keyof typeof typeConfig] || { color: 'default', text: type }
+        return <Tag color={config.color}>{config.text}</Tag>
+      }
+    },
+    {
+      title: 'Açıklama',
+      dataIndex: 'description',
+      key: 'description'
+    },
+    {
+      title: 'Miktar',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      render: (text: number, record: any) => (
+        <span>{text} {record.unit}</span>
+      )
+    },
+    {
+      title: 'Toplam',
+      dataIndex: 'total',
+      key: 'total',
+      render: (text: number, record: any) => (
+        <Text strong>{text} {record.currency}</Text>
+      )
     },
     {
       title: 'Durum',
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
-        <div className="status-badge">
-          {getStatusIcon(status)}
-          <span className="status-text">{getStatusText(status)}</span>
-        </div>
-      ),
+        <Badge 
+          status={getStatusColor(status) as any} 
+          text={getStatusText(status)}
+        />
+      )
     },
     {
       title: 'Vade Tarihi',
       dataIndex: 'dueDate',
-      key: 'dueDate',
-      render: (date: string) => (
-        <div className="date-info">
-          <CalendarOutlined style={{ marginRight: '4px', color: '#64748b' }} />
-          {date}
-        </div>
-      ),
-    },
-    {
-      title: 'Açıklama',
-      dataIndex: 'description',
-      key: 'description',
-      render: (description: string) => (
-        <Text type="secondary">{description}</Text>
-      ),
+      key: 'dueDate'
     },
     {
       title: 'İşlemler',
       key: 'actions',
       render: (record: any) => (
-        <Space size="small">
-          <Tooltip title="Görüntüle">
-            <Button 
-              type="text" 
-              icon={<EyeOutlined />} 
+        <Space>
+          <Button
+            type="text"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewInvoice(record)}
+            title="Detayları Görüntüle"
+          />
+          <Popconfirm
+            title="Bu faturayı silmek istediğinizden emin misiniz?"
+            onConfirm={() => handleDeleteCompanyInvoice(record)}
+            okText="Evet"
+            cancelText="Hayır"
+          >
+            <Button
+              type="text"
               size="small"
-              className="action-button"
+              icon={<DeleteOutlined />}
+              danger
+              title="Sil"
             />
-          </Tooltip>
-          <Tooltip title="İndir">
-            <Button 
-              type="text" 
-              icon={<DownloadOutlined />} 
-              size="small"
-              className="action-button"
-            />
-          </Tooltip>
-          <Tooltip title="Düzenle">
-            <Button 
-              type="text" 
-              icon={<EditOutlined />} 
-              size="small"
-              className="action-button"
-            />
-          </Tooltip>
-          <Tooltip title="Sil">
-            <Button 
-              type="text" 
-              icon={<DeleteOutlined />} 
-              size="small"
-              className="action-button delete-button"
-            />
-          </Tooltip>
+          </Popconfirm>
         </Space>
-      ),
+      )
+    }
+  ]
+
+  // Tenant Invoice columns (Tenant → Utility)
+  const tenantInvoiceColumns = [
+    {
+      title: 'Fatura No',
+      dataIndex: 'invoiceNumber',
+      key: 'invoiceNumber',
+      render: (text: string) => <Text strong>{text}</Text>
     },
+    {
+      title: 'Tenant',
+      dataIndex: 'tenantName',
+      key: 'tenantName'
+    },
+    {
+      title: 'Kaynak',
+      dataIndex: 'resourceType',
+      key: 'resourceType',
+      render: (text: string) => <Tag color="blue">{text}</Tag>
+    },
+    {
+      title: 'Sağlayıcı',
+      dataIndex: 'utilityProvider',
+      key: 'utilityProvider'
+    },
+    {
+      title: 'Dönem',
+      dataIndex: 'period',
+      key: 'period'
+    },
+    {
+      title: 'Tüketim',
+      dataIndex: 'consumption',
+      key: 'consumption',
+      render: (text: number, record: any) => (
+        <span>{text} {record.unit}</span>
+      )
+    },
+    {
+      title: 'Toplam',
+      dataIndex: 'total',
+      key: 'total',
+      render: (text: number, record: any) => (
+        <Text strong>{text} {record.currency}</Text>
+      )
+    },
+    {
+      title: 'Durum',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => (
+        <Badge 
+          status={getStatusColor(status) as any} 
+          text={getStatusText(status)}
+        />
+      )
+    },
+    {
+      title: 'Vade Tarihi',
+      dataIndex: 'dueDate',
+      key: 'dueDate'
+    },
+    {
+      title: 'İşlemler',
+      key: 'actions',
+      render: (record: any) => (
+        <Space>
+          <Button
+            type="text"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewInvoice(record)}
+            title="Detayları Görüntüle"
+          />
+          <Popconfirm
+            title="Bu faturayı silmek istediğinizden emin misiniz?"
+            onConfirm={() => handleDeleteTenantInvoice(record)}
+            okText="Evet"
+            cancelText="Hayır"
+          >
+            <Button
+              type="text"
+              size="small"
+              icon={<DeleteOutlined />}
+              danger
+              title="Sil"
+            />
+          </Popconfirm>
+        </Space>
+      )
+    }
   ]
 
   return (
-    <PageContainer
-      header={{
-        title: (
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-green-500 to-blue-600 rounded-lg shadow-lg">
-              <DollarOutlined style={{ fontSize: '20px', color: 'white' }} />
-            </div>
-            <div>
-              <Title level={3} style={{ margin: 0, color: '#1e293b' }}>
-                Fatura & Kaynak Yönetimi
-              </Title>
-              <Text type="secondary" style={{ fontSize: '14px' }}>
-                Faturaları yönetin, kaynak kullanımını izleyin ve ödemeleri takip edin.
-              </Text>
-            </div>
-          </div>
-        ),
-        breadcrumb: {},
-      }}
-    >
-      <div className="billing-management-container">
-        {/* Billing Statistics */}
-        <Row gutter={[16, 16]} className="mb-6">
-          {billingStats.map((stat, index) => (
-            <Col xs={24} sm={12} lg={6} key={index}>
-              <Card 
-                className="stat-card"
-                style={{
-                  background: stat.gradient,
-                  border: 'none',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-                  overflow: 'hidden',
-                  position: 'relative'
-                }}
-              >
-                <div className="stat-card-content">
-                  <div className="stat-icon">
-                    {stat.icon}
-                  </div>
-                  <div className="stat-info">
-                    <div className="stat-value">{stat.value}</div>
-                    <div className="stat-title">{stat.title}</div>
-                    <div className={`stat-change ${stat.changeType}`}>
-                      {stat.change}
-                    </div>
-                  </div>
-                </div>
-                <div className="stat-card-overlay"></div>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+    <div className="p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <Title level={2} className="mb-2">
+          <DollarOutlined className="mr-3 text-blue-600" />
+          Fatura & Kaynak Yönetimi
+        </Title>
+        <Text className="text-gray-600">
+          Kaynak tiplerini, tenant giderlerini ve faturaları yönetin.
+        </Text>
+      </div>
 
-        <Row gutter={[16, 16]} className="mb-6">
-          {/* Resource Usage */}
-          <Col xs={24} lg={12}>
-            <ProCard
-              title={
-                <div className="flex items-center space-x-2">
-                  <BarChartOutlined style={{ color: '#3b82f6', fontSize: '18px' }} />
-                  <span style={{ color: '#1e293b', fontWeight: 600 }}>Kaynak Kullanımı</span>
-                </div>
-              }
-              className="resource-card"
+      {/* Statistics Cards */}
+      <Row gutter={[16, 16]} className="mb-6">
+        {stats.map((stat, index) => (
+          <Col xs={24} sm={12} lg={6} key={index}>
+            <Card 
+              className="stat-card"
               style={{
+                background: stat.gradient,
+                border: 'none',
                 borderRadius: '12px',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-                border: '1px solid #e2e8f0'
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+                overflow: 'hidden',
+                position: 'relative'
               }}
             >
-              <div className="resource-usage">
-                {resourceUsage.map((resource, index) => (
-                  <div key={index} className="resource-item">
-                    <div className="resource-header">
-                      <div className="resource-info">
-                        <div className="resource-icon">
-                          {resource.icon}
-                        </div>
-                        <div>
-                          <div className="resource-name">{resource.name}</div>
-                          <div className="resource-usage-text">
-                            {resource.used} / {resource.total} {resource.unit}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="resource-percentage">
-                        {Math.round((resource.used / resource.total) * 100)}%
-                      </div>
-                    </div>
-                    <Progress 
-                      percent={Math.round((resource.used / resource.total) * 100)} 
-                      strokeColor={resource.color}
-                      strokeWidth={8}
-                      showInfo={false}
-                      className="resource-progress"
-                    />
-                  </div>
-                ))}
+              <div className="stat-card-content">
+                <div className="stat-icon">
+                  {stat.icon}
+                </div>
+                <div className="stat-info">
+                  <div className="stat-value">{stat.value}</div>
+                  <div className="stat-title">{stat.title}</div>
+                </div>
               </div>
-            </ProCard>
+              <div className="stat-card-overlay"></div>
+            </Card>
           </Col>
+        ))}
+      </Row>
 
-          {/* Quick Actions */}
-          <Col xs={24} lg={12}>
-            <ProCard
-              title={
-                <div className="flex items-center space-x-2">
-                  <FileTextOutlined style={{ color: '#8b5cf6', fontSize: '18px' }} />
-                  <span style={{ color: '#1e293b', fontWeight: 600 }}>Hızlı İşlemler</span>
-                </div>
-              }
-              className="actions-card"
-              style={{
-                borderRadius: '12px',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-                border: '1px solid #e2e8f0'
+      {/* Main Content Tabs */}
+      <Tabs defaultActiveKey="resources" size="large">
+        <TabPane 
+          tab={
+            <span>
+              <ThunderboltOutlined />
+              Kaynak Tipleri
+            </span>
+          } 
+          key="resources"
+        >
+          <Card 
+            title="Kaynak Tipleri"
+            extra={
+              <Button 
+                type="primary" 
+                icon={<PlusOutlined />}
+                onClick={handleAddResourceType}
+              >
+                Yeni Kaynak Tipi Ekle
+              </Button>
+            }
+            className="shadow-sm"
+          >
+            <Table
+              columns={resourceColumns}
+              dataSource={resourceTypes}
+              rowKey="id"
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => 
+                  `${range[0]}-${range[1]} / ${total} kaynak tipi`
               }}
-            >
-              <div className="quick-actions">
-                <Button
-                  type="primary"
+            />
+          </Card>
+        </TabPane>
+
+        <TabPane 
+          tab={
+            <span>
+              <CalculatorOutlined />
+              Tenant Giderleri
+            </span>
+          } 
+          key="expenses"
+        >
+          <Card 
+            title="Tenant Bazlı Gider Tanımları"
+            extra={
+              <Button 
+                type="primary" 
+                icon={<PlusOutlined />}
+                onClick={handleAddExpense}
+              >
+                Yeni Gider Tanımı Ekle
+              </Button>
+            }
+            className="shadow-sm"
+          >
+            <Table
+              columns={expenseColumns}
+              dataSource={tenantExpenses}
+              rowKey="id"
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => 
+                  `${range[0]}-${range[1]} / ${total} gider tanımı`
+              }}
+            />
+          </Card>
+        </TabPane>
+
+        <TabPane 
+          tab={
+            <span>
+              <DollarOutlined />
+              Şirket Faturaları
+            </span>
+          } 
+          key="company-invoices"
+        >
+          <Card 
+            title="Şirket → Tenant Faturaları (Uygulama Kullanım)"
+            extra={
+              <Space>
+                <Button 
+                  type="primary" 
                   icon={<PlusOutlined />}
-                  size="large"
-                  block
-                  onClick={() => setIsModalVisible(true)}
-                  style={{
-                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    marginBottom: '12px'
-                  }}
                 >
                   Yeni Fatura Oluştur
                 </Button>
-                <Button
+                <Button 
                   icon={<DownloadOutlined />}
-                  size="large"
-                  block
-                  style={{
-                    border: '2px solid #e2e8f0',
-                    borderRadius: '8px',
-                    marginBottom: '12px'
-                  }}
                 >
-                  Toplu Fatura İndir
+                  Excel Export
                 </Button>
-                <Button
-                  icon={<BarChartOutlined />}
-                  size="large"
-                  block
-                  style={{
-                    border: '2px solid #e2e8f0',
-                    borderRadius: '8px'
-                  }}
-                >
-                  Rapor Oluştur
-                </Button>
-              </div>
-            </ProCard>
-          </Col>
-        </Row>
-
-        {/* Invoices Table */}
-        <ProCard
-          title={
-            <div className="flex items-center space-x-2">
-              <FileTextOutlined style={{ color: '#f59e0b', fontSize: '18px' }} />
-              <span style={{ color: '#1e293b', fontWeight: 600 }}>Son Faturalar</span>
-            </div>
-          }
-          className="table-card"
-          style={{
-            borderRadius: '12px',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-            border: '1px solid #e2e8f0'
-          }}
-        >
-          <Table
-            columns={columns}
-            dataSource={invoices}
-            rowKey="id"
-            pagination={{
-              total: invoices.length,
-              pageSize: 10,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} fatura`,
-            }}
-            className="invoices-table"
-          />
-        </ProCard>
-
-        {/* Create Invoice Modal */}
-        <Modal
-          title={
-            <div className="flex items-center space-x-2">
-              <PlusOutlined style={{ color: '#3b82f6' }} />
-              <span>Yeni Fatura Oluştur</span>
-            </div>
-          }
-          open={isModalVisible}
-          onOk={() => setIsModalVisible(false)}
-          onCancel={() => setIsModalVisible(false)}
-          width={600}
-          okText="Oluştur"
-          cancelText="İptal"
-        >
-          <Form
-            form={form}
-            layout="vertical"
-            className="invoice-form"
+              </Space>
+            }
+            className="shadow-sm"
           >
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="tenant"
-                  label="Tenant"
-                  rules={[{ required: true, message: 'Tenant seçin!' }]}
-                >
-                  <Select placeholder="Tenant seçin">
-                    <Option value="ABC Şirketi">ABC Şirketi</Option>
-                    <Option value="XYZ Ltd.">XYZ Ltd.</Option>
-                    <Option value="DEF Corp.">DEF Corp.</Option>
-                    <Option value="GHI Inc.">GHI Inc.</Option>
-                    <Option value="JKL Co.">JKL Co.</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="amount"
-                  label="Tutar"
-                  rules={[{ required: true, message: 'Tutar girin!' }]}
-                >
-                  <Input prefix="₺" placeholder="0.00" />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="issueDate"
-                  label="Düzenleme Tarihi"
-                  rules={[{ required: true, message: 'Tarih seçin!' }]}
-                >
-                  <DatePicker style={{ width: '100%' }} />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="dueDate"
-                  label="Vade Tarihi"
-                  rules={[{ required: true, message: 'Tarih seçin!' }]}
-                >
-                  <DatePicker style={{ width: '100%' }} />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Form.Item
-              name="description"
-              label="Açıklama"
-              rules={[{ required: true, message: 'Açıklama girin!' }]}
-            >
-              <Input.TextArea rows={3} placeholder="Fatura açıklaması..." />
-            </Form.Item>
-          </Form>
-        </Modal>
+            <Table
+              columns={companyInvoiceColumns}
+              dataSource={companyInvoices}
+              rowKey="id"
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => 
+                  `${range[0]}-${range[1]} / ${total} şirket faturası`
+              }}
+            />
+          </Card>
+        </TabPane>
 
-        <style jsx>{`
-          .billing-management-container {
-            padding: 0;
-          }
-          
-          .stat-card {
-            transition: all 0.3s ease;
-            cursor: pointer;
-          }
-          
-          .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15) !important;
-          }
-          
-          .stat-card-content {
-            position: relative;
-            z-index: 2;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 20px;
-            color: white;
-          }
-          
-          .stat-icon {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 12px;
-            backdrop-filter: blur(10px);
-          }
-          
-          .stat-info {
-            text-align: right;
-          }
-          
-          .stat-value {
-            font-size: 28px;
-            font-weight: bold;
-            line-height: 1;
-            margin-bottom: 4px;
-          }
-          
-          .stat-title {
-            font-size: 14px;
-            opacity: 0.9;
-            font-weight: 500;
-            margin-bottom: 4px;
-          }
-          
-          .stat-change {
-            font-size: 12px;
-            font-weight: 600;
-          }
-          
-          .stat-change.increase {
-            color: #10b981;
-          }
-          
-          .stat-change.decrease {
-            color: #ef4444;
-          }
-          
-          .stat-card-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
-            z-index: 1;
-          }
-          
-          .resource-card, .actions-card, .table-card {
-            transition: all 0.3s ease;
-          }
-          
-          .resource-card:hover, .actions-card:hover, .table-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12) !important;
-          }
-          
-          .resource-usage {
-            padding: 8px 0;
-          }
-          
-          .resource-item {
-            margin-bottom: 20px;
-          }
-          
-          .resource-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-          }
-          
-          .resource-info {
-            display: flex;
-            align-items: center;
-          }
-          
-          .resource-icon {
-            background: rgba(59, 130, 246, 0.1);
-            border-radius: 8px;
-            padding: 8px;
-            margin-right: 12px;
-          }
-          
-          .resource-name {
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 2px;
-          }
-          
-          .resource-usage-text {
-            font-size: 12px;
-            color: #64748b;
-          }
-          
-          .resource-percentage {
-            font-weight: bold;
-            color: #3b82f6;
-          }
-          
-          .resource-progress {
-            border-radius: 4px;
-          }
-          
-          .quick-actions {
-            padding: 8px 0;
-          }
-          
-          .tenant-info {
-            display: flex;
-            align-items: center;
-            font-weight: 500;
-          }
-          
-          .date-info {
-            color: #64748b;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-          }
-          
-          .action-button {
-            transition: all 0.3s ease;
-            border-radius: 6px;
-          }
-          
-          .action-button:hover {
-            transform: scale(1.1);
-            background: rgba(59, 130, 246, 0.1);
-          }
-          
-          .delete-button:hover {
-            background: rgba(239, 68, 68, 0.1) !important;
-          }
-          
-          .status-badge {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 12px;
-            font-weight: 500;
-          }
-          
-          .status-text {
-            color: #374151;
-          }
-          
-          .invoices-table :global(.ant-table-thead > tr > th) {
-            background: #f8fafc;
-            font-weight: 600;
-            color: #374151;
-            border-bottom: 2px solid #e2e8f0;
-          }
-          
-          .invoices-table :global(.ant-table-tbody > tr:hover > td) {
-            background: rgba(59, 130, 246, 0.05);
-          }
-          
-          .invoice-form :global(.ant-form-item-label > label) {
-            font-weight: 600;
-            color: #374151;
-          }
-          
-          @media (max-width: 768px) {
-            .stat-value {
-              font-size: 24px;
+        <TabPane 
+          tab={
+            <span>
+              <FileTextOutlined />
+              Tenant Faturaları
+            </span>
+          } 
+          key="tenant-invoices"
+        >
+          <Card 
+            title="Tenant → Utility Faturaları (Elektrik, Su, vb.)"
+            extra={
+              <Space>
+                <Button 
+                  icon={<UploadOutlined />}
+                  onClick={handleImportInvoices}
+                >
+                  Toplu Import
+                </Button>
+                <Button 
+                  icon={<DownloadOutlined />}
+                >
+                  Excel Export
+                </Button>
+              </Space>
             }
+            className="shadow-sm"
+          >
+            <Table
+              columns={tenantInvoiceColumns}
+              dataSource={tenantInvoices}
+              rowKey="id"
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => 
+                  `${range[0]}-${range[1]} / ${total} tenant faturası`
+              }}
+            />
+          </Card>
+        </TabPane>
+      </Tabs>
+
+      {/* Resource Type Modal */}
+      <Modal
+        title={
+          modalType === 'add' ? 'Yeni Kaynak Tipi Ekle' :
+          modalType === 'edit' ? 'Kaynak Tipi Düzenle' : 'Kaynak Tipi Detayları'
+        }
+        open={resourceModalVisible}
+        onOk={modalType !== 'view' ? handleResourceModalOk : undefined}
+        onCancel={() => setResourceModalVisible(false)}
+        width={600}
+        okText={modalType === 'add' ? 'Ekle' : 'Güncelle'}
+        cancelText="İptal"
+      >
+        <Form
+          form={resourceForm}
+          layout="vertical"
+          disabled={modalType === 'view'}
+        >
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="name"
+                label="Kaynak Adı"
+                rules={[{ required: true, message: 'Kaynak adı gerekli' }]}
+              >
+                <Input placeholder="Elektrik, Su, Doğalgaz..." />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="icon"
+                label="İkon"
+                rules={[{ required: true, message: 'İkon gerekli' }]}
+              >
+                <Input placeholder="⚡, 💧, 🔥..." />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="unit"
+                label="Birim"
+                rules={[{ required: true, message: 'Birim gerekli' }]}
+              >
+                <Input placeholder="kWh, m³, L..." />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="defaultVAT"
+                label="Varsayılan KDV (%)"
+                rules={[{ required: true, message: 'KDV oranı gerekli' }]}
+              >
+                <InputNumber 
+                  min={0} 
+                  max={100} 
+                  placeholder="20" 
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="defaultCurrency"
+                label="Varsayılan Para Birimi"
+                rules={[{ required: true, message: 'Para birimi gerekli' }]}
+              >
+                <Select placeholder="Para birimi seçin">
+                  <Option value="TRY">Türk Lirası (₺)</Option>
+                  <Option value="USD">Amerikan Doları ($)</Option>
+                  <Option value="EUR">Euro (€)</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="isActive"
+                label="Durum"
+                valuePropName="checked"
+              >
+                <Switch checkedChildren="Aktif" unCheckedChildren="Pasif" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            name="description"
+            label="Açıklama"
+          >
+            <Input.TextArea 
+              rows={3} 
+              placeholder="Kaynak tipi hakkında açıklama..."
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Tenant Expense Modal */}
+      <Modal
+        title={
+          modalType === 'add' ? 'Yeni Gider Tanımı Ekle' :
+          modalType === 'edit' ? 'Gider Tanımı Düzenle' : 'Gider Tanımı Detayları'
+        }
+        open={expenseModalVisible}
+        onOk={modalType !== 'view' ? handleExpenseModalOk : undefined}
+        onCancel={() => setExpenseModalVisible(false)}
+        width={700}
+        okText={modalType === 'add' ? 'Ekle' : 'Güncelle'}
+        cancelText="İptal"
+      >
+        <Form
+          form={expenseForm}
+          layout="vertical"
+          disabled={modalType === 'view'}
+        >
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="tenantId"
+                label="Tenant"
+                rules={[{ required: true, message: 'Tenant seçin' }]}
+              >
+                <Select placeholder="Tenant seçin">
+                  <Option value={1}>ABC Şirketi</Option>
+                  <Option value={2}>XYZ Ltd.</Option>
+                  <Option value={3}>TechCorp</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="resourceTypeId"
+                label="Kaynak Tipi"
+                rules={[{ required: true, message: 'Kaynak tipi seçin' }]}
+              >
+                <Select placeholder="Kaynak tipi seçin">
+                  {resourceTypes.map(rt => (
+                    <Option key={rt.id} value={rt.id}>
+                      {rt.icon} {rt.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="expenseName"
+                label="Gider Adı"
+                rules={[{ required: true, message: 'Gider adı gerekli' }]}
+              >
+                <Input placeholder="Ana Bina Elektrik, Su Tüketimi..." />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="unitPrice"
+                label="Birim Fiyat"
+                rules={[{ required: true, message: 'Birim fiyat gerekli' }]}
+              >
+                <InputNumber 
+                  min={0} 
+                  placeholder="1.25" 
+                  style={{ width: '100%' }}
+                  addonAfter="₺"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="VAT"
+                label="KDV (%)"
+                rules={[{ required: true, message: 'KDV oranı gerekli' }]}
+              >
+                <InputNumber 
+                  min={0} 
+                  max={100} 
+                  placeholder="20" 
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="currency"
+                label="Para Birimi"
+                rules={[{ required: true, message: 'Para birimi gerekli' }]}
+              >
+                <Select placeholder="Para birimi seçin">
+                  <Option value="TRY">Türk Lirası (₺)</Option>
+                  <Option value="USD">Amerikan Doları ($)</Option>
+                  <Option value="EUR">Euro (€)</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="isActive"
+                label="Durum"
+                valuePropName="checked"
+              >
+                <Switch checkedChildren="Aktif" unCheckedChildren="Pasif" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            name="description"
+            label="Açıklama"
+          >
+            <Input.TextArea 
+              rows={3} 
+              placeholder="Gider tanımı hakkında açıklama..."
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Invoice Modal */}
+      <Modal
+        title="Fatura Detayları"
+        open={invoiceModalVisible}
+        onCancel={() => setInvoiceModalVisible(false)}
+        width={600}
+        footer={[
+          <Button key="close" onClick={() => setInvoiceModalVisible(false)}>
+            Kapat
+          </Button>
+        ]}
+      >
+        {selectedItem && (
+          <div>
+            <Row gutter={16} className="mb-4">
+              <Col span={12}>
+                <Text strong>Fatura No:</Text>
+                <br />
+                <Text>{selectedItem.invoiceNumber}</Text>
+              </Col>
+              <Col span={12}>
+                <Text strong>Durum:</Text>
+                <br />
+                <Badge 
+                  status={getStatusColor(selectedItem.status) as any} 
+                  text={getStatusText(selectedItem.status)}
+                />
+              </Col>
+            </Row>
             
-            .stat-title {
-              font-size: 12px;
-            }
+            <Row gutter={16} className="mb-4">
+              <Col span={12}>
+                <Text strong>Tenant:</Text>
+                <br />
+                <Text>{selectedItem.tenantName}</Text>
+              </Col>
+              <Col span={12}>
+                <Text strong>Kaynak:</Text>
+                <br />
+                <Tag color="blue">{selectedItem.resourceType}</Tag>
+              </Col>
+            </Row>
             
-            .resource-header {
-              flex-direction: column;
-              align-items: flex-start;
-            }
+            <Row gutter={16} className="mb-4">
+              <Col span={12}>
+                <Text strong>Dönem:</Text>
+                <br />
+                <Text>{selectedItem.period}</Text>
+              </Col>
+              <Col span={12}>
+                <Text strong>Tüketim:</Text>
+                <br />
+                <Text>{selectedItem.consumption} {selectedItem.unit}</Text>
+              </Col>
+            </Row>
             
-            .resource-percentage {
-              margin-top: 8px;
-            }
-          }
-        `}</style>
-      </div>
-    </PageContainer>
+            <Divider />
+            
+            <Row gutter={16} className="mb-4">
+              <Col span={12}>
+                <Text strong>Birim Fiyat:</Text>
+                <br />
+                <Text>{selectedItem.unitPrice} {selectedItem.currency}</Text>
+              </Col>
+              <Col span={12}>
+                <Text strong>Ara Toplam:</Text>
+                <br />
+                <Text>{selectedItem.subtotal} {selectedItem.currency}</Text>
+              </Col>
+            </Row>
+            
+            <Row gutter={16} className="mb-4">
+              <Col span={12}>
+                <Text strong>KDV:</Text>
+                <br />
+                <Text>{selectedItem.VAT} {selectedItem.currency}</Text>
+              </Col>
+              <Col span={12}>
+                <Text strong>Toplam:</Text>
+                <br />
+                <Text strong style={{ fontSize: '16px', color: '#1890ff' }}>
+                  {selectedItem.total} {selectedItem.currency}
+                </Text>
+              </Col>
+            </Row>
+            
+            <Divider />
+            
+            <Row gutter={16}>
+              <Col span={12}>
+                <Text strong>Vade Tarihi:</Text>
+                <br />
+                <Text>{selectedItem.dueDate}</Text>
+              </Col>
+              <Col span={12}>
+                <Text strong>Ödeme Tarihi:</Text>
+                <br />
+                <Text>{selectedItem.paidDate || 'Henüz ödenmedi'}</Text>
+              </Col>
+            </Row>
+          </div>
+        )}
+      </Modal>
+
+      {/* Import Modal */}
+      <Modal
+        title="Toplu Fatura Import"
+        open={importModalVisible}
+        onOk={handleImportModalOk}
+        onCancel={() => setImportModalVisible(false)}
+        width={500}
+        okText="Import Et"
+        cancelText="İptal"
+      >
+        <div className="text-center">
+          <Upload.Dragger
+            name="file"
+            multiple={false}
+            accept=".xlsx,.xls,.csv"
+            beforeUpload={() => false}
+          >
+            <p className="ant-upload-drag-icon">
+              <FileExcelOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
+            </p>
+            <p className="ant-upload-text">Excel veya CSV dosyasını buraya sürükleyin</p>
+            <p className="ant-upload-hint">
+              Desteklenen formatlar: .xlsx, .xls, .csv
+            </p>
+          </Upload.Dragger>
+          
+          <Divider />
+          
+          <div className="text-left">
+            <Text strong>Import Şablonu:</Text>
+            <br />
+            <Text type="secondary">
+              Dosyanızda şu sütunlar bulunmalıdır:
+            </Text>
+            <ul className="mt-2">
+              <li>tenant_id (Tenant ID)</li>
+              <li>resource_type (Kaynak Tipi)</li>
+              <li>period (Dönem - YYYY-MM)</li>
+              <li>consumption (Tüketim)</li>
+              <li>unit_price (Birim Fiyat)</li>
+              <li>vat_rate (KDV Oranı)</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
+
+      <style jsx>{`
+        .stat-card {
+          transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+          transform: translateY(-5px);
+        }
+        
+        .stat-card-content {
+          display: flex;
+          align-items: center;
+          color: white;
+          position: relative;
+          z-index: 2;
+        }
+        
+        .stat-icon {
+          font-size: 32px;
+          margin-right: 16px;
+          opacity: 0.9;
+        }
+        
+        .stat-info {
+          flex: 1;
+        }
+        
+        .stat-value {
+          font-size: 28px;
+          font-weight: bold;
+          line-height: 1;
+          margin-bottom: 4px;
+        }
+        
+        .stat-title {
+          font-size: 14px;
+          opacity: 0.9;
+        }
+        
+        .stat-card-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(255, 255, 255, 0.1);
+          z-index: 1;
+        }
+      `}</style>
+    </div>
   )
 } 
