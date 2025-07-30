@@ -417,7 +417,7 @@ export default function AdminTenantsPage() {
             showTotal: (total, range) => 
               `${range[0]}-${range[1]} / ${total} tenant`
           }}
-          scroll={{ x: 1000 }}
+
         />
       </Card>
 
@@ -504,6 +504,69 @@ export default function AdminTenantsPage() {
           )}
         </Form>
       </Modal>
+
+      <style jsx>{`
+        .tenants-container {
+          padding: 0;
+        }
+        
+        /* Responsive table styles */
+        :global(.ant-table) {
+          overflow-x: auto;
+        }
+        
+        :global(.ant-table-thead > tr > th),
+        :global(.ant-table-tbody > tr > td) {
+          white-space: nowrap;
+          min-width: 120px;
+        }
+        
+        :global(.ant-table-thead > tr > th) {
+          background: #f8fafc;
+          font-weight: 600;
+          color: #374151;
+          border-bottom: 2px solid #e2e8f0;
+        }
+        
+        :global(.ant-table-tbody > tr:hover > td) {
+          background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .action-button {
+          transition: all 0.3s ease;
+          border-radius: 6px;
+        }
+        
+        .action-button:hover {
+          transform: scale(1.1);
+          background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .delete-button:hover {
+          background: rgba(239, 68, 68, 0.1) !important;
+        }
+        
+        .status-badge {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+        
+        .subscription-badge {
+          font-weight: 600;
+          border-radius: 6px;
+        }
+        
+        @media (max-width: 768px) {
+          :global(.ant-table-thead > tr > th),
+          :global(.ant-table-tbody > tr > td) {
+            min-width: 100px;
+            font-size: 12px;
+          }
+        }
+      `}</style>
     </div>
   )
 } 

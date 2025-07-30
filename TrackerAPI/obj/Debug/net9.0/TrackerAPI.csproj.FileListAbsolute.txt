@@ -234,3 +234,4 @@ C:\Users\ataka\Desktop\ElectricityTracker\TrackerAPI\bin\Debug\net9.0\Serilog.Si
 C:\Users\ataka\Desktop\ElectricityTracker\TrackerAPI\bin\Debug\net9.0\Serilog.Sinks.File.dll
 C:\Users\ataka\Desktop\ElectricityTracker\TrackerAPI\bin\Debug\net9.0\Serilog.Sinks.PeriodicBatching.dll
 C:\Users\ataka\Desktop\ElectricityTracker\TrackerAPI\bin\Debug\net9.0\Serilog.Sinks.PostgreSQL.dll
+C:\Users\ataka\Desktop\ElectricityTracker\TrackerAPI\obj\Debug\net9.0\TrackerAPI.sourcelink.json

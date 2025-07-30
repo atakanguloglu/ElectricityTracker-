@@ -468,7 +468,6 @@ export default function AdminLogsPage() {
               showTotal: (total, range) => `${range[0]}-${range[1]} / ${total} kayıt`,
             }}
             className="logs-table"
-            scroll={{ x: 800 }}
           />
         </ProCard>
 
@@ -587,6 +586,17 @@ export default function AdminLogsPage() {
           
           .logs-table :global(.ant-table-tbody > tr:hover > td) {
             background: rgba(59, 130, 246, 0.05);
+          }
+          
+          /* Responsive table styles */
+          .logs-table :global(.ant-table) {
+            overflow-x: auto;
+          }
+          
+          .logs-table :global(.ant-table-thead > tr > th),
+          .logs-table :global(.ant-table-tbody > tr > td) {
+            white-space: nowrap;
+            min-width: 120px;
           }
           
           @media (max-width: 768px) {
