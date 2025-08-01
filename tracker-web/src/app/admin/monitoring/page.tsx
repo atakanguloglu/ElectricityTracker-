@@ -33,7 +33,8 @@ import {
   Steps,
   Upload,
   Dropdown,
-  App
+  App,
+  Spin
 } from 'antd';
 import {
   MonitorOutlined,
@@ -88,7 +89,6 @@ import { apiRequest } from '@/utils/auth';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
-const { TabPane } = Tabs;
 const { Panel } = Collapse;
 const { RangePicker } = DatePicker;
 const { TextArea } = Input;
@@ -156,11 +156,39 @@ interface PerformanceMetrics {
 interface Alert {
   id: string;
   type: string;
-  level: string;
   title: string;
-  message: string;
+  description: string;
+  server: string;
   timestamp: string;
-  isActive: boolean;
+  status: string;
+  sentVia: string[];
+  details?: any;
+}
+
+interface AlertDetails {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  server: string;
+  timestamp: string;
+  status: string;
+  severity: string;
+  category: string;
+  impact: string;
+  resolution: string;
+  actions: string[];
+  metrics: {
+    errorCount: number;
+    totalLogs: number;
+    databaseConnections: number;
+    memoryUsage: string;
+    cpuUsage: string;
+  };
+  timeline: Array<{
+    time: string;
+    event: string;
+  }>;
 }
 
 interface MonitoringDashboard {
@@ -193,244 +221,136 @@ interface MonitoringDashboard {
   };
 }
 
-// Mock data
-const mockServers = [
-  {
-    id: 1,
-    name: 'Web Server 1',
-    ip: '192.168.1.10',
-    type: 'web',
-    status: 'online',
-    cpu: 45,
-    ram: 67,
-    disk: 23,
-    network: 12,
-    uptime: '15 days, 8 hours',
-    lastUpdate: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: 2,
-    name: 'Database Server',
-    ip: '192.168.1.20',
-    type: 'database',
-    status: 'online',
-    cpu: 78,
-    ram: 89,
-    disk: 45,
-    network: 8,
-    uptime: '30 days, 12 hours',
-    lastUpdate: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: 3,
-    name: 'Cache Server',
-    ip: '192.168.1.30',
-    type: 'cache',
-    status: 'online',
-    cpu: 23,
-    ram: 34,
-    disk: 12,
-    network: 5,
-    uptime: '7 days, 3 hours',
-    lastUpdate: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: 4,
-    name: 'Background Job Server',
-    ip: '192.168.1.40',
-    type: 'job',
-    status: 'warning',
-    cpu: 92,
-    ram: 95,
-    disk: 67,
-    network: 15,
-    uptime: '5 days, 18 hours',
-    lastUpdate: '2024-01-15T10:30:00Z'
-  }
-];
+interface Server {
+  id: number;
+  name: string;
+  ip: string;
+  type: string;
+  status: string;
+  cpu: number;
+  ram: number;
+  disk: number;
+  network: number;
+  uptime: string;
+  lastUpdate: string;
+}
 
-const mockDatabaseMetrics = [
-  {
-    id: 1,
-    name: 'Main Database',
-    type: 'PostgreSQL',
-    status: 'online',
-    connections: 45,
-    maxConnections: 100,
-    activeQueries: 12,
-    slowQueries: 2,
-    responseTime: 15,
-    lastBackup: '2024-01-15T02:00:00Z',
-    size: '2.5 GB'
-  },
-  {
-    id: 2,
-    name: 'Read Replica',
-    type: 'PostgreSQL',
-    status: 'online',
-    connections: 23,
-    maxConnections: 50,
-    activeQueries: 8,
-    slowQueries: 0,
-    responseTime: 8,
-    lastBackup: '2024-01-15T02:00:00Z',
-    size: '2.5 GB'
-  }
-];
+interface ServerDetails {
+  id: number;
+  name: string;
+  ip: string;
+  type: string;
+  status: string;
+  cpu: number;
+  ram: number;
+  disk: number;
+  network: number;
+  uptime: string;
+  lastUpdate: string;
+  details: {
+    processInfo: {
+      processName: string;
+      processId: number;
+      workingSet: string;
+      totalMemory: string;
+      threadCount: number;
+      handleCount: number;
+      startTime: string;
+      totalProcessorTime: number;
+    };
+    systemInfo: {
+      osVersion: string;
+      machineName: string;
+      processorCount: number;
+      workingSet: string;
+      is64BitProcess: boolean;
+      is64BitOperatingSystem: boolean;
+    };
+    networkInfo: {
+      localIpAddress: string;
+      hostName: string;
+      networkInterfaces: Array<{
+        name: string;
+        description: string;
+        networkInterfaceType: string;
+        speed: string;
+      }>;
+    };
+    databaseInfo?: {
+      canConnect: boolean;
+      connectionString: string;
+      pendingMigrations: string[];
+      totalLogs: number;
+      recentLogs: number;
+      errorLogs: number;
+    };
+    performanceMetrics: {
+      cpuUsage: number;
+      memoryUsage: number;
+      diskUsage: number;
+      networkUsage: number;
+      threadCount: number;
+      handleCount: number;
+    };
+  };
+}
 
-const mockCacheMetrics = [
-  {
-    id: 1,
-    name: 'Redis Cache',
-    type: 'Redis',
-    status: 'online',
-    memoryUsage: 67,
-    maxMemory: '1 GB',
-    hitRate: 89,
-    missRate: 11,
-    keys: 15420,
-    connections: 8,
-    lastUpdate: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: 2,
-    name: 'Application Cache',
-    type: 'In-Memory',
-    status: 'online',
-    memoryUsage: 34,
-    maxMemory: '512 MB',
-    hitRate: 92,
-    missRate: 8,
-    keys: 8230,
-    connections: 4,
-    lastUpdate: '2024-01-15T10:30:00Z'
-  }
-];
+interface DatabaseMetric {
+  id: number;
+  name: string;
+  type: string;
+  status: string;
+  connections: number;
+  maxConnections: number;
+  activeQueries: number;
+  slowQueries: number;
+  responseTime: number;
+  lastBackup: string;
+  size: string;
+}
 
-const mockBackgroundJobs = [
-  {
-    id: 1,
-    name: 'Email Queue Processor',
-    type: 'email',
-    status: 'running',
-    progress: 75,
-    totalJobs: 150,
-    completedJobs: 112,
-    failedJobs: 3,
-    avgProcessingTime: 2.5,
-    lastRun: '2024-01-15T10:25:00Z',
-    nextRun: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: 2,
-    name: 'Report Generator',
-    type: 'report',
-    status: 'idle',
-    progress: 0,
-    totalJobs: 0,
-    completedJobs: 0,
-    failedJobs: 0,
-    avgProcessingTime: 15.2,
-    lastRun: '2024-01-15T09:00:00Z',
-    nextRun: '2024-01-15T11:00:00Z'
-  },
-  {
-    id: 3,
-    name: 'Data Sync Job',
-    type: 'sync',
-    status: 'failed',
-    progress: 0,
-    totalJobs: 50,
-    completedJobs: 23,
-    failedJobs: 27,
-    avgProcessingTime: 8.7,
-    lastRun: '2024-01-15T10:15:00Z',
-    nextRun: '2024-01-15T10:45:00Z'
-  }
-];
+interface CacheMetric {
+  id: number;
+  name: string;
+  type: string;
+  status: string;
+  memoryUsage: number;
+  maxMemory: string;
+  hitRate: number;
+  missRate: number;
+  keys: number;
+  connections: number;
+  lastUpdate: string;
+}
 
-const mockMicroservices = [
-  {
-    id: 1,
-    name: 'User Service',
-    endpoint: '/api/users',
-    status: 'healthy',
-    uptime: 99.8,
-    responseTime: 45,
-    errorRate: 0.1,
-    requestsPerMinute: 120,
-    lastCheck: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: 2,
-    name: 'Billing Service',
-    endpoint: '/api/billing',
-    status: 'warning',
-    uptime: 98.5,
-    responseTime: 120,
-    errorRate: 2.3,
-    requestsPerMinute: 85,
-    lastCheck: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: 3,
-    name: 'Notification Service',
-    endpoint: '/api/notifications',
-    status: 'healthy',
-    uptime: 99.9,
-    responseTime: 25,
-    errorRate: 0.05,
-    requestsPerMinute: 200,
-    lastCheck: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: 4,
-    name: 'Analytics Service',
-    endpoint: '/api/analytics',
-    status: 'down',
-    uptime: 0,
-    responseTime: 0,
-    errorRate: 100,
-    requestsPerMinute: 0,
-    lastCheck: '2024-01-15T10:25:00Z'
-  }
-];
+interface BackgroundJob {
+  id: number;
+  name: string;
+  type: string;
+  status: string;
+  progress: number;
+  totalJobs: number;
+  completedJobs: number;
+  failedJobs: number;
+  avgProcessingTime: number;
+  lastRun: string;
+  nextRun: string;
+}
 
-const mockAlerts = [
-  {
-    id: 1,
-    type: 'critical',
-    title: 'Database Server CPU Usage Critical',
-    description: 'CPU usage exceeded 90% threshold',
-    server: 'Database Server',
-    timestamp: '2024-01-15T10:28:00Z',
-    status: 'active',
-    sentVia: ['email', 'sms']
-  },
-  {
-    id: 2,
-    type: 'warning',
-    title: 'Background Job Failed',
-    description: 'Data Sync Job failed with 27 errors',
-    server: 'Background Job Server',
-    timestamp: '2024-01-15T10:20:00Z',
-    status: 'active',
-    sentVia: ['email']
-  },
-  {
-    id: 3,
-    type: 'info',
-    title: 'Microservice Response Time High',
-    description: 'Billing Service response time > 100ms',
-    server: 'Billing Service',
-    timestamp: '2024-01-15T10:15:00Z',
-    status: 'resolved',
-    sentVia: ['email']
-  }
-];
+interface Microservice {
+  id: number;
+  name: string;
+  endpoint: string;
+  status: string;
+  uptime: number;
+  responseTime: number;
+  errorRate: number;
+  requestsPerMinute: number;
+  lastCheck: string;
+}
 
 const serverTypes = [
-  { value: 'web', label: 'Web Server', icon: <DesktopOutlined />, color: '#1890ff' },
+  { value: 'api', label: 'API Server', icon: <DesktopOutlined />, color: '#1890ff' },
   { value: 'database', label: 'Database', icon: <DatabaseOutlined />, color: '#52c41a' },
   { value: 'cache', label: 'Cache', icon: <ThunderboltOutlined />, color: '#faad14' },
   { value: 'job', label: 'Background Job', icon: <SyncOutlined />, color: '#722ed1' }
@@ -444,82 +364,154 @@ const alertTypes = [
 
 export default function SystemMonitoringPage() {
   const { message } = App.useApp();
-  const [servers, setServers] = useState(mockServers);
-  const [databaseMetrics, setDatabaseMetrics] = useState(mockDatabaseMetrics);
-  const [cacheMetrics, setCacheMetrics] = useState(mockCacheMetrics);
-  const [backgroundJobs, setBackgroundJobs] = useState(mockBackgroundJobs);
-  const [microservices, setMicroservices] = useState(mockMicroservices);
-  const [alerts, setAlerts] = useState(mockAlerts);
+  
+  // Backend API states
+  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
+  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
+  const [monitoringDashboard, setMonitoringDashboard] = useState<MonitoringDashboard | null>(null);
+  const [backendAlerts, setBackendAlerts] = useState<Alert[]>([]);
+  const [servers, setServers] = useState<Server[]>([]);
+  const [databaseMetrics, setDatabaseMetrics] = useState<DatabaseMetric[]>([]);
+  const [cacheMetrics, setCacheMetrics] = useState<CacheMetric[]>([]);
+  const [backgroundJobs, setBackgroundJobs] = useState<BackgroundJob[]>([]);
+  const [microservices, setMicroservices] = useState<Microservice[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     serverType: undefined,
     status: undefined,
     alertType: undefined
   });
 
-  // Backend API states
-  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
-  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
-  const [monitoringDashboard, setMonitoringDashboard] = useState<MonitoringDashboard | null>(null);
-  const [backendAlerts, setBackendAlerts] = useState<Alert[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Alert details modal states
+  const [alertDetailsVisible, setAlertDetailsVisible] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState<AlertDetails | null>(null);
+  const [alertDetailsLoading, setAlertDetailsLoading] = useState(false);
+
+  // Server details modal states
+  const [serverDetailsVisible, setServerDetailsVisible] = useState(false);
+  const [selectedServer, setSelectedServer] = useState<ServerDetails | null>(null);
+  const [serverDetailsLoading, setServerDetailsLoading] = useState(false);
 
   // Fetch backend data
   const fetchSystemHealth = async () => {
     try {
-      setLoading(true);
-      const response = await apiRequest(`${API_BASE_URL}/monitoring/system-health`);
+      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/system-health`);
       if (!response.ok) throw new Error('Sistem sağlığı alınamadı');
       const data = await response.json();
       setSystemHealth(data);
     } catch (err) {
-      setError('Sistem sağlığı alınırken hata oluştu');
       console.error('System health fetch error:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchPerformanceMetrics = async () => {
     try {
-      setLoading(true);
-      const response = await apiRequest(`${API_BASE_URL}/monitoring/performance-metrics`);
+      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/performance-metrics`);
       if (!response.ok) throw new Error('Performans metrikleri alınamadı');
       const data = await response.json();
       setPerformanceMetrics(data);
     } catch (err) {
-      setError('Performans metrikleri alınırken hata oluştu');
       console.error('Performance metrics fetch error:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchMonitoringDashboard = async () => {
     try {
-      setLoading(true);
-      const response = await apiRequest(`${API_BASE_URL}/monitoring/dashboard`);
+      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/dashboard`);
       if (!response.ok) throw new Error('Monitoring dashboard alınamadı');
       const data = await response.json();
       setMonitoringDashboard(data);
     } catch (err) {
-      setError('Monitoring dashboard alınırken hata oluştu');
       console.error('Monitoring dashboard fetch error:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchAlerts = async () => {
     try {
-      setLoading(true);
-      const response = await apiRequest(`${API_BASE_URL}/monitoring/alerts`);
+      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/alerts`);
       if (!response.ok) throw new Error('Uyarılar alınamadı');
       const data = await response.json();
       setBackendAlerts(data.items || []);
     } catch (err) {
-      setError('Uyarılar alınırken hata oluştu');
       console.error('Alerts fetch error:', err);
+    }
+  };
+
+  const fetchServers = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/servers`);
+      if (!response.ok) throw new Error('Sunucu bilgileri alınamadı');
+      const data = await response.json();
+      setServers(data);
+    } catch (err) {
+      console.error('Servers fetch error:', err);
+    }
+  };
+
+  const fetchDatabaseMetrics = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/database-metrics`);
+      if (!response.ok) throw new Error('Veritabanı metrikleri alınamadı');
+      const data = await response.json();
+      setDatabaseMetrics(data);
+    } catch (err) {
+      console.error('Database metrics fetch error:', err);
+    }
+  };
+
+  const fetchCacheMetrics = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/cache-metrics`);
+      if (!response.ok) throw new Error('Cache metrikleri alınamadı');
+      const data = await response.json();
+      setCacheMetrics(data);
+    } catch (err) {
+      console.error('Cache metrics fetch error:', err);
+    }
+  };
+
+  const fetchBackgroundJobs = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/background-jobs`);
+      if (!response.ok) throw new Error('Background job bilgileri alınamadı');
+      const data = await response.json();
+      setBackgroundJobs(data);
+    } catch (err) {
+      console.error('Background jobs fetch error:', err);
+    }
+  };
+
+  const fetchMicroservices = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/microservices`);
+      if (!response.ok) throw new Error('Mikroservis bilgileri alınamadı');
+      const data = await response.json();
+      setMicroservices(data);
+    } catch (err) {
+      console.error('Microservices fetch error:', err);
+    }
+  };
+
+  const fetchAllData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      await Promise.all([
+        fetchSystemHealth(),
+        fetchPerformanceMetrics(),
+        fetchMonitoringDashboard(),
+        fetchAlerts(),
+        fetchServers(),
+        fetchDatabaseMetrics(),
+        fetchCacheMetrics(),
+        fetchBackgroundJobs(),
+        fetchMicroservices()
+      ]);
+    } catch (err) {
+      setError('Veriler yüklenirken hata oluştu');
+      console.error('Data fetch error:', err);
     } finally {
       setLoading(false);
     }
@@ -527,30 +519,13 @@ export default function SystemMonitoringPage() {
 
   // Load data on component mount
   useEffect(() => {
-    fetchSystemHealth();
-    fetchPerformanceMetrics();
-    fetchMonitoringDashboard();
-    fetchAlerts();
+    fetchAllData();
   }, []);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      // Refresh backend data
-      fetchSystemHealth();
-      fetchPerformanceMetrics();
-      fetchMonitoringDashboard();
-      fetchAlerts();
-      
-      // Simulate real-time updates for mock data
-      setServers(prev => prev.map(server => ({
-        ...server,
-        cpu: Math.floor(Math.random() * 100),
-        ram: Math.floor(Math.random() * 100),
-        disk: Math.floor(Math.random() * 100),
-        network: Math.floor(Math.random() * 100),
-        lastUpdate: new Date().toISOString()
-      })));
+      fetchAllData();
     }, 30000);
 
     return () => clearInterval(interval);
@@ -567,26 +542,26 @@ export default function SystemMonitoringPage() {
     },
     {
       title: 'Ortalama CPU',
-      value: `${Math.round(servers.reduce((sum, s) => sum + s.cpu, 0) / servers.length)}%`,
+      value: servers.length > 0 ? `${Math.round(servers.reduce((sum, s) => sum + s.cpu, 0) / servers.length)}%` : '0%',
       icon: <DesktopOutlined />,
       color: '#52c41a',
       gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
     },
     {
       title: 'Ortalama RAM',
-      value: `${Math.round(servers.reduce((sum, s) => sum + s.ram, 0) / servers.length)}%`,
+      value: servers.length > 0 ? `${Math.round(servers.reduce((sum, s) => sum + s.ram, 0) / servers.length)}%` : '0%',
       icon: <HddOutlined />,
       color: '#faad14',
       gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
     },
     {
       title: 'Aktif Alarm',
-      value: alerts.filter(a => a.status === 'active').length,
+      value: backendAlerts.filter(a => a.status === 'active').length,
       icon: <AlertOutlined />,
       color: '#ff4d4f',
       gradient: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)'
     }
-  ], [servers, alerts]);
+  ], [servers, backendAlerts]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -620,7 +595,7 @@ export default function SystemMonitoringPage() {
     }
   };
 
-  const serverColumns: ColumnsType<any> = [
+  const serverColumns: ColumnsType<Server> = [
     {
       title: 'Sunucu',
       key: 'server',
@@ -749,7 +724,7 @@ export default function SystemMonitoringPage() {
     }
   ];
 
-  const databaseColumns: ColumnsType<any> = [
+  const databaseColumns: ColumnsType<DatabaseMetric> = [
     {
       title: 'Veritabanı',
       dataIndex: 'name',
@@ -823,7 +798,7 @@ export default function SystemMonitoringPage() {
     }
   ];
 
-  const cacheColumns: ColumnsType<any> = [
+  const cacheColumns: ColumnsType<CacheMetric> = [
     {
       title: 'Cache',
       dataIndex: 'name',
@@ -893,7 +868,7 @@ export default function SystemMonitoringPage() {
     }
   ];
 
-  const jobColumns: ColumnsType<any> = [
+  const jobColumns: ColumnsType<BackgroundJob> = [
     {
       title: 'Job Adı',
       dataIndex: 'name',
@@ -909,7 +884,9 @@ export default function SystemMonitoringPage() {
         <Tag color={
           type === 'email' ? 'blue' :
           type === 'report' ? 'green' :
-          type === 'sync' ? 'orange' : 'default'
+          type === 'sync' ? 'orange' :
+          type === 'maintenance' ? 'purple' :
+          type === 'backup' ? 'cyan' : 'default'
         }>
           {type}
         </Tag>
@@ -985,7 +962,7 @@ export default function SystemMonitoringPage() {
     }
   ];
 
-  const microserviceColumns: ColumnsType<any> = [
+  const microserviceColumns: ColumnsType<Microservice> = [
     {
       title: 'Servis',
       dataIndex: 'name',
@@ -1067,7 +1044,7 @@ export default function SystemMonitoringPage() {
     }
   ];
 
-  const alertColumns: ColumnsType<any> = [
+  const alertColumns: ColumnsType<Alert> = [
     {
       title: 'Zaman',
       key: 'timestamp',
@@ -1154,23 +1131,50 @@ export default function SystemMonitoringPage() {
     }
   ];
 
-  const handleViewServerDetails = (server: any) => {
-    message.info(`${server.name} detayları yakında eklenecek`);
+  const handleViewServerDetails = async (server: Server) => {
+    try {
+      setServerDetailsLoading(true);
+      setServerDetailsVisible(true);
+      
+      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/servers/${server.id}`);
+      if (!response.ok) throw new Error('Sunucu detayları alınamadı');
+      
+      const details: ServerDetails = await response.json();
+      setSelectedServer(details);
+    } catch (err) {
+      console.error('Server details fetch error:', err);
+      message.error('Sunucu detayları yüklenirken hata oluştu');
+    } finally {
+      setServerDetailsLoading(false);
+    }
   };
 
   const handleRefreshServer = (serverId: number) => {
     message.success('Sunucu bilgileri yenilendi');
+    fetchServers();
   };
 
-  const handleViewAlertDetails = (alert: any) => {
-    message.info(`${alert.title} detayları yakında eklenecek`);
+  const handleViewAlertDetails = async (alert: Alert) => {
+    try {
+      setAlertDetailsLoading(true);
+      setAlertDetailsVisible(true);
+      
+      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/alerts/${alert.id}`);
+      if (!response.ok) throw new Error('Alarm detayları alınamadı');
+      
+      const details: AlertDetails = await response.json();
+      setSelectedAlert(details);
+    } catch (err) {
+      console.error('Alert details fetch error:', err);
+      message.error('Alarm detayları yüklenirken hata oluştu');
+    } finally {
+      setAlertDetailsLoading(false);
+    }
   };
 
-  const handleResolveAlert = (alertId: number) => {
-    setAlerts(alerts => alerts.map(a => 
-      a.id === alertId ? { ...a, status: 'resolved' } : a
-    ));
+  const handleResolveAlert = (alertId: string) => {
     message.success('Alarm çözüldü olarak işaretlendi');
+    fetchAlerts();
   };
 
   const handleFilterChange = (key: string, value: any) => {
@@ -1185,11 +1189,296 @@ export default function SystemMonitoringPage() {
     });
   };
 
+  // Tabs items configuration
+  const tabItems = [
+    {
+      key: 'servers',
+      label: (
+        <span>
+          <CloudServerOutlined />
+          Sunucular
+        </span>
+      ),
+      children: (
+        <Card
+          title="Sunucu Durumları"
+          extra={
+            <Space>
+              <Select
+                placeholder="Sunucu Türü"
+                style={{ width: 120 }}
+                value={filters.serverType}
+                onChange={(value) => handleFilterChange('serverType', value)}
+                allowClear
+              >
+                {serverTypes.map(type => (
+                  <Option key={type.value} value={type.value}>
+                    {type.label}
+                  </Option>
+                ))}
+              </Select>
+              <Select
+                placeholder="Durum"
+                style={{ width: 100 }}
+                value={filters.status}
+                onChange={(value) => handleFilterChange('status', value)}
+                allowClear
+              >
+                <Option value="online">Çevrimiçi</Option>
+                <Option value="warning">Uyarı</Option>
+                <Option value="offline">Çevrimdışı</Option>
+              </Select>
+              <Button
+                icon={<FilterOutlined />}
+                onClick={clearFilters}
+              >
+                Temizle
+              </Button>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={fetchServers}
+                loading={loading}
+              >
+                Yenile
+              </Button>
+            </Space>
+          }
+        >
+          <Table
+            columns={serverColumns}
+            dataSource={servers}
+            rowKey="id"
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} / ${total} sunucu`
+            }}
+            scroll={{ x: 1200 }}
+            loading={loading}
+          />
+        </Card>
+      )
+    },
+    {
+      key: 'database',
+      label: (
+        <span>
+          <DatabaseOutlined />
+          Veritabanı
+        </span>
+      ),
+      children: (
+        <Card 
+          title="Veritabanı Metrikleri"
+          extra={
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={fetchDatabaseMetrics}
+              loading={loading}
+            >
+              Yenile
+            </Button>
+          }
+        >
+          <Table
+            columns={databaseColumns}
+            dataSource={databaseMetrics}
+            rowKey="id"
+            pagination={false}
+            scroll={{ x: 1000 }}
+            loading={loading}
+          />
+        </Card>
+      )
+    },
+    {
+      key: 'cache',
+      label: (
+        <span>
+          <ThunderboltOutlined />
+          Cache
+        </span>
+      ),
+      children: (
+        <Card 
+          title="Cache Metrikleri"
+          extra={
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={fetchCacheMetrics}
+              loading={loading}
+            >
+              Yenile
+            </Button>
+          }
+        >
+          <Table
+            columns={cacheColumns}
+            dataSource={cacheMetrics}
+            rowKey="id"
+            pagination={false}
+            scroll={{ x: 1000 }}
+            loading={loading}
+          />
+        </Card>
+      )
+    },
+    {
+      key: 'jobs',
+      label: (
+        <span>
+          <SyncOutlined />
+          Background Jobs
+        </span>
+      ),
+      children: (
+        <Card 
+          title="Background Job Durumları"
+          extra={
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={fetchBackgroundJobs}
+              loading={loading}
+            >
+              Yenile
+            </Button>
+          }
+        >
+          <Table
+            columns={jobColumns}
+            dataSource={backgroundJobs}
+            rowKey="id"
+            pagination={false}
+            scroll={{ x: 1200 }}
+            loading={loading}
+          />
+        </Card>
+      )
+    },
+    {
+      key: 'microservices',
+      label: (
+        <span>
+          <GlobalOutlined />
+          Mikroservisler
+        </span>
+      ),
+      children: (
+        <Card 
+          title="Mikroservis Durumları"
+          extra={
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={fetchMicroservices}
+              loading={loading}
+            >
+              Yenile
+            </Button>
+          }
+        >
+          <Table
+            columns={microserviceColumns}
+            dataSource={microservices}
+            rowKey="id"
+            pagination={false}
+            scroll={{ x: 1200 }}
+            loading={loading}
+          />
+        </Card>
+      )
+    },
+    {
+      key: 'alerts',
+      label: (
+        <span>
+          <BellOutlined />
+          Alarmlar
+        </span>
+      ),
+      children: (
+        <Card
+          title="Sistem Alarmları"
+          extra={
+            <Space>
+              <Select
+                placeholder="Alarm Türü"
+                style={{ width: 120 }}
+                value={filters.alertType}
+                onChange={(value) => handleFilterChange('alertType', value)}
+                allowClear
+              >
+                {alertTypes.map(type => (
+                  <Option key={type.value} value={type.value}>
+                    {type.label}
+                  </Option>
+                ))}
+              </Select>
+              <Button
+                icon={<FilterOutlined />}
+                onClick={clearFilters}
+              >
+                Temizle
+              </Button>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={fetchAlerts}
+                loading={loading}
+              >
+                Yenile
+              </Button>
+            </Space>
+          }
+        >
+          <Table
+            columns={alertColumns}
+            dataSource={backendAlerts}
+            rowKey="id"
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} / ${total} alarm`
+            }}
+            scroll={{ x: 1000 }}
+            loading={loading}
+          />
+        </Card>
+      )
+    }
+  ];
+
+  if (loading && servers.length === 0) {
+    return (
+      <div style={{ padding: '24px', textAlign: 'center' }}>
+        <Spin size="large" />
+        <div style={{ marginTop: '16px' }}>Sistem verileri yükleniyor...</div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: '24px' }}>
       <Title level={2}>
         <MonitorOutlined /> Sistem İzleme
       </Title>
+
+      {error && (
+        <Alert
+          message="Hata"
+          description={error}
+          type="error"
+          showIcon
+          style={{ marginBottom: '16px' }}
+          action={
+            <Button size="small" onClick={fetchAllData}>
+              Tekrar Dene
+            </Button>
+          }
+        />
+      )}
 
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
@@ -1217,200 +1506,7 @@ export default function SystemMonitoringPage() {
       </Row>
 
       {/* Main Monitoring Tabs */}
-      <Tabs defaultActiveKey="servers" size="large">
-        <TabPane
-          tab={
-            <span>
-              <CloudServerOutlined />
-              Sunucular
-            </span>
-          }
-          key="servers"
-        >
-          <Card
-            title="Sunucu Durumları"
-            extra={
-              <Space>
-                <Select
-                  placeholder="Sunucu Türü"
-                  style={{ width: 120 }}
-                  value={filters.serverType}
-                  onChange={(value) => handleFilterChange('serverType', value)}
-                  allowClear
-                >
-                  {serverTypes.map(type => (
-                    <Option key={type.value} value={type.value}>
-                      {type.label}
-                    </Option>
-                  ))}
-                </Select>
-                <Select
-                  placeholder="Durum"
-                  style={{ width: 100 }}
-                  value={filters.status}
-                  onChange={(value) => handleFilterChange('status', value)}
-                  allowClear
-                >
-                  <Option value="online">Çevrimiçi</Option>
-                  <Option value="warning">Uyarı</Option>
-                  <Option value="offline">Çevrimdışı</Option>
-                </Select>
-                <Button
-                  icon={<FilterOutlined />}
-                  onClick={clearFilters}
-                >
-                  Temizle
-                </Button>
-              </Space>
-            }
-          >
-            <Table
-              columns={serverColumns}
-              dataSource={servers}
-              rowKey="id"
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total, range) =>
-                  `${range[0]}-${range[1]} / ${total} sunucu`
-              }}
-              scroll={{ x: 1200 }}
-            />
-          </Card>
-        </TabPane>
-
-        <TabPane
-          tab={
-            <span>
-              <DatabaseOutlined />
-              Veritabanı
-            </span>
-          }
-          key="database"
-        >
-          <Card title="Veritabanı Metrikleri">
-            <Table
-              columns={databaseColumns}
-              dataSource={databaseMetrics}
-              rowKey="id"
-              pagination={false}
-              scroll={{ x: 1000 }}
-            />
-          </Card>
-        </TabPane>
-
-        <TabPane
-          tab={
-            <span>
-              <ThunderboltOutlined />
-              Cache
-            </span>
-          }
-          key="cache"
-        >
-          <Card title="Cache Metrikleri">
-            <Table
-              columns={cacheColumns}
-              dataSource={cacheMetrics}
-              rowKey="id"
-              pagination={false}
-              scroll={{ x: 1000 }}
-            />
-          </Card>
-        </TabPane>
-
-        <TabPane
-          tab={
-            <span>
-              <SyncOutlined />
-              Background Jobs
-            </span>
-          }
-          key="jobs"
-        >
-          <Card title="Background Job Durumları">
-            <Table
-              columns={jobColumns}
-              dataSource={backgroundJobs}
-              rowKey="id"
-              pagination={false}
-              scroll={{ x: 1200 }}
-            />
-          </Card>
-        </TabPane>
-
-        <TabPane
-          tab={
-            <span>
-              <GlobalOutlined />
-              Mikroservisler
-            </span>
-          }
-          key="microservices"
-        >
-          <Card title="Mikroservis Durumları">
-            <Table
-              columns={microserviceColumns}
-              dataSource={microservices}
-              rowKey="id"
-              pagination={false}
-              scroll={{ x: 1200 }}
-            />
-          </Card>
-        </TabPane>
-
-        <TabPane
-          tab={
-            <span>
-              <BellOutlined />
-              Alarmlar
-            </span>
-          }
-          key="alerts"
-        >
-          <Card
-            title="Sistem Alarmları"
-            extra={
-              <Space>
-                <Select
-                  placeholder="Alarm Türü"
-                  style={{ width: 120 }}
-                  value={filters.alertType}
-                  onChange={(value) => handleFilterChange('alertType', value)}
-                  allowClear
-                >
-                  {alertTypes.map(type => (
-                    <Option key={type.value} value={type.value}>
-                      {type.label}
-                    </Option>
-                  ))}
-                </Select>
-                <Button
-                  icon={<FilterOutlined />}
-                  onClick={clearFilters}
-                >
-                  Temizle
-                </Button>
-              </Space>
-            }
-          >
-            <Table
-              columns={alertColumns}
-              dataSource={alerts}
-              rowKey="id"
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total, range) =>
-                  `${range[0]}-${range[1]} / ${total} alarm`
-              }}
-              scroll={{ x: 1000 }}
-            />
-          </Card>
-        </TabPane>
-      </Tabs>
+      <Tabs defaultActiveKey="servers" size="large" items={tabItems} />
 
       {/* Real-time Monitoring Info */}
       <Card
@@ -1449,6 +1545,402 @@ export default function SystemMonitoringPage() {
           </Col>
         </Row>
       </Card>
+
+      {/* Alert Details Modal */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertOutlined style={{ 
+              color: selectedAlert?.type === 'critical' ? '#ff4d4f' : 
+                     selectedAlert?.type === 'warning' ? '#faad14' : '#1890ff' 
+            }} />
+            Alarm Detayları
+          </div>
+        }
+        open={alertDetailsVisible}
+        onCancel={() => {
+          setAlertDetailsVisible(false);
+          setSelectedAlert(null);
+        }}
+        footer={[
+          <Button key="close" onClick={() => {
+            setAlertDetailsVisible(false);
+            setSelectedAlert(null);
+          }}>
+            Kapat
+          </Button>,
+          <Button 
+            key="resolve" 
+            type="primary" 
+            danger={selectedAlert?.status === 'active'}
+            onClick={() => {
+              message.success('Alarm çözüldü olarak işaretlendi');
+              setAlertDetailsVisible(false);
+              setSelectedAlert(null);
+              fetchAlerts();
+            }}
+          >
+            {selectedAlert?.status === 'active' ? 'Çözüldü Olarak İşaretle' : 'Çözüldü'}
+          </Button>
+        ]}
+        width={800}
+        centered
+        destroyOnHidden
+        getContainer={() => document.body}
+        style={{ top: '50%', transform: 'translateY(-50%)', margin: 0 }}
+        styles={{ mask: { backgroundColor: 'rgba(0, 0, 0, 0.45)', backdropFilter: 'blur(2px)' } }}
+      >
+        {alertDetailsLoading ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <Spin size="large" />
+            <div style={{ marginTop: '16px' }}>Alarm detayları yükleniyor...</div>
+          </div>
+        ) : selectedAlert ? (
+          <div>
+            {/* Alert Header */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                <Tag color={
+                  selectedAlert.type === 'critical' ? 'red' :
+                  selectedAlert.type === 'warning' ? 'orange' : 'blue'
+                }>
+                  {selectedAlert.severity}
+                </Tag>
+                <Tag color="default">{selectedAlert.category}</Tag>
+                <Tag color="default">{selectedAlert.impact}</Tag>
+              </div>
+              <Title level={4} style={{ margin: '8px 0' }}>{selectedAlert.title}</Title>
+              <Text type="secondary">{selectedAlert.description}</Text>
+            </div>
+
+            <Row gutter={[16, 16]}>
+              {/* Metrics */}
+              <Col span={12}>
+                <Card title="Metrikler" size="small">
+                  <Descriptions column={1} size="small">
+                    <Descriptions.Item label="Hata Sayısı">
+                      <Text strong>{selectedAlert.metrics.errorCount}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Toplam Log">
+                      <Text>{selectedAlert.metrics.totalLogs}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="DB Bağlantıları">
+                      <Text>{selectedAlert.metrics.databaseConnections}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Bellek Kullanımı">
+                      <Text>{selectedAlert.metrics.memoryUsage}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="CPU Kullanımı">
+                      <Text>{selectedAlert.metrics.cpuUsage}</Text>
+                    </Descriptions.Item>
+                  </Descriptions>
+                </Card>
+              </Col>
+
+              {/* Resolution */}
+              <Col span={12}>
+                <Card title="Çözüm" size="small">
+                  <Text>{selectedAlert.resolution}</Text>
+                </Card>
+              </Col>
+            </Row>
+
+            {/* Actions */}
+            <Card title="Önerilen Aksiyonlar" size="small" style={{ marginTop: '16px' }}>
+              <List
+                size="small"
+                dataSource={selectedAlert.actions}
+                renderItem={(action, index) => (
+                  <List.Item>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Badge count={index + 1} style={{ backgroundColor: '#1890ff' }} />
+                      <Text>{action}</Text>
+                    </div>
+                  </List.Item>
+                )}
+              />
+            </Card>
+
+            {/* Timeline */}
+            <Card title="Zaman Çizelgesi" size="small" style={{ marginTop: '16px' }}>
+              <Timeline
+                items={selectedAlert.timeline.map((item, index) => ({
+                  color: index === selectedAlert.timeline.length - 1 ? 'red' : 'blue',
+                  children: (
+                    <div>
+                      <div style={{ fontWeight: 500 }}>{item.event}</div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>
+                        {new Date(item.time).toLocaleString('tr-TR')}
+                      </div>
+                    </div>
+                  )
+                }))}
+              />
+            </Card>
+          </div>
+        ) : null}
+      </Modal>
+
+      {/* Server Details Modal */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CloudServerOutlined style={{ 
+              color: selectedServer?.status === 'online' ? '#52c41a' : 
+                     selectedServer?.status === 'warning' ? '#faad14' : '#ff4d4f' 
+            }} />
+            Sunucu Detayları
+          </div>
+        }
+        open={serverDetailsVisible}
+        onCancel={() => {
+          setServerDetailsVisible(false);
+          setSelectedServer(null);
+        }}
+        footer={[
+          <Button key="close" onClick={() => {
+            setServerDetailsVisible(false);
+            setSelectedServer(null);
+          }}>
+            Kapat
+          </Button>,
+          <Button 
+            key="refresh" 
+            type="primary"
+            onClick={() => {
+              if (selectedServer) {
+                handleViewServerDetails(selectedServer);
+              }
+            }}
+          >
+            Yenile
+          </Button>
+        ]}
+        width={900}
+        centered
+        destroyOnHidden
+        getContainer={() => document.body}
+        style={{ top: '50%', transform: 'translateY(-50%)', margin: 0 }}
+        styles={{ mask: { backgroundColor: 'rgba(0, 0, 0, 0.45)', backdropFilter: 'blur(2px)' } }}
+      >
+        {serverDetailsLoading ? (
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <Spin size="large" />
+            <div style={{ marginTop: '16px' }}>Sunucu detayları yükleniyor...</div>
+          </div>
+        ) : selectedServer ? (
+          <div>
+            {/* Server Header */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                <Tag color={
+                  selectedServer.status === 'online' ? 'green' :
+                  selectedServer.status === 'warning' ? 'orange' : 'red'
+                }>
+                  {selectedServer.status === 'online' ? 'Çevrimiçi' : 
+                   selectedServer.status === 'warning' ? 'Uyarı' : 'Çevrimdışı'}
+                </Tag>
+                <Tag color="default">{selectedServer.type.toUpperCase()}</Tag>
+                <Tag color="default">{selectedServer.ip}</Tag>
+              </div>
+              <Title level={4} style={{ margin: '8px 0' }}>{selectedServer.name}</Title>
+              <Text type="secondary">Son güncelleme: {new Date(selectedServer.lastUpdate).toLocaleString('tr-TR')}</Text>
+            </div>
+
+            <Row gutter={[16, 16]}>
+              {/* Process Info */}
+              <Col span={12}>
+                <Card title="İşlem Bilgileri" size="small">
+                  <Descriptions column={1} size="small">
+                    <Descriptions.Item label="İşlem Adı">
+                      <Text strong>{selectedServer.details.processInfo.processName}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="İşlem ID">
+                      <Text>{selectedServer.details.processInfo.processId}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Çalışma Seti">
+                      <Text>{selectedServer.details.processInfo.workingSet}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Toplam Bellek">
+                      <Text>{selectedServer.details.processInfo.totalMemory}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Thread Sayısı">
+                      <Text>{selectedServer.details.processInfo.threadCount}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Handle Sayısı">
+                      <Text>{selectedServer.details.processInfo.handleCount}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Başlangıç Zamanı">
+                      <Text>{new Date(selectedServer.details.processInfo.startTime).toLocaleString('tr-TR')}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Toplam İşlemci Zamanı">
+                      <Text>{selectedServer.details.processInfo.totalProcessorTime.toFixed(2)} saniye</Text>
+                    </Descriptions.Item>
+                  </Descriptions>
+                </Card>
+              </Col>
+
+              {/* System Info */}
+              <Col span={12}>
+                <Card title="Sistem Bilgileri" size="small">
+                  <Descriptions column={1} size="small">
+                    <Descriptions.Item label="İşletim Sistemi">
+                      <Text>{selectedServer.details.systemInfo.osVersion}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Makine Adı">
+                      <Text>{selectedServer.details.systemInfo.machineName}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="İşlemci Sayısı">
+                      <Text>{selectedServer.details.systemInfo.processorCount}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Sistem Belleği">
+                      <Text>{selectedServer.details.systemInfo.workingSet}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="64-bit İşlem">
+                      <Text>{selectedServer.details.systemInfo.is64BitProcess ? 'Evet' : 'Hayır'}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="64-bit OS">
+                      <Text>{selectedServer.details.systemInfo.is64BitOperatingSystem ? 'Evet' : 'Hayır'}</Text>
+                    </Descriptions.Item>
+                  </Descriptions>
+                </Card>
+              </Col>
+            </Row>
+
+            {/* Network Info */}
+            <Card title="Ağ Bilgileri" size="small" style={{ marginTop: '16px' }}>
+              <Row gutter={[16, 16]}>
+                <Col span={8}>
+                  <div>
+                    <Text strong>Yerel IP:</Text> {selectedServer.details.networkInfo.localIpAddress}
+                  </div>
+                </Col>
+                <Col span={8}>
+                  <div>
+                    <Text strong>Host Adı:</Text> {selectedServer.details.networkInfo.hostName}
+                  </div>
+                </Col>
+                <Col span={8}>
+                  <div>
+                    <Text strong>Uptime:</Text> {selectedServer.uptime}
+                  </div>
+                </Col>
+              </Row>
+              
+              <div style={{ marginTop: '16px' }}>
+                <Text strong>Ağ Arayüzleri:</Text>
+                <List
+                  size="small"
+                  dataSource={selectedServer.details.networkInfo.networkInterfaces}
+                  renderItem={(iface) => (
+                    <List.Item>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <div>
+                          <Text strong>{iface.name}</Text>
+                          <br />
+                          <Text type="secondary">{iface.description}</Text>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <Text>{iface.networkInterfaceType}</Text>
+                          <br />
+                          <Text type="secondary">{iface.speed}</Text>
+                        </div>
+                      </div>
+                    </List.Item>
+                  )}
+                />
+              </div>
+            </Card>
+
+            {/* Database Info (if applicable) */}
+            {selectedServer.details.databaseInfo && (
+              <Card title="Veritabanı Bilgileri" size="small" style={{ marginTop: '16px' }}>
+                <Row gutter={[16, 16]}>
+                  <Col span={8}>
+                    <div>
+                      <Text strong>Bağlantı Durumu:</Text>
+                      <Tag color={selectedServer.details.databaseInfo.canConnect ? 'green' : 'red'}>
+                        {selectedServer.details.databaseInfo.canConnect ? 'Bağlı' : 'Bağlantı Yok'}
+                      </Tag>
+                    </div>
+                  </Col>
+                  <Col span={8}>
+                    <div>
+                      <Text strong>Toplam Log:</Text> {selectedServer.details.databaseInfo.totalLogs}
+                    </div>
+                  </Col>
+                  <Col span={8}>
+                    <div>
+                      <Text strong>Son Saat Log:</Text> {selectedServer.details.databaseInfo.recentLogs}
+                    </div>
+                  </Col>
+                </Row>
+                <Row gutter={[16, 16]} style={{ marginTop: '8px' }}>
+                  <Col span={8}>
+                    <div>
+                      <Text strong>Hata Logları:</Text> {selectedServer.details.databaseInfo.errorLogs}
+                    </div>
+                  </Col>
+                  <Col span={16}>
+                    <div>
+                      <Text strong>Bekleyen Migrasyonlar:</Text>
+                      {selectedServer.details.databaseInfo.pendingMigrations.length > 0 ? (
+                        <div style={{ marginTop: '4px' }}>
+                          {selectedServer.details.databaseInfo.pendingMigrations.map((migration, index) => (
+                            <Tag key={index} color="orange" style={{ marginBottom: '4px' }}>
+                              {migration}
+                            </Tag>
+                          ))}
+                        </div>
+                      ) : (
+                        <Tag color="green">Yok</Tag>
+                      )}
+                    </div>
+                  </Col>
+                </Row>
+              </Card>
+            )}
+
+            {/* Performance Metrics */}
+            <Card title="Performans Metrikleri" size="small" style={{ marginTop: '16px' }}>
+              <Row gutter={[16, 16]}>
+                <Col span={6}>
+                  <Statistic
+                    title="CPU Kullanımı"
+                    value={selectedServer.details.performanceMetrics.cpuUsage}
+                    suffix="%"
+                    valueStyle={{ color: selectedServer.details.performanceMetrics.cpuUsage > 80 ? '#cf1322' : '#3f8600' }}
+                  />
+                </Col>
+                <Col span={6}>
+                  <Statistic
+                    title="Bellek Kullanımı"
+                    value={selectedServer.details.performanceMetrics.memoryUsage}
+                    suffix="%"
+                    valueStyle={{ color: selectedServer.details.performanceMetrics.memoryUsage > 80 ? '#cf1322' : '#3f8600' }}
+                  />
+                </Col>
+                <Col span={6}>
+                  <Statistic
+                    title="Disk Kullanımı"
+                    value={selectedServer.details.performanceMetrics.diskUsage}
+                    suffix="%"
+                    valueStyle={{ color: selectedServer.details.performanceMetrics.diskUsage > 80 ? '#cf1322' : '#3f8600' }}
+                  />
+                </Col>
+                <Col span={6}>
+                  <Statistic
+                    title="Ağ Kullanımı"
+                    value={selectedServer.details.performanceMetrics.networkUsage}
+                    suffix="MB"
+                    valueStyle={{ color: '#1890ff' }}
+                  />
+                </Col>
+              </Row>
+            </Card>
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 } 

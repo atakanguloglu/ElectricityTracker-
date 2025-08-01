@@ -381,9 +381,11 @@ export default function UsersPage() {
           transform: 'translateY(-50%)',
           margin: '0 auto'
         },
-        maskStyle: {
-          backgroundColor: 'rgba(0, 0, 0, 0.45)',
-          backdropFilter: 'blur(2px)'
+        styles: {
+          mask: {
+            backgroundColor: 'rgba(0, 0, 0, 0.45)',
+            backdropFilter: 'blur(2px)'
+          }
         }
       })
     } catch (err) {
@@ -948,9 +950,11 @@ export default function UsersPage() {
           transform: 'translateY(-50%)',
           margin: '0 auto'
         }}
-        maskStyle={{
-          backgroundColor: 'rgba(0, 0, 0, 0.45)',
-          backdropFilter: 'blur(2px)'
+        styles={{
+          mask: {
+            backgroundColor: 'rgba(0, 0, 0, 0.45)',
+            backdropFilter: 'blur(2px)'
+          }
         }}
       >
         <Form
@@ -1168,9 +1172,11 @@ export default function UsersPage() {
           transform: 'translateY(-50%)',
           margin: '0 auto'
         }}
-        maskStyle={{
-          backgroundColor: 'rgba(0, 0, 0, 0.45)',
-          backdropFilter: 'blur(2px)'
+        styles={{
+          mask: {
+            backgroundColor: 'rgba(0, 0, 0, 0.45)',
+            backdropFilter: 'blur(2px)'
+          }
         }}
       >
         <Table

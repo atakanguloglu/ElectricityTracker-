@@ -253,4 +253,144 @@ namespace ElectricityTrackerAPI.DTOs.Admin
         public DateTime? LastLogin { get; set; }
         public DateTime CreatedAt { get; set; }
     }
+
+    // Security DTOs
+    public class SecurityAlertDto
+    {
+        public int Id { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public string Severity { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public int? TenantId { get; set; }
+        public string? TenantName { get; set; }
+        public int? UserId { get; set; }
+        public string? UserName { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public bool Resolved { get; set; }
+        public DateTime Timestamp { get; set; }
+        public DateTime? ResolvedAt { get; set; }
+        public string? ResolvedBy { get; set; }
+        public string? IpAddress { get; set; }
+        public string? UserAgent { get; set; }
+        public string? Location { get; set; }
+        public string? Details { get; set; }
+    }
+
+    public class SecurityAlertDetailsDto
+    {
+        public int Id { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Severity { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string Impact { get; set; } = string.Empty;
+        public string Resolution { get; set; } = string.Empty;
+        public List<string> Actions { get; set; } = new List<string>();
+        public SecurityAlertDetailsInfoDto Details { get; set; } = new SecurityAlertDetailsInfoDto();
+        public List<SecurityTimelineDto> Timeline { get; set; } = new List<SecurityTimelineDto>();
+    }
+
+    public class SecurityAlertDetailsInfoDto
+    {
+        public int AttemptCount { get; set; }
+        public string? IpAddress { get; set; }
+        public string? Location { get; set; }
+        public string? DeviceType { get; set; }
+        public string? Browser { get; set; }
+        public string? Os { get; set; }
+    }
+
+    public class SecurityTimelineDto
+    {
+        public DateTime Time { get; set; }
+        public string Event { get; set; } = string.Empty;
+    }
+
+    public class TenantSecurityReportDto
+    {
+        public int TenantId { get; set; }
+        public string TenantName { get; set; } = string.Empty;
+        public DateTime GeneratedAt { get; set; }
+        public int SecurityScore { get; set; }
+        public string RiskLevel { get; set; } = string.Empty;
+        public TenantSecuritySummaryDto Summary { get; set; } = new TenantSecuritySummaryDto();
+        public List<SecurityIssueDto> SecurityIssues { get; set; } = new List<SecurityIssueDto>();
+        public List<string> Recommendations { get; set; } = new List<string>();
+    }
+
+    public class TenantSecuritySummaryDto
+    {
+        public int TotalUsers { get; set; }
+        public int ActiveUsers { get; set; }
+        public int LockedUsers { get; set; }
+        public int ApiKeys { get; set; }
+        public int ActiveApiKeys { get; set; }
+        public int ActiveAlerts { get; set; }
+        public int BlockedIPs { get; set; }
+    }
+
+    public class SecurityIssueDto
+    {
+        public string Type { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public string Severity { get; set; } = string.Empty;
+    }
+
+    public class UserSecurityHistoryDto
+    {
+        public int UserId { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public string? TenantName { get; set; }
+        public string AccountStatus { get; set; } = string.Empty;
+        public UserSecurityStatsDto SecurityStats { get; set; } = new UserSecurityStatsDto();
+        public List<SecurityEventDto> SecurityEvents { get; set; } = new List<SecurityEventDto>();
+    }
+
+    public class UserSecurityStatsDto
+    {
+        public int TotalLogins { get; set; }
+        public int FailedLogins { get; set; }
+        public int PasswordChanges { get; set; }
+        public int SecurityAlerts { get; set; }
+    }
+
+    public class SecurityEventDto
+    {
+        public DateTime Timestamp { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public string Severity { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string? IpAddress { get; set; }
+        public bool Resolved { get; set; }
+    }
+
+    public class BlockedIPDto
+    {
+        public int Id { get; set; }
+        public string IpAddress { get; set; } = string.Empty;
+        public int? TenantId { get; set; }
+        public string? TenantName { get; set; }
+        public string Reason { get; set; } = string.Empty;
+        public DateTime BlockedAt { get; set; }
+        public DateTime? ExpiresAt { get; set; }
+        public bool IsActive { get; set; }
+        public string? BlockedBy { get; set; }
+        public int? AttemptCount { get; set; }
+    }
+
+    public class TenantSecurityScoreDto
+    {
+        public int Id { get; set; }
+        public int TenantId { get; set; }
+        public string TenantName { get; set; } = string.Empty;
+        public int SecurityScore { get; set; }
+        public bool TwoFactorEnabled { get; set; }
+        public string PasswordPolicy { get; set; } = string.Empty;
+        public DateTime LastSecurityAudit { get; set; }
+        public int ActiveThreats { get; set; }
+        public int BlockedIPs { get; set; }
+        public string? SecurityRecommendations { get; set; }
+    }
 } 

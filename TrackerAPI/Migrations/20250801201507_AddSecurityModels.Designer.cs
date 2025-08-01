@@ -3,6 +3,7 @@ using System;
 using ElectricityTrackerAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace TrackerAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250801201507_AddSecurityModels")]
+    partial class AddSecurityModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1181,119 +1184,6 @@ namespace TrackerAPI.Migrations
                     b.ToTable("SecurityAlerts");
                 });
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.Security.SecurityReport", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("text");
-
-                    b.Property<int>("CriticalAlerts")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<long?>("ExportFileSize")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("ExportFormat")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ExportPath")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("ExportedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ExportedBy")
-                        .HasColumnType("text");
-
-                    b.Property<int>("HighAlerts")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("LowAlerts")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("MediumAlerts")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("PendingAlerts")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Recommendations")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ReportData")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("ReportDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ReportType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("ResolvedAlerts")
-                        .HasColumnType("integer");
-
-                    b.Property<double>("SecurityScore")
-                        .HasColumnType("double precision");
-
-                    b.Property<string>("SecurityScoreTrend")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("StartDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("TenantId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("TotalAlerts")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalBlockedIPs")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalFailedLogins")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalLockedAccounts")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalSuccessfulLogins")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("SecurityReports");
-                });
-
             modelBuilder.Entity("ElectricityTrackerAPI.Models.Security.TenantSecurityScore", b =>
                 {
                     b.Property<int>("Id")
@@ -1338,147 +1228,6 @@ namespace TrackerAPI.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("TenantSecurityScores");
-                });
-
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.Security.TenantSecuritySettings", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AccountLockoutDurationMinutes")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("AllowAuthenticatorApp")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("AllowConcurrentSessions")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("AllowEmailTwoFactor")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("AllowSmsTwoFactor")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("AllowedCountries")
-                        .HasColumnType("text");
-
-                    b.Property<string>("AllowedIpRanges")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("BlockSuspiciousIps")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("BruteForceThreshold")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("BruteForceWindowMinutes")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("CaptchaThreshold")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("EnableBruteForceProtection")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("EnableGeolocationBlocking")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("EnableIpWhitelist")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("EnableSecurityAuditLog")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("ForceLogoutOnPasswordChange")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("LogAdminActions")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("LogFailedLoginAttempts")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("LogPasswordChanges")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("LogSuccessfulLogins")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("MaxConcurrentSessions")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("MaxFailedLoginAttempts")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("MinimumPasswordLength")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("NotificationEmails")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("NotifyOnAccountLockout")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("NotifyOnFailedLogin")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("NotifyOnSuspiciousActivity")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("PasswordExpiryDays")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("PasswordHistoryCount")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("PreventPasswordReuse")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireCaptchaAfterFailedAttempts")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireLowercase")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireNumbers")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireSpecialCharacters")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireTwoFactor")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("RequireUppercase")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("SessionTimeoutMinutes")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SuspiciousIpThreshold")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TenantId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("TenantSecuritySettings");
                 });
 
             modelBuilder.Entity("ElectricityTrackerAPI.Models.Admin.ApiKey", b =>
@@ -1712,29 +1461,7 @@ namespace TrackerAPI.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.Security.SecurityReport", b =>
-                {
-                    b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
-                });
-
             modelBuilder.Entity("ElectricityTrackerAPI.Models.Security.TenantSecurityScore", b =>
-                {
-                    b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.Security.TenantSecuritySettings", b =>
                 {
                     b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
                         .WithMany()

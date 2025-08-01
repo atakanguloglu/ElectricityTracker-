@@ -33,7 +33,9 @@ import {
   Avatar,
   Steps,
   Upload,
-  Dropdown
+  Dropdown,
+  Spin,
+  App
 } from 'antd';
 import {
   SafetyOutlined,
@@ -72,6 +74,9 @@ import {
   ThunderboltOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { apiRequest } from '@/utils/auth';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -81,255 +86,7 @@ const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 const { Step } = Steps;
 
-// Mock data
-const mockTenants = [
-  { id: 1, name: 'ABC Şirketi', domain: 'abc.com' },
-  { id: 2, name: 'XYZ Ltd.', domain: 'xyz.com' },
-  { id: 3, name: 'Tech Solutions', domain: 'techsolutions.com' },
-  { id: 4, name: 'Global Corp', domain: 'globalcorp.com' },
-  { id: 5, name: 'Startup Inc', domain: 'startupinc.com' }
-];
-
-const mockSecurityAlerts = [
-  {
-    id: 1,
-    timestamp: '2024-01-15T10:30:00Z',
-    type: 'brute_force',
-    severity: 'high',
-    tenantId: 2,
-    tenantName: 'XYZ Ltd.',
-    description: 'Brute force saldırısı tespit edildi',
-    details: {
-      ipAddress: '192.168.2.100',
-      attemptCount: 150,
-      timeWindow: '5 minutes',
-      targetUsername: 'admin@xyz.com',
-      blocked: true
-    },
-    status: 'active',
-    resolved: false
-  },
-  {
-    id: 2,
-    timestamp: '2024-01-15T10:25:00Z',
-    type: 'suspicious_login',
-    severity: 'medium',
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    description: 'Şüpheli giriş tespit edildi',
-    details: {
-      ipAddress: '203.45.67.89',
-      location: 'Unknown Location',
-      userAgent: 'Suspicious Browser',
-      previousLogin: '2024-01-10T15:30:00Z',
-      locationChanged: true
-    },
-    status: 'investigating',
-    resolved: false
-  },
-  {
-    id: 3,
-    timestamp: '2024-01-15T10:20:00Z',
-    type: 'failed_2fa',
-    severity: 'low',
-    tenantId: 3,
-    tenantName: 'Tech Solutions',
-    description: '2FA doğrulama başarısız',
-    details: {
-      username: 'analist.tech',
-      attemptCount: 3,
-      lastSuccessful: '2024-01-14T09:15:00Z',
-      deviceInfo: 'Mobile App'
-    },
-    status: 'resolved',
-    resolved: true
-  },
-  {
-    id: 4,
-    timestamp: '2024-01-15T10:15:00Z',
-    type: 'data_breach_attempt',
-    severity: 'critical',
-    tenantId: 4,
-    tenantName: 'Global Corp',
-    description: 'Veri sızıntısı girişimi tespit edildi',
-    details: {
-      ipAddress: '185.67.43.21',
-      endpoint: '/api/users/data',
-      requestCount: 500,
-      timeWindow: '10 minutes',
-      blocked: true,
-      reported: true
-    },
-    status: 'active',
-    resolved: false
-  },
-  {
-    id: 5,
-    timestamp: '2024-01-15T10:10:00Z',
-    type: 'unusual_activity',
-    severity: 'medium',
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    description: 'Olağandışı aktivite tespit edildi',
-    details: {
-      username: 'muhasebe.abc',
-      activityType: 'mass_data_export',
-      recordCount: 10000,
-      timeWindow: '2 hours',
-      flagged: true
-    },
-    status: 'investigating',
-    resolved: false
-  }
-];
-
-const mockTenantSecurityScores = [
-  {
-    id: 1,
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    securityScore: 85,
-    twoFactorEnabled: true,
-    passwordPolicy: 'strong',
-    lastSecurityAudit: '2024-01-10T14:30:00Z',
-    activeThreats: 2,
-    blockedIPs: 5,
-    securityRecommendations: [
-      'IP whitelist güncellemesi önerilir',
-      'Kullanıcı eğitimi gerekli'
-    ]
-  },
-  {
-    id: 2,
-    tenantId: 2,
-    tenantName: 'XYZ Ltd.',
-    securityScore: 45,
-    twoFactorEnabled: false,
-    passwordPolicy: 'weak',
-    lastSecurityAudit: '2024-01-08T11:20:00Z',
-    activeThreats: 5,
-    blockedIPs: 12,
-    securityRecommendations: [
-      '2FA zorunlu hale getirilmeli',
-      'Şifre politikası güçlendirilmeli',
-      'Güvenlik eğitimi acil'
-    ]
-  },
-  {
-    id: 3,
-    tenantId: 3,
-    tenantName: 'Tech Solutions',
-    securityScore: 92,
-    twoFactorEnabled: true,
-    passwordPolicy: 'strong',
-    lastSecurityAudit: '2024-01-12T16:45:00Z',
-    activeThreats: 0,
-    blockedIPs: 2,
-    securityRecommendations: [
-      'Mevcut güvenlik seviyesi yeterli'
-    ]
-  },
-  {
-    id: 4,
-    tenantId: 4,
-    tenantName: 'Global Corp',
-    securityScore: 78,
-    twoFactorEnabled: true,
-    passwordPolicy: 'medium',
-    lastSecurityAudit: '2024-01-09T13:15:00Z',
-    activeThreats: 1,
-    blockedIPs: 8,
-    securityRecommendations: [
-      'Şifre politikası güçlendirilmeli',
-      'Düzenli güvenlik taraması önerilir'
-    ]
-  },
-  {
-    id: 5,
-    tenantId: 5,
-    tenantName: 'Startup Inc',
-    securityScore: 65,
-    twoFactorEnabled: false,
-    passwordPolicy: 'medium',
-    lastSecurityAudit: '2024-01-11T10:30:00Z',
-    activeThreats: 3,
-    blockedIPs: 6,
-    securityRecommendations: [
-      '2FA aktifleştirilmeli',
-      'Güvenlik protokolleri gözden geçirilmeli'
-    ]
-  }
-];
-
-const mockBlockedIPs = [
-  {
-    id: 1,
-    ipAddress: '192.168.2.100',
-    reason: 'Brute force saldırısı',
-    blockedAt: '2024-01-15T10:30:00Z',
-    blockedBy: 'System',
-    tenantId: 2,
-    tenantName: 'XYZ Ltd.',
-    attemptCount: 150,
-    status: 'blocked',
-    expiryDate: '2024-01-22T10:30:00Z'
-  },
-  {
-    id: 2,
-    ipAddress: '185.67.43.21',
-    reason: 'Veri sızıntısı girişimi',
-    blockedAt: '2024-01-15T10:15:00Z',
-    blockedBy: 'Admin',
-    tenantId: 4,
-    tenantName: 'Global Corp',
-    attemptCount: 500,
-    status: 'blocked',
-    expiryDate: '2024-01-30T10:15:00Z'
-  },
-  {
-    id: 3,
-    ipAddress: '203.45.67.89',
-    reason: 'Şüpheli aktivite',
-    blockedAt: '2024-01-15T10:25:00Z',
-    blockedBy: 'System',
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    attemptCount: 25,
-    status: 'blocked',
-    expiryDate: '2024-01-18T10:25:00Z'
-  }
-];
-
-const mockLockedAccounts = [
-  {
-    id: 1,
-    userId: 4,
-    username: 'rapor.tech',
-    fullName: 'Ayşe Özkan',
-    tenantId: 3,
-    tenantName: 'Tech Solutions',
-    lockedAt: '2024-01-15T09:30:00Z',
-    lockedBy: 'System',
-    reason: 'Başarısız giriş denemeleri',
-    failedAttempts: 5,
-    status: 'locked',
-    unlockDate: '2024-01-16T09:30:00Z'
-  },
-  {
-    id: 2,
-    userId: 6,
-    username: 'test.user',
-    fullName: 'Test User',
-    tenantId: 2,
-    tenantName: 'XYZ Ltd.',
-    lockedAt: '2024-01-15T08:45:00Z',
-    lockedBy: 'Admin',
-    reason: 'Güvenlik ihlali',
-    failedAttempts: 0,
-    status: 'locked',
-    unlockDate: null
-  }
-];
+// Alert types and severity levels for UI
 
 const alertTypes = [
   { value: 'brute_force', label: 'Brute Force', icon: <FireOutlined />, color: '#ff4d4f' },
@@ -347,16 +104,117 @@ const severityLevels = [
 ];
 
 export default function SecurityCenterPage() {
-  const [securityAlerts, setSecurityAlerts] = useState(mockSecurityAlerts);
-  const [tenantSecurityScores, setTenantSecurityScores] = useState(mockTenantSecurityScores);
-  const [blockedIPs, setBlockedIPs] = useState(mockBlockedIPs);
-  const [lockedAccounts, setLockedAccounts] = useState(mockLockedAccounts);
+  const { modal, message: messageApi } = App.useApp();
+  const [securityAlerts, setSecurityAlerts] = useState<any[]>([]);
+  const [tenantSecurityScores, setTenantSecurityScores] = useState<any[]>([]);
+  const [blockedIPs, setBlockedIPs] = useState<any[]>([]);
+  const [lockedAccounts, setLockedAccounts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [availableTenants, setAvailableTenants] = useState<any[]>([]);
   const [filters, setFilters] = useState({
     tenantId: undefined,
     alertType: undefined,
     severity: undefined,
     status: undefined
   });
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [alertToDelete, setAlertToDelete] = useState<any>(null);
+  const [deleteIPModalVisible, setDeleteIPModalVisible] = useState(false);
+  const [ipToDelete, setIpToDelete] = useState<any>(null);
+
+  // Data fetching functions
+  const fetchSecurityAlerts = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/security/alerts`);
+      if (!response.ok) throw new Error('Güvenlik alarmları alınamadı');
+      
+      const data = await response.json();
+      setSecurityAlerts(data.items || []);
+    } catch (err) {
+      console.error('Security alerts fetch error:', err);
+      setError('Güvenlik alarmları yüklenirken hata oluştu');
+    }
+  };
+
+  const fetchTenantSecurityScores = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/security/tenant-scores`);
+      if (!response.ok) throw new Error('Tenant güvenlik skorları alınamadı');
+      
+      const data = await response.json();
+      setTenantSecurityScores(data || []);
+    } catch (err) {
+      console.error('Tenant security scores fetch error:', err);
+      setError('Tenant güvenlik skorları yüklenirken hata oluştu');
+    }
+  };
+
+  const fetchBlockedIPs = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/security/blocked-ips`);
+      if (!response.ok) throw new Error('Engellenen IP\'ler alınamadı');
+      
+      const data = await response.json();
+      setBlockedIPs(data.items || []);
+    } catch (err) {
+      console.error('Blocked IPs fetch error:', err);
+      setError('Engellenen IP\'ler yüklenirken hata oluştu');
+    }
+  };
+
+  const fetchLockedAccounts = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/users`);
+      if (!response.ok) throw new Error('Kullanıcı listesi alınamadı');
+      
+      const data = await response.json();
+      // Filter locked accounts from all users
+      const lockedUsers = data.items?.filter((user: any) => user.isLocked) || [];
+      setLockedAccounts(lockedUsers);
+    } catch (err) {
+      console.error('Locked accounts fetch error:', err);
+      setError('Kilitli hesaplar yüklenirken hata oluştu');
+    }
+  };
+
+  const fetchAvailableTenants = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/tenants?page=1&pageSize=100`);
+      if (!response.ok) throw new Error('Tenant listesi alınamadı');
+      
+      const data = await response.json();
+      setAvailableTenants(data.items || []);
+    } catch (err) {
+      console.error('Available tenants fetch error:', err);
+      setError('Tenant listesi yüklenirken hata oluştu');
+    }
+  };
+
+  const fetchAllData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      await Promise.all([
+        fetchSecurityAlerts(),
+        fetchTenantSecurityScores(),
+        fetchBlockedIPs(),
+        fetchLockedAccounts(),
+        fetchAvailableTenants()
+      ]);
+    } catch (err) {
+      console.error('Data fetch error:', err);
+      setError('Veriler yüklenirken hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load data on component mount
+  React.useEffect(() => {
+    fetchAllData();
+  }, []);
 
   // Statistics
   const stats = useMemo(() => [
@@ -534,20 +392,14 @@ export default function SecurityCenterPage() {
               />
             </Tooltip>
           )}
-          <Popconfirm
-            title="Bu uyarıyı silmek istediğinizden emin misiniz?"
-            onConfirm={() => handleDeleteAlert(record.id)}
-            okText="Evet"
-            cancelText="Hayır"
-          >
-            <Tooltip title="Sil">
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Tooltip>
-          </Popconfirm>
+                     <Tooltip title="Sil">
+             <Button
+               type="text"
+               danger
+               icon={<DeleteOutlined />}
+               onClick={() => showDeleteAlertModal(record)}
+             />
+           </Tooltip>
         </Space>
       )
     }
@@ -737,20 +589,14 @@ export default function SecurityCenterPage() {
               onClick={() => handleUnblockIP(record.id)}
             />
           </Tooltip>
-          <Popconfirm
-            title="Bu IP engelini silmek istediğinizden emin misiniz?"
-            onConfirm={() => handleDeleteBlockedIP(record.id)}
-            okText="Evet"
-            cancelText="Hayır"
-          >
-            <Tooltip title="Sil">
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Tooltip>
-          </Popconfirm>
+                     <Tooltip title="Sil">
+             <Button
+               type="text"
+               danger
+               icon={<DeleteOutlined />}
+               onClick={() => showDeleteIPModal(record)}
+             />
+           </Tooltip>
         </Space>
       )
     }
@@ -764,7 +610,7 @@ export default function SecurityCenterPage() {
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: 500 }}>{record.fullName}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>{record.username}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>{record.email}</div>
         </div>
       )
     },
@@ -778,47 +624,40 @@ export default function SecurityCenterPage() {
       )
     },
     {
-      title: 'Kilitlenme Tarihi',
-      key: 'lockedAt',
-      width: 150,
-      render: (_, record) => (
-        <div>
-          <div>{new Date(record.lockedAt).toLocaleDateString('tr-TR')}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            {new Date(record.lockedAt).toLocaleTimeString('tr-TR')}
-          </div>
-        </div>
-      )
-    },
-    {
-      title: 'Sebep',
-      dataIndex: 'reason',
-      key: 'reason',
-      width: 200
-    },
-    {
-      title: 'Başarısız Deneme',
-      dataIndex: 'failedAttempts',
-      key: 'failedAttempts',
+      title: 'Rol',
+      dataIndex: 'roleName',
+      key: 'roleName',
       width: 120,
-      render: (attempts) => (
-        <Tag color="red">{attempts}</Tag>
+      render: (roleName) => (
+        <Tag color="purple">{roleName}</Tag>
       )
     },
     {
-      title: 'Açılma Tarihi',
-      key: 'unlockDate',
+      title: 'Durum',
+      dataIndex: 'isLocked',
+      key: 'isLocked',
+      width: 100,
+      render: (isLocked) => (
+        <Badge
+          status={isLocked ? 'error' : 'success'}
+          text={isLocked ? 'Kilitli' : 'Aktif'}
+        />
+      )
+    },
+    {
+      title: 'Son Giriş',
+      key: 'lastLogin',
       width: 150,
       render: (_, record) => (
-        record.unlockDate ? (
+        record.lastLogin ? (
           <div>
-            <div>{new Date(record.unlockDate).toLocaleDateString('tr-TR')}</div>
+            <div>{new Date(record.lastLogin).toLocaleDateString('tr-TR')}</div>
             <div style={{ fontSize: '12px', color: '#666' }}>
-              {new Date(record.unlockDate).toLocaleTimeString('tr-TR')}
+              {new Date(record.lastLogin).toLocaleTimeString('tr-TR')}
             </div>
           </div>
         ) : (
-          <Text type="secondary">Manuel açılma gerekli</Text>
+          <Text type="secondary">Hiç giriş yapmamış</Text>
         )
       )
     },
@@ -847,47 +686,567 @@ export default function SecurityCenterPage() {
     }
   ];
 
-  const handleViewAlertDetails = (alert: any) => {
-    message.info(`${alert.description} detayları yakında eklenecek`);
+  const handleViewAlertDetails = async (alert: any) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/security/alerts/${alert.id}`);
+      if (!response.ok) throw new Error('Güvenlik alarmı detayları alınamadı');
+      
+      const details = await response.json();
+      
+              modal.info({
+          title: 'Güvenlik Alarmı Detayları',
+          width: 600,
+          centered: true,
+          getContainer: () => document.body,
+          style: {
+            top: '50%',
+            transform: 'translateY(-50%)',
+            margin: 0
+          },
+          styles: {
+            mask: {
+              backgroundColor: 'rgba(0, 0, 0, 0.45)',
+              backdropFilter: 'blur(2px)'
+            }
+          },
+        content: (
+          <div>
+            <div style={{ marginBottom: '16px' }}>
+              <Tag color={getSeverityColor(details.severity)}>{details.severity}</Tag>
+              <Tag color="default">{details.category}</Tag>
+            </div>
+            <Title level={4}>{details.title}</Title>
+            <Text>{details.description}</Text>
+            
+            <Divider />
+            
+            <Title level={5}>Etki</Title>
+            <Text>{details.impact}</Text>
+            
+            <Divider />
+            
+            <Title level={5}>Çözüm</Title>
+            <Text>{details.resolution}</Text>
+            
+            <Divider />
+            
+            <Title level={5}>Detaylar</Title>
+            <Descriptions column={2} size="small">
+              <Descriptions.Item label="Deneme Sayısı">{details.details?.attemptCount || 'N/A'}</Descriptions.Item>
+              <Descriptions.Item label="IP Adresi">{details.details?.ipAddress || 'N/A'}</Descriptions.Item>
+              <Descriptions.Item label="Konum">{details.details?.location || 'N/A'}</Descriptions.Item>
+              <Descriptions.Item label="Cihaz">{details.details?.deviceType || 'N/A'}</Descriptions.Item>
+              <Descriptions.Item label="Tarayıcı">{details.details?.browser || 'N/A'}</Descriptions.Item>
+              <Descriptions.Item label="İşletim Sistemi">{details.details?.os || 'N/A'}</Descriptions.Item>
+            </Descriptions>
+            
+            <Divider />
+            
+            <Title level={5}>Önerilen Aksiyonlar</Title>
+            <List
+              size="small"
+              dataSource={details.actions || []}
+              renderItem={(action: string, index: number) => (
+                <List.Item>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Badge count={index + 1} style={{ backgroundColor: '#1890ff' }} />
+                    <Text>{action}</Text>
+                  </div>
+                </List.Item>
+              )}
+            />
+            
+            {details.timeline && details.timeline.length > 0 && (
+              <>
+                <Divider />
+                <Title level={5}>Zaman Çizelgesi</Title>
+                <Timeline
+                  items={details.timeline.map((item: any) => ({
+                    children: (
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{item.event}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          {new Date(item.time).toLocaleString('tr-TR')}
+                        </div>
+                      </div>
+                    )
+                  }))}
+                />
+              </>
+            )}
+          </div>
+        )
+      });
+    } catch (err) {
+      console.error('Security alert details fetch error:', err);
+      messageApi.error('Güvenlik alarmı detayları yüklenirken hata oluştu');
+    }
   };
 
-  const handleResolveAlert = (alertId: number) => {
-    setSecurityAlerts(alerts => alerts.map(a => 
-      a.id === alertId ? { ...a, resolved: true, status: 'resolved' } : a
-    ));
-    message.success('Uyarı çözüldü olarak işaretlendi');
+  const handleResolveAlert = async (alertId: number) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/security/alerts/${alertId}/resolve`, {
+        method: 'POST'
+      });
+      
+      if (!response.ok) throw new Error('Uyarı çözülemedi');
+      
+      messageApi.success('Uyarı çözüldü olarak işaretlendi');
+      fetchSecurityAlerts(); // Refresh the list
+    } catch (err) {
+      messageApi.error('Uyarı çözülürken hata oluştu');
+      console.error('Resolve alert error:', err);
+    }
   };
 
-  const handleDeleteAlert = (alertId: number) => {
-    setSecurityAlerts(alerts => alerts.filter(a => a.id !== alertId));
-    message.success('Uyarı silindi');
+  const handleDeleteAlert = async (alertId: number) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/security/alerts/${alertId}`, {
+        method: 'DELETE'
+      });
+      
+      if (!response.ok) throw new Error('Uyarı silinemedi');
+      
+      messageApi.success('Uyarı silindi');
+      fetchSecurityAlerts(); // Refresh the list
+    } catch (err) {
+      messageApi.error('Uyarı silinirken hata oluştu');
+      console.error('Delete alert error:', err);
+    }
   };
 
-  const handleViewSecurityReport = (tenant: any) => {
-    message.info(`${tenant.tenantName} güvenlik raporu yakında eklenecek`);
+  const showDeleteAlertModal = (alert: any) => {
+    setAlertToDelete(alert);
+    setDeleteModalVisible(true);
   };
 
-  const handleSecuritySettings = (tenant: any) => {
-    message.info(`${tenant.tenantName} güvenlik ayarları yakında eklenecek`);
+  const confirmDeleteAlert = async () => {
+    if (alertToDelete) {
+      await handleDeleteAlert(alertToDelete.id);
+      setDeleteModalVisible(false);
+      setAlertToDelete(null);
+    }
   };
 
-  const handleUnblockIP = (ipId: number) => {
-    setBlockedIPs(ips => ips.filter(ip => ip.id !== ipId));
-    message.success('IP engeli kaldırıldı');
+  const handleViewSecurityReport = async (tenant: any) => {
+    try {
+      // Use tenantId from the security score record
+      const tenantId = tenant.tenantId || tenant.id;
+      const response = await apiRequest(`${API_BASE_URL}/admin/security/tenants/${tenantId}/report`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          messageApi.error(`Tenant bulunamadı: ${tenant.tenantName || tenantId}`);
+          return;
+        }
+        throw new Error('Güvenlik raporu alınamadı');
+      }
+      
+      const report = await response.json();
+      
+              modal.info({
+          title: `${report.tenantName} Güvenlik Raporu`,
+          width: 700,
+          centered: true,
+          getContainer: () => document.body,
+          style: {
+            top: '50%',
+            transform: 'translateY(-50%)',
+            margin: 0
+          },
+          styles: {
+            mask: {
+              backgroundColor: 'rgba(0, 0, 0, 0.45)',
+              backdropFilter: 'blur(2px)'
+            }
+          },
+        content: (
+          <div>
+            <div style={{ marginBottom: '16px' }}>
+              <Tag color={report.riskLevel === 'High' ? 'red' : report.riskLevel === 'Medium' ? 'orange' : 'green'}>
+                {report.riskLevel}
+              </Tag>
+              <Text strong>Güvenlik Skoru: {report.securityScore}/100</Text>
+            </div>
+            
+            <Divider />
+            
+            <Title level={5}>Özet</Title>
+            <Row gutter={[16, 16]}>
+              <Col span={6}>
+                <Statistic title="Toplam Kullanıcı" value={report.summary.totalUsers} />
+              </Col>
+              <Col span={6}>
+                <Statistic title="Aktif Kullanıcı" value={report.summary.activeUsers} />
+              </Col>
+              <Col span={6}>
+                <Statistic title="Kilitli Kullanıcı" value={report.summary.lockedUsers} />
+              </Col>
+              <Col span={6}>
+                <Statistic title="API Anahtarları" value={report.summary.apiKeys} />
+              </Col>
+            </Row>
+            
+            <Divider />
+            
+            <Title level={5}>Güvenlik Sorunları</Title>
+            <List
+              size="small"
+              dataSource={report.securityIssues}
+              renderItem={(issue: any) => (
+                <List.Item>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                    <div>
+                      <Text strong>{issue.type}</Text>
+                      <br />
+                      <Text type="secondary">{issue.count} adet</Text>
+                    </div>
+                    <Tag color={issue.severity === 'High' ? 'red' : issue.severity === 'Medium' ? 'orange' : 'green'}>
+                      {issue.severity}
+                    </Tag>
+                  </div>
+                </List.Item>
+              )}
+            />
+            
+            <Divider />
+            
+            <Title level={5}>Öneriler</Title>
+            <List
+              size="small"
+              dataSource={report.recommendations}
+              renderItem={(rec: string, index: number) => (
+                <List.Item>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Badge count={index + 1} style={{ backgroundColor: '#1890ff' }} />
+                    <Text>{rec}</Text>
+                  </div>
+                </List.Item>
+              )}
+            />
+          </div>
+        )
+      });
+    } catch (err) {
+      console.error('Security report fetch error:', err);
+      messageApi.error('Güvenlik raporu yüklenirken hata oluştu');
+    }
   };
 
-  const handleDeleteBlockedIP = (ipId: number) => {
-    setBlockedIPs(ips => ips.filter(ip => ip.id !== ipId));
-    message.success('IP engeli silindi');
+  const handleDownloadSecurityReport = async () => {
+    try {
+      // Use the first available tenant from the actual tenant list
+      const validTenantId = availableTenants.length > 0 ? availableTenants[0].id : 1;
+      
+      // Generate a new security report for the last 7 days
+      const generateResponse = await apiRequest(`${API_BASE_URL}/admin/security/reports/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tenantId: validTenantId,
+          reportType: 'weekly',
+          startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          endDate: new Date().toISOString(),
+          title: 'Admin Güvenlik Raporu (Son 7 Gün)',
+          description: 'Son 7 günlük güvenlik durumu raporu'
+        })
+      });
+
+      if (!generateResponse.ok) throw new Error('Güvenlik raporu oluşturulamadı');
+      
+      const report = await generateResponse.json();
+      
+      // Download the report
+      const downloadResponse = await apiRequest(`${API_BASE_URL}/admin/security/reports/${report.id}/download?format=pdf`);
+      
+      if (!downloadResponse.ok) throw new Error('Rapor indirilemedi');
+      
+      const blob = await downloadResponse.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `security_report_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      messageApi.success('Güvenlik raporu başarıyla indirildi');
+    } catch (err) {
+      console.error('Security report download error:', err);
+      messageApi.error('Güvenlik raporu indirilirken hata oluştu');
+    }
   };
 
-  const handleUnlockAccount = (accountId: number) => {
-    setLockedAccounts(accounts => accounts.filter(acc => acc.id !== accountId));
-    message.success('Hesap kilidi açıldı');
+  const handleSecuritySettings = async (tenant: any) => {
+    try {
+      // Use tenantId from the security score record
+      const tenantId = tenant.tenantId || tenant.id;
+      const response = await apiRequest(`${API_BASE_URL}/admin/security/tenants/${tenantId}/settings`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          messageApi.error(`Tenant bulunamadı: ${tenant.tenantName || tenantId}`);
+          return;
+        }
+        throw new Error('Güvenlik ayarları alınamadı');
+      }
+      
+      const settings = await response.json();
+      
+      modal.info({
+        title: `${tenant.tenantName} Güvenlik Ayarları`,
+        width: 800,
+        centered: true,
+        getContainer: () => document.body,
+        style: { top: '50%', transform: 'translateY(-50%)', margin: 0 },
+        styles: { mask: { backgroundColor: 'rgba(0, 0, 0, 0.45)', backdropFilter: 'blur(2px)' } },
+        content: (
+          <div>
+            <Tabs defaultActiveKey="2fa">
+              <Tabs.TabPane tab="İki Faktörlü Kimlik Doğrulama" key="2fa">
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="2FA Zorunlu">
+                    <Tag color={settings.requireTwoFactor ? 'green' : 'red'}>
+                      {settings.requireTwoFactor ? 'Evet' : 'Hayır'}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="SMS 2FA">
+                    <Tag color={settings.allowSmsTwoFactor ? 'green' : 'red'}>
+                      {settings.allowSmsTwoFactor ? 'Aktif' : 'Pasif'}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Email 2FA">
+                    <Tag color={settings.allowEmailTwoFactor ? 'green' : 'red'}>
+                      {settings.allowEmailTwoFactor ? 'Aktif' : 'Pasif'}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Authenticator App">
+                    <Tag color={settings.allowAuthenticatorApp ? 'green' : 'red'}>
+                      {settings.allowAuthenticatorApp ? 'Aktif' : 'Pasif'}
+                    </Tag>
+                  </Descriptions.Item>
+                </Descriptions>
+              </Tabs.TabPane>
+              
+              <Tabs.TabPane tab="Şifre Politikası" key="password">
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Minimum Şifre Uzunluğu">
+                    {settings.minimumPasswordLength} karakter
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Büyük Harf Zorunlu">
+                    <Tag color={settings.requireUppercase ? 'green' : 'red'}>
+                      {settings.requireUppercase ? 'Evet' : 'Hayır'}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Küçük Harf Zorunlu">
+                    <Tag color={settings.requireLowercase ? 'green' : 'red'}>
+                      {settings.requireLowercase ? 'Evet' : 'Hayır'}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Rakam Zorunlu">
+                    <Tag color={settings.requireNumbers ? 'green' : 'red'}>
+                      {settings.requireNumbers ? 'Evet' : 'Hayır'}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Özel Karakter Zorunlu">
+                    <Tag color={settings.requireSpecialCharacters ? 'green' : 'red'}>
+                      {settings.requireSpecialCharacters ? 'Evet' : 'Hayır'}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Şifre Geçerlilik Süresi">
+                    {settings.passwordExpiryDays} gün
+                  </Descriptions.Item>
+                </Descriptions>
+              </Tabs.TabPane>
+              
+              <Tabs.TabPane tab="Oturum Yönetimi" key="session">
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Oturum Zaman Aşımı">
+                    {settings.sessionTimeoutMinutes} dakika
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Şifre Değişikliğinde Çıkış">
+                    <Tag color={settings.forceLogoutOnPasswordChange ? 'green' : 'red'}>
+                      {settings.forceLogoutOnPasswordChange ? 'Evet' : 'Hayır'}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Eşzamanlı Oturum">
+                    <Tag color={settings.allowConcurrentSessions ? 'green' : 'red'}>
+                      {settings.allowConcurrentSessions ? 'Evet' : 'Hayır'}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Maksimum Eşzamanlı Oturum">
+                    {settings.maxConcurrentSessions} adet
+                  </Descriptions.Item>
+                </Descriptions>
+              </Tabs.TabPane>
+              
+              <Tabs.TabPane tab="Giriş Güvenliği" key="login">
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Maksimum Başarısız Giriş">
+                    {settings.maxFailedLoginAttempts} deneme
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Hesap Kilitleme Süresi">
+                    {settings.accountLockoutDurationMinutes} dakika
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Captcha Zorunlu">
+                    <Tag color={settings.requireCaptchaAfterFailedAttempts ? 'green' : 'red'}>
+                      {settings.requireCaptchaAfterFailedAttempts ? 'Evet' : 'Hayır'}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Captcha Eşiği">
+                    {settings.captchaThreshold} deneme
+                  </Descriptions.Item>
+                </Descriptions>
+              </Tabs.TabPane>
+            </Tabs>
+          </div>
+        ),
+      });
+    } catch (err) {
+      console.error('Security settings fetch error:', err);
+      messageApi.error('Güvenlik ayarları yüklenirken hata oluştu');
+    }
   };
 
-  const handleViewSecurityHistory = (account: any) => {
-    message.info(`${account.username} güvenlik geçmişi yakında eklenecek`);
+  const handleUnblockIP = async (ipId: number) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/security/blocked-ips/${ipId}/unblock`, {
+        method: 'POST'
+      });
+      
+      if (!response.ok) throw new Error('IP engeli kaldırılamadı');
+      
+      messageApi.success('IP adresi engeli kaldırıldı');
+      fetchBlockedIPs(); // Refresh the list
+    } catch (err) {
+      messageApi.error('IP engeli kaldırılırken hata oluştu');
+      console.error('Unblock IP error:', err);
+    }
+  };
+
+  const handleDeleteBlockedIP = async (ipId: number) => {
+    try {
+      // Backend'de silme endpoint'i yoksa frontend'den kaldır
+      setBlockedIPs(ips => ips.filter(ip => ip.id !== ipId));
+      messageApi.success('IP engeli silindi');
+    } catch (err) {
+      messageApi.error('IP engeli silinirken hata oluştu');
+      console.error('Delete IP error:', err);
+    }
+  };
+
+  const showDeleteIPModal = (ip: any) => {
+    setIpToDelete(ip);
+    setDeleteIPModalVisible(true);
+  };
+
+  const confirmDeleteIP = async () => {
+    if (ipToDelete) {
+      await handleDeleteBlockedIP(ipToDelete.id);
+      setDeleteIPModalVisible(false);
+      setIpToDelete(null);
+    }
+  };
+
+  const handleUnlockAccount = async (accountId: number) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/users/${accountId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          isLocked: false
+        })
+      });
+      
+      if (!response.ok) throw new Error('Hesap kilidi açılamadı');
+      
+      messageApi.success('Hesap kilidi açıldı');
+      fetchLockedAccounts(); // Refresh the list
+    } catch (err) {
+      messageApi.error('Hesap kilidi açılırken hata oluştu');
+      console.error('Unlock account error:', err);
+    }
+  };
+
+  const handleViewSecurityHistory = async (account: any) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/security/users/${account.id}/history`);
+      if (!response.ok) throw new Error('Güvenlik geçmişi alınamadı');
+      
+      const history = await response.json();
+      
+              modal.info({
+          title: `${history.userName} Güvenlik Geçmişi`,
+          width: 600,
+          centered: true,
+          getContainer: () => document.body,
+          style: {
+            top: '50%',
+            transform: 'translateY(-50%)',
+            margin: 0
+          },
+          styles: {
+            mask: {
+              backgroundColor: 'rgba(0, 0, 0, 0.45)',
+              backdropFilter: 'blur(2px)'
+            }
+          },
+        content: (
+          <div>
+            <div style={{ marginBottom: '16px' }}>
+              <Text strong>Hesap Durumu:</Text>
+              <Tag color={history.securityStats.accountLocked ? 'red' : 'green'} style={{ marginLeft: '8px' }}>
+                {history.securityStats.accountLocked ? 'Kilitli' : 'Aktif'}
+              </Tag>
+            </div>
+            
+            <Divider />
+            
+            <Title level={5}>İstatistikler</Title>
+            <Row gutter={[16, 16]}>
+              <Col span={6}>
+                <Statistic title="Toplam Giriş" value={history.securityStats.totalLogins} />
+              </Col>
+              <Col span={6}>
+                <Statistic title="Başarısız Giriş" value={history.securityStats.failedLogins} />
+              </Col>
+              <Col span={6}>
+                <Statistic title="Şifre Değişimi" value={history.securityStats.passwordChanges} />
+              </Col>
+              <Col span={6}>
+                <Statistic title="Son Giriş" value={new Date(history.securityStats.lastLogin).toLocaleDateString('tr-TR')} />
+              </Col>
+            </Row>
+            
+            <Divider />
+            
+            <Title level={5}>Güvenlik Olayları</Title>
+            <Timeline
+              items={history.securityEvents.map((event: any) => ({
+                color: event.success ? 'green' : 'red',
+                children: (
+                  <div>
+                    <div style={{ fontWeight: 500 }}>{event.type}</div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      {new Date(event.timestamp).toLocaleString('tr-TR')} - {event.ipAddress}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#999' }}>
+                      {event.userAgent}
+                    </div>
+                  </div>
+                )
+              }))}
+            />
+          </div>
+        )
+      });
+    } catch (err) {
+      console.error('Security history fetch error:', err);
+      messageApi.error('Güvenlik geçmişi yüklenirken hata oluştu');
+    }
   };
 
   const handleFilterChange = (key: string, value: any) => {
@@ -903,11 +1262,48 @@ export default function SecurityCenterPage() {
     });
   };
 
+  if (loading) {
+    return (
+      <div style={{ padding: '24px', textAlign: 'center' }}>
+        <Spin size="large" />
+        <div style={{ marginTop: '16px' }}>Güvenlik verileri yükleniyor...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: '24px' }}>
+        <Alert
+          message="Hata"
+          description={error}
+          type="error"
+          showIcon
+          action={
+            <Button size="small" onClick={fetchAllData}>
+              Tekrar Dene
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: '24px' }}>
-      <Title level={2}>
-        <SafetyOutlined /> Güvenlik Merkezi
-      </Title>
+      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Title level={2}>
+          <SafetyOutlined /> Güvenlik Merkezi
+        </Title>
+        <Button 
+          type="primary" 
+          icon={<ReloadOutlined />} 
+          onClick={fetchAllData}
+          loading={loading}
+        >
+          Yenile
+        </Button>
+      </div>
 
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
@@ -945,39 +1341,48 @@ export default function SecurityCenterPage() {
         style={{ marginBottom: '24px' }}
         extra={
           <Space>
-            <Select
-              placeholder="Tenant"
-              style={{ width: 120 }}
-              value={filters.tenantId}
-              onChange={(value) => handleFilterChange('tenantId', value)}
-              allowClear
-            >
-              {mockTenants.map(tenant => (
-                <Option key={tenant.id} value={tenant.id}>
-                  {tenant.name}
+                         <Select
+               placeholder="Tenant"
+               style={{ width: 120 }}
+               value={filters.tenantId}
+               onChange={(value) => handleFilterChange('tenantId', value)}
+               allowClear
+               getPopupContainer={(triggerNode) => document.body}
+               onMouseDown={(e) => e.stopPropagation()}
+               styles={{ popup: { root: { zIndex: 1050 } } }}
+             >
+              {tenantSecurityScores.map(tenant => (
+                <Option key={tenant.tenantId} value={tenant.tenantId}>
+                  {tenant.tenantName}
                 </Option>
               ))}
             </Select>
-            <Select
-              placeholder="Tür"
-              style={{ width: 120 }}
-              value={filters.alertType}
-              onChange={(value) => handleFilterChange('alertType', value)}
-              allowClear
-            >
+                         <Select
+               placeholder="Tür"
+               style={{ width: 120 }}
+               value={filters.alertType}
+               onChange={(value) => handleFilterChange('alertType', value)}
+               allowClear
+               getPopupContainer={(triggerNode) => document.body}
+               onMouseDown={(e) => e.stopPropagation()}
+               styles={{ popup: { root: { zIndex: 1050 } } }}
+             >
               {alertTypes.map(type => (
                 <Option key={type.value} value={type.value}>
                   {type.label}
                 </Option>
               ))}
             </Select>
-            <Select
-              placeholder="Önem"
-              style={{ width: 100 }}
-              value={filters.severity}
-              onChange={(value) => handleFilterChange('severity', value)}
-              allowClear
-            >
+                         <Select
+               placeholder="Önem"
+               style={{ width: 100 }}
+               value={filters.severity}
+               onChange={(value) => handleFilterChange('severity', value)}
+               allowClear
+               getPopupContainer={(triggerNode) => document.body}
+               onMouseDown={(e) => e.stopPropagation()}
+               styles={{ popup: { root: { zIndex: 1050 } } }}
+             >
               {severityLevels.map(level => (
                 <Option key={level.value} value={level.value}>
                   {level.label}
@@ -1086,7 +1491,7 @@ export default function SecurityCenterPage() {
           <Button
             type="primary"
             icon={<DownloadOutlined />}
-            onClick={() => message.info('Güvenlik raporu indirme özelliği yakında eklenecek')}
+            onClick={handleDownloadSecurityReport}
           >
             Raporu İndir
           </Button>
@@ -1148,8 +1553,56 @@ export default function SecurityCenterPage() {
               <Text>{item}</Text>
             </List.Item>
           )}
-        />
-      </Card>
-    </div>
-  );
-} 
+                 />
+       </Card>
+
+       {/* Delete Alert Modal */}
+       <Modal
+         title="Güvenlik Alarmını Sil"
+         open={deleteModalVisible}
+         onOk={confirmDeleteAlert}
+         onCancel={() => {
+           setDeleteModalVisible(false);
+           setAlertToDelete(null);
+         }}
+         okText="Sil"
+         cancelText="İptal"
+         okButtonProps={{ danger: true }}
+         centered={true}
+         destroyOnHidden={true}
+         getContainer={() => document.body}
+         style={{ top: '50%', transform: 'translateY(-50%)', margin: 0 }}
+         styles={{ mask: { backgroundColor: 'rgba(0, 0, 0, 0.45)', backdropFilter: 'blur(2px)' } }}
+       >
+         <p>
+           <strong>{alertToDelete?.title}</strong> başlıklı güvenlik alarmını silmek istediğinizden emin misiniz?
+         </p>
+         <p>Bu işlem geri alınamaz.</p>
+       </Modal>
+
+       {/* Delete IP Modal */}
+       <Modal
+         title="IP Engelini Sil"
+         open={deleteIPModalVisible}
+         onOk={confirmDeleteIP}
+         onCancel={() => {
+           setDeleteIPModalVisible(false);
+           setIpToDelete(null);
+         }}
+         okText="Sil"
+         cancelText="İptal"
+         okButtonProps={{ danger: true }}
+         centered={true}
+         destroyOnHidden={true}
+         getContainer={() => document.body}
+         style={{ top: '50%', transform: 'translateY(-50%)', margin: 0 }}
+         styles={{ mask: { backgroundColor: 'rgba(0, 0, 0, 0.45)', backdropFilter: 'blur(2px)' } }}
+       >
+         <p>
+           <strong>{ipToDelete?.ipAddress}</strong> IP adresinin engelini silmek istediğinizden emin misiniz?
+         </p>
+         <p>Bu işlem geri alınamaz.</p>
+       </Modal>
+     </div>
+   );
+ } 

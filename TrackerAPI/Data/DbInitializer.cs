@@ -3,6 +3,7 @@ using ElectricityTrackerAPI.Models.Energy;
 using ElectricityTrackerAPI.Models.Admin;
 using ElectricityTrackerAPI.Models.Billing;
 using ElectricityTrackerAPI.Models.Logging;
+using ElectricityTrackerAPI.Models.Security;
 using BCrypt.Net;
 using PaymentStatus = ElectricityTrackerAPI.Models.Core.PaymentStatus;
 
@@ -27,6 +28,12 @@ namespace ElectricityTrackerAPI.Data
             context.Departments.RemoveRange(context.Departments);
             context.Tenants.RemoveRange(context.Tenants);
             context.SubscriptionPlans.RemoveRange(context.SubscriptionPlans);
+            context.SecurityAlerts.RemoveRange(context.SecurityAlerts);
+            context.BlockedIPs.RemoveRange(context.BlockedIPs);
+            context.TenantSecurityScores.RemoveRange(context.TenantSecurityScores);
+            context.TenantSecuritySettings.RemoveRange(context.TenantSecuritySettings);
+            context.SecurityReports.RemoveRange(context.SecurityReports);
+            context.SystemLogs.RemoveRange(context.SystemLogs);
             context.SaveChanges();
             
             // Yeni kapsamlı verileri oluştur
@@ -532,6 +539,15 @@ namespace ElectricityTrackerAPI.Data
 
             // 9. Sistem Logları oluştur
             CreateDemoLogs(context, tenants, users);
+            
+            // 10. Güvenlik Verileri oluştur
+            CreateDemoSecurityData(context, tenants, users);
+            
+            // 11. Tenant Güvenlik Ayarları oluştur
+            CreateDemoSecuritySettings(context, tenants);
+            
+            // 12. Güvenlik Raporları oluştur
+            CreateDemoSecurityReports(context, tenants);
 
             Console.WriteLine("✅ Demo veriler başarıyla oluşturuldu!");
             Console.WriteLine($"📊 Tenant: {tenants.Count} adet");
@@ -743,6 +759,322 @@ namespace ElectricityTrackerAPI.Data
             return @"at ElectricityTrackerAPI.Controllers.AdminController.GetUsers() in C:\src\Controllers\AdminController.cs:line 123
 at System.Threading.Tasks.Task`1.InnerInvoke()
 at System.Threading.Tasks.Task.Execute()";
+        }
+
+        private static void CreateDemoSecurityData(ApplicationDbContext context, List<Tenant> tenants, List<User> users)
+        {
+            var random = new Random();
+            var securityAlerts = new List<SecurityAlert>();
+            var blockedIPs = new List<BlockedIP>();
+            var tenantSecurityScores = new List<TenantSecurityScore>();
+
+            // Güvenlik Alarmları oluştur
+            var alertTypes = new[] { "brute_force", "suspicious_login", "failed_2fa", "data_breach_attempt", "unusual_activity" };
+            var severities = new[] { "low", "medium", "high", "critical" };
+            var statuses = new[] { "active", "investigating", "resolved" };
+
+            for (int i = 0; i < 20; i++)
+            {
+                var tenant = tenants[random.Next(tenants.Count)];
+                var user = users.FirstOrDefault(u => u.TenantId == tenant.Id);
+                var alertType = alertTypes[random.Next(alertTypes.Length)];
+                var severity = severities[random.Next(severities.Length)];
+                var status = statuses[random.Next(statuses.Length)];
+                var resolved = status == "resolved";
+
+                var alert = new SecurityAlert
+                {
+                    Type = alertType,
+                    Severity = severity,
+                    Title = GetSecurityAlertTitle(alertType),
+                    Description = GetSecurityAlertDescription(alertType, user),
+                    TenantId = tenant.Id,
+                    UserId = user?.Id,
+                    Status = status,
+                    Resolved = resolved,
+                    Timestamp = DateTime.UtcNow.AddDays(-random.Next(1, 30)),
+                    ResolvedAt = resolved ? DateTime.UtcNow.AddDays(-random.Next(1, 10)) : null,
+                    ResolvedBy = resolved ? "admin" : null,
+                    IpAddress = GetRandomIp(),
+                    UserAgent = GetRandomUserAgent(),
+                    Location = GetRandomLocation(),
+                    Details = GetSecurityAlertDetails(alertType)
+                };
+
+                securityAlerts.Add(alert);
+            }
+
+            // Engellenen IP'ler oluştur
+            for (int i = 0; i < 8; i++)
+            {
+                var tenant = tenants[random.Next(tenants.Count)];
+                var blockedIP = new BlockedIP
+                {
+                    IpAddress = GetRandomIp(),
+                    TenantId = tenant.Id,
+                    Reason = GetBlockedIPReason(),
+                    BlockedAt = DateTime.UtcNow.AddDays(-random.Next(1, 60)),
+                    ExpiresAt = DateTime.UtcNow.AddDays(random.Next(1, 365)),
+                    IsActive = random.Next(2) == 1,
+                    BlockedBy = "admin",
+                    AttemptCount = random.Next(5, 50)
+                };
+
+                blockedIPs.Add(blockedIP);
+            }
+
+            // Tenant Güvenlik Skorları oluştur
+            foreach (var tenant in tenants)
+            {
+                var securityScore = new TenantSecurityScore
+                {
+                    TenantId = tenant.Id,
+                    SecurityScore = random.Next(60, 95),
+                    TwoFactorEnabled = random.Next(2) == 1,
+                    PasswordPolicy = random.Next(3) switch { 0 => "weak", 1 => "medium", _ => "strong" },
+                    LastSecurityAudit = DateTime.UtcNow.AddDays(-random.Next(1, 90)),
+                    ActiveThreats = random.Next(0, 5),
+                    BlockedIPs = random.Next(0, 3),
+                    SecurityRecommendations = GetSecurityRecommendations()
+                };
+
+                tenantSecurityScores.Add(securityScore);
+            }
+
+            context.SecurityAlerts.AddRange(securityAlerts);
+            context.BlockedIPs.AddRange(blockedIPs);
+            context.TenantSecurityScores.AddRange(tenantSecurityScores);
+            context.SaveChanges();
+        }
+
+        private static string GetSecurityAlertTitle(string alertType)
+        {
+            return alertType switch
+            {
+                "brute_force" => "Brute Force Saldırısı Tespit Edildi",
+                "suspicious_login" => "Şüpheli Giriş Tespit Edildi",
+                "failed_2fa" => "2FA Doğrulama Başarısız",
+                "data_breach_attempt" => "Veri Sızıntısı Girişimi Tespit Edildi",
+                "unusual_activity" => "Olağandışı Aktivite Tespit Edildi",
+                _ => "Güvenlik Alarmı"
+            };
+        }
+
+        private static string GetSecurityAlertDescription(string alertType, User? user)
+        {
+            var userName = user != null ? $"{user.FirstName} {user.LastName}" : "Bilinmeyen Kullanıcı";
+            
+            return alertType switch
+            {
+                "brute_force" => $"{userName} hesabına brute force saldırısı tespit edildi",
+                "suspicious_login" => $"{userName} hesabından şüpheli giriş tespit edildi",
+                "failed_2fa" => $"{userName} için 2FA doğrulama başarısız oldu",
+                "data_breach_attempt" => $"{userName} hesabından veri sızıntısı girişimi tespit edildi",
+                "unusual_activity" => $"{userName} hesabında olağandışı aktivite tespit edildi",
+                _ => "Genel güvenlik alarmı"
+            };
+        }
+
+        private static string GetSecurityAlertDetails(string alertType)
+        {
+            var random = new Random();
+            
+            return alertType switch
+            {
+                "brute_force" => $"{{\"attemptCount\":{random.Next(10, 100)},\"timeWindow\":\"{random.Next(5, 30)} minutes\",\"targetUsername\":\"admin@example.com\",\"blocked\":true}}",
+                "suspicious_login" => $"{{\"ipAddress\":\"{GetRandomIp()}\",\"location\":\"Unknown Location\",\"userAgent\":\"Suspicious Browser\",\"previousLogin\":\"{DateTime.UtcNow.AddDays(-1):O}\",\"locationChanged\":true}}",
+                "failed_2fa" => $"{{\"username\":\"user@example.com\",\"attemptCount\":{random.Next(1, 5)},\"lastSuccessful\":\"{DateTime.UtcNow.AddDays(-1):O}\",\"deviceInfo\":\"Mobile App\"}}",
+                "data_breach_attempt" => $"{{\"ipAddress\":\"{GetRandomIp()}\",\"endpoint\":\"/api/users/data\",\"requestCount\":{random.Next(100, 1000)},\"timeWindow\":\"{random.Next(5, 60)} minutes\",\"blocked\":true,\"reported\":true}}",
+                "unusual_activity" => $"{{\"username\":\"user@example.com\",\"activityType\":\"mass_data_export\",\"recordCount\":{random.Next(1000, 10000)},\"timeWindow\":\"{random.Next(1, 24)} hours\",\"flagged\":true}}",
+                _ => "{\"action\":\"security_check\",\"timestamp\":\"" + DateTime.UtcNow.ToString("O") + "\"}"
+            };
+        }
+
+        private static string GetBlockedIPReason()
+        {
+            var reasons = new[]
+            {
+                "Brute force saldırısı",
+                "Şüpheli aktivite",
+                "Çok fazla başarısız giriş denemesi",
+                "Geçersiz API istekleri",
+                "Spam aktivitesi"
+            };
+
+            return reasons[new Random().Next(reasons.Length)];
+        }
+
+        private static string GetRandomLocation()
+        {
+            var locations = new[]
+            {
+                "İstanbul, Türkiye",
+                "Ankara, Türkiye",
+                "İzmir, Türkiye",
+                "Bursa, Türkiye",
+                "Antalya, Türkiye",
+                "Unknown Location"
+            };
+
+            return locations[new Random().Next(locations.Length)];
+        }
+
+        private static string GetSecurityRecommendations()
+        {
+            var recommendations = new[]
+            {
+                "İki faktörlü kimlik doğrulamayı etkinleştirin",
+                "Güçlü şifre politikası uygulayın",
+                "Düzenli güvenlik denetimleri yapın",
+                "Kullanıcı eğitimleri düzenleyin",
+                "Güvenlik loglarını düzenli kontrol edin"
+            };
+
+            return string.Join(",", recommendations);
+        }
+
+        private static void CreateDemoSecuritySettings(ApplicationDbContext context, List<Tenant> tenants)
+        {
+            var securitySettings = new List<TenantSecuritySettings>();
+
+            foreach (var tenant in tenants)
+            {
+                var settings = new TenantSecuritySettings
+                {
+                    TenantId = tenant.Id,
+                    RequireTwoFactor = tenant.Subscription == SubscriptionType.Premium,
+                    AllowSmsTwoFactor = true,
+                    AllowEmailTwoFactor = true,
+                    AllowAuthenticatorApp = true,
+                    MinimumPasswordLength = 8,
+                    RequireUppercase = true,
+                    RequireLowercase = true,
+                    RequireNumbers = true,
+                    RequireSpecialCharacters = true,
+                    PasswordExpiryDays = 90,
+                    PreventPasswordReuse = true,
+                    PasswordHistoryCount = 5,
+                    SessionTimeoutMinutes = 30,
+                    ForceLogoutOnPasswordChange = true,
+                    AllowConcurrentSessions = false,
+                    MaxConcurrentSessions = 1,
+                    MaxFailedLoginAttempts = 5,
+                    AccountLockoutDurationMinutes = 30,
+                    RequireCaptchaAfterFailedAttempts = true,
+                    CaptchaThreshold = 3,
+                    EnableIpWhitelist = false,
+                    AllowedIpRanges = null,
+                    BlockSuspiciousIps = true,
+                    SuspiciousIpThreshold = 10,
+                    EnableSecurityAuditLog = true,
+                    LogFailedLoginAttempts = true,
+                    LogSuccessfulLogins = false,
+                    LogPasswordChanges = true,
+                    LogAdminActions = true,
+                    NotifyOnFailedLogin = true,
+                    NotifyOnSuspiciousActivity = true,
+                    NotifyOnAccountLockout = true,
+                    NotificationEmails = "[\"admin@" + tenant.Domain + "\"]",
+                    EnableBruteForceProtection = true,
+                    BruteForceThreshold = 10,
+                    BruteForceWindowMinutes = 15,
+                    EnableGeolocationBlocking = false,
+                    AllowedCountries = null,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    UpdatedBy = "System"
+                };
+
+                securitySettings.Add(settings);
+            }
+
+            context.TenantSecuritySettings.AddRange(securitySettings);
+            context.SaveChanges();
+        }
+
+        private static void CreateDemoSecurityReports(ApplicationDbContext context, List<Tenant> tenants)
+        {
+            var securityReports = new List<SecurityReport>();
+            var random = new Random();
+
+            foreach (var tenant in tenants)
+            {
+                // Son 30 gün için günlük raporlar oluştur
+                for (int i = 0; i < 30; i++)
+                {
+                    var reportDate = DateTime.UtcNow.AddDays(-i);
+                    var startDate = reportDate.Date;
+                    var endDate = reportDate.Date.AddDays(1).AddSeconds(-1);
+
+                    var totalAlerts = random.Next(0, 10);
+                    var criticalAlerts = random.Next(0, Math.Min(3, totalAlerts));
+                    var highAlerts = random.Next(0, Math.Min(5, totalAlerts - criticalAlerts));
+                    var mediumAlerts = random.Next(0, Math.Min(8, totalAlerts - criticalAlerts - highAlerts));
+                    var lowAlerts = totalAlerts - criticalAlerts - highAlerts - mediumAlerts;
+                    var resolvedAlerts = random.Next(0, totalAlerts + 1);
+                    var pendingAlerts = totalAlerts - resolvedAlerts;
+
+                    var totalBlockedIPs = random.Next(0, 5);
+                    var totalLockedAccounts = random.Next(0, 3);
+                    var totalFailedLogins = random.Next(0, 20);
+                    var totalSuccessfulLogins = random.Next(10, 50);
+
+                    var securityScore = Math.Max(0, Math.Min(100, 100 - (criticalAlerts * 15) - (highAlerts * 10) - (totalLockedAccounts * 5) - (totalFailedLogins / 2)));
+                    var securityScoreTrend = securityScore >= 80 ? "improving" : securityScore >= 60 ? "stable" : "declining";
+
+                    var recommendations = new[]
+                    {
+                        "Güvenlik skorunu artırmak için güvenlik önlemlerini gözden geçirin",
+                        "İki faktörlü kimlik doğrulamayı etkinleştirin",
+                        "Güçlü şifre politikası uygulayın",
+                        "IP whitelist'leri düzenli olarak güncelleyin"
+                    };
+
+                    var reportData = new
+                    {
+                        Period = new { Start = startDate, End = endDate },
+                        Alerts = new object[0],
+                        BlockedIPs = new object[0],
+                        LockedAccounts = new object[0],
+                        LoginStats = new { Failed = totalFailedLogins, Successful = totalSuccessfulLogins }
+                    };
+
+                    var report = new SecurityReport
+                    {
+                        TenantId = tenant.Id,
+                        ReportType = "daily",
+                        ReportDate = reportDate,
+                        StartDate = startDate,
+                        EndDate = endDate,
+                        Title = $"Günlük Güvenlik Raporu - {tenant.CompanyName}",
+                        Description = $"{reportDate:dd.MM.yyyy} tarihli günlük güvenlik raporu",
+                        ReportData = System.Text.Json.JsonSerializer.Serialize(reportData),
+                        TotalAlerts = totalAlerts,
+                        CriticalAlerts = criticalAlerts,
+                        HighAlerts = highAlerts,
+                        MediumAlerts = mediumAlerts,
+                        LowAlerts = lowAlerts,
+                        ResolvedAlerts = resolvedAlerts,
+                        PendingAlerts = pendingAlerts,
+                        TotalBlockedIPs = totalBlockedIPs,
+                        TotalLockedAccounts = totalLockedAccounts,
+                        TotalFailedLogins = totalFailedLogins,
+                        TotalSuccessfulLogins = totalSuccessfulLogins,
+                        SecurityScore = securityScore,
+                        SecurityScoreTrend = securityScoreTrend,
+                        Recommendations = System.Text.Json.JsonSerializer.Serialize(recommendations),
+                        Status = "generated",
+                        CreatedAt = reportDate,
+                        UpdatedAt = reportDate,
+                        CreatedBy = "System"
+                    };
+
+                    securityReports.Add(report);
+                }
+            }
+
+            context.SecurityReports.AddRange(securityReports);
+            context.SaveChanges();
         }
     }
 } 

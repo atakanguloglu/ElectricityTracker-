@@ -4,6 +4,7 @@ using ElectricityTrackerAPI.Models.Admin;
 using ElectricityTrackerAPI.Models.Energy;
 using ElectricityTrackerAPI.Models.Logging;
 using ElectricityTrackerAPI.Models.Billing;
+using ElectricityTrackerAPI.Models.Security;
 
 namespace ElectricityTrackerAPI.Data
 {
@@ -32,6 +33,13 @@ namespace ElectricityTrackerAPI.Data
         public DbSet<PaymentRecord> PaymentRecords { get; set; }
         public DbSet<ResourceType> ResourceTypes { get; set; }
         public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
+        
+        // Security
+        public DbSet<SecurityAlert> SecurityAlerts { get; set; }
+        public DbSet<BlockedIP> BlockedIPs { get; set; }
+        public DbSet<TenantSecurityScore> TenantSecurityScores { get; set; }
+        public DbSet<TenantSecuritySettings> TenantSecuritySettings { get; set; }
+        public DbSet<SecurityReport> SecurityReports { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
