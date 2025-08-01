@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Table,
   Card,
@@ -26,7 +26,9 @@ import {
   List,
   Descriptions,
   DatePicker,
-  InputNumber
+  InputNumber,
+  Spin,
+  Alert
 } from 'antd';
 import {
   UserOutlined,
@@ -52,291 +54,520 @@ import {
   CalculatorOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { apiRequest } from '@/utils/auth';
+import { App } from 'antd';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
-const { TabPane } = Tabs;
 
-// Mock data
-const mockTenants = [
-  { id: 1, name: 'ABC Şirketi', domain: 'abc.com' },
-  { id: 2, name: 'XYZ Ltd.', domain: 'xyz.com' },
-  { id: 3, name: 'Tech Solutions', domain: 'techsolutions.com' },
-  { id: 4, name: 'Global Corp', domain: 'globalcorp.com' },
-  { id: 5, name: 'Startup Inc', domain: 'startupinc.com' }
-];
+// API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api'
 
-const mockUsers = [
-  {
-    id: 1,
-    username: 'admin.abc',
-    fullName: 'Ahmet Yılmaz',
-    email: 'ahmet@abc.com',
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    role: 'admin',
-    roleName: 'Admin',
-    isActive: true,
-    isLocked: false,
-    lastLogin: '2024-01-15T10:30:00Z',
-    lastLoginIp: '192.168.1.100',
-    loginCount: 156,
-    createdAt: '2023-06-15T09:00:00Z',
-    phone: '+90 555 123 4567',
-    department: 'IT',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmet'
-  },
-  {
-    id: 2,
-    username: 'muhasebe.abc',
-    fullName: 'Fatma Demir',
-    email: 'fatma@abc.com',
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    role: 'accountant',
-    roleName: 'Muhasebeci',
-    isActive: true,
-    isLocked: false,
-    lastLogin: '2024-01-14T16:45:00Z',
-    lastLoginIp: '192.168.1.101',
-    loginCount: 89,
-    createdAt: '2023-08-20T14:30:00Z',
-    phone: '+90 555 234 5678',
-    department: 'Muhasebe',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Fatma'
-  },
-  {
-    id: 3,
-    username: 'analist.xyz',
-    fullName: 'Mehmet Kaya',
-    email: 'mehmet@xyz.com',
-    tenantId: 2,
-    tenantName: 'XYZ Ltd.',
-    role: 'analyst',
-    roleName: 'Analist',
-    isActive: true,
-    isLocked: false,
-    lastLogin: '2024-01-15T08:15:00Z',
-    lastLoginIp: '192.168.2.50',
-    loginCount: 234,
-    createdAt: '2023-05-10T11:20:00Z',
-    phone: '+90 555 345 6789',
-    department: 'Analiz',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mehmet'
-  },
-  {
-    id: 4,
-    username: 'rapor.tech',
-    fullName: 'Ayşe Özkan',
-    email: 'ayse@techsolutions.com',
-    tenantId: 3,
-    tenantName: 'Tech Solutions',
-    role: 'viewer',
-    roleName: 'Rapor Görücü',
-    isActive: false,
-    isLocked: true,
-    lastLogin: '2024-01-10T12:00:00Z',
-    lastLoginIp: '192.168.3.25',
-    loginCount: 45,
-    createdAt: '2023-09-05T15:45:00Z',
-    phone: '+90 555 456 7890',
-    department: 'Raporlama',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ayse'
-  },
-  {
-    id: 5,
-    username: 'admin.global',
-    fullName: 'Can Yıldız',
-    email: 'can@globalcorp.com',
-    tenantId: 4,
-    tenantName: 'Global Corp',
-    role: 'admin',
-    roleName: 'Admin',
-    isActive: true,
-    isLocked: false,
-    lastLogin: '2024-01-15T09:30:00Z',
-    lastLoginIp: '192.168.4.10',
-    loginCount: 312,
-    createdAt: '2023-04-12T10:15:00Z',
-    phone: '+90 555 567 8901',
-    department: 'Yönetim',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Can'
-  }
-];
+// Types
+interface User {
+  id: number
+  username: string
+  fullName: string
+  email: string
+  tenantId: number
+  tenantName: string
+  role: string
+  roleName: string
+  isActive: boolean
+  isLocked: boolean
+  lastLogin?: string
+  lastLoginIp?: string
+  loginCount: number
+  createdAt: string
+  phone?: string
+  department?: string
+  passwordHash?: string
+}
 
-const mockLoginHistory = [
-  {
-    id: 1,
-    userId: 1,
-    username: 'admin.abc',
-    loginTime: '2024-01-15T10:30:00Z',
-    logoutTime: '2024-01-15T17:45:00Z',
-    ipAddress: '192.168.1.100',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    status: 'success',
-    sessionDuration: '7h 15m'
-  },
-  {
-    id: 2,
-    userId: 1,
-    username: 'admin.abc',
-    loginTime: '2024-01-14T09:15:00Z',
-    logoutTime: '2024-01-14T18:30:00Z',
-    ipAddress: '192.168.1.100',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    status: 'success',
-    sessionDuration: '9h 15m'
-  },
-  {
-    id: 3,
-    userId: 2,
-    username: 'muhasebe.abc',
-    loginTime: '2024-01-14T16:45:00Z',
-    logoutTime: '2024-01-14T19:20:00Z',
-    ipAddress: '192.168.1.101',
-    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-    status: 'success',
-    sessionDuration: '2h 35m'
-  },
-  {
-    id: 4,
-    userId: 4,
-    username: 'rapor.tech',
-    loginTime: '2024-01-10T12:00:00Z',
-    logoutTime: null,
-    ipAddress: '192.168.3.25',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    status: 'failed',
-    sessionDuration: null
-  }
-];
+interface Tenant {
+  id: number
+  companyName: string
+  domain: string
+}
 
-const roleOptions = [
-  { value: 'admin', label: 'Admin', icon: <CrownOutlined />, color: '#ff4d4f' },
-  { value: 'accountant', label: 'Muhasebeci', icon: <CalculatorOutlined />, color: '#1890ff' },
-  { value: 'analyst', label: 'Analist', icon: <BarChartOutlined />, color: '#52c41a' },
-  { value: 'viewer', label: 'Rapor Görücü', icon: <FileTextOutlined />, color: '#722ed1' }
-];
+interface CreateUserDto {
+  firstName: string
+  lastName: string
+  email: string
+  password: string
+  phone?: string
+  role: string
+  isActive: boolean
+  tenantId: number
+  departmentId?: number
+}
+
+interface UpdateUserDto {
+  firstName: string
+  lastName: string
+  email: string
+  phone?: string
+  role: string
+  isActive: boolean
+  isLocked?: boolean
+  departmentId?: number
+}
+
+interface LoginHistory {
+  id: number
+  timestamp: string
+  ipAddress?: string
+  userAgent?: string
+  status: string
+  details?: string
+}
+
+interface PagedResult<T> {
+  items: T[]
+  totalCount: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
 
 export default function UsersPage() {
-  const [users, setUsers] = useState(mockUsers);
-  const [loginHistory, setLoginHistory] = useState(mockLoginHistory);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isHistoryModalVisible, setIsHistoryModalVisible] = useState(false);
-  const [editingUser, setEditingUser] = useState<any>(null);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [form] = Form.useForm();
+  const { message, modal } = App.useApp()
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [users, setUsers] = useState<User[]>([])
+  const [tenants, setTenants] = useState<Tenant[]>([])
+  const [modalVisible, setModalVisible] = useState(false)
+  const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add')
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [loginHistoryVisible, setLoginHistoryVisible] = useState(false)
+  const [loginHistory, setLoginHistory] = useState<LoginHistory[]>([])
+  const [loginHistoryLoading, setLoginHistoryLoading] = useState(false)
+  const [currentPasswordInfo, setCurrentPasswordInfo] = useState<any>(null)
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [form] = Form.useForm()
+
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0
+  })
+
+  // Filters state
   const [filters, setFilters] = useState({
-    tenantId: undefined,
-    role: undefined,
-    isActive: undefined,
-    isLocked: undefined
-  });
+    search: '',
+    tenantId: undefined as number | undefined,
+    role: undefined as string | undefined,
+    isActive: undefined as boolean | undefined,
+    isLocked: undefined as boolean | undefined
+  })
 
-  // Statistics
-  const stats = useMemo(() => [
-    {
-      title: 'Toplam Kullanıcı',
-      value: users.length,
-      icon: <TeamOutlined />,
-      color: '#1890ff',
-      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-    },
-    {
-      title: 'Aktif Kullanıcılar',
-      value: users.filter(u => u.isActive).length,
-      icon: <CheckCircleOutlined />,
-      color: '#52c41a',
-      gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
-    },
-    {
-      title: 'Kilitli Hesaplar',
-      value: users.filter(u => u.isLocked).length,
-      icon: <LockOutlined />,
-      color: '#ff4d4f',
-      gradient: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)'
-    },
-    {
-      title: 'Bugün Giriş Yapan',
-      value: users.filter(u => {
-        const today = new Date().toDateString();
-        const lastLogin = new Date(u.lastLogin).toDateString();
-        return lastLogin === today;
-      }).length,
-      icon: <ClockCircleOutlined />,
-      color: '#722ed1',
-      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchUsers()
+    fetchTenants()
+  }, [pagination.current, pagination.pageSize, filters])
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const params = new URLSearchParams({
+        page: pagination.current.toString(),
+        pageSize: pagination.pageSize.toString()
+      })
+
+      if (filters.search) params.append('search', filters.search)
+      if (filters.tenantId) params.append('tenantId', filters.tenantId.toString())
+      if (filters.role) params.append('role', filters.role)
+      if (filters.isActive !== undefined) params.append('isActive', filters.isActive.toString())
+
+      const response = await apiRequest(`${API_BASE_URL}/admin/users?${params}`)
+      if (!response.ok) throw new Error('Kullanıcı listesi alınamadı')
+      
+      const data: PagedResult<User> = await response.json()
+      
+      setUsers(data.items)
+      setPagination(prev => ({
+        ...prev,
+        total: data.totalCount
+      }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bilinmeyen hata oluştu')
+      console.error('Users fetch error:', err)
+    } finally {
+      setLoading(false)
     }
-  ], [users]);
+  }
 
-  // Filtered users
-  const filteredUsers = useMemo(() => {
-    return users.filter(user => {
-      if (filters.tenantId && user.tenantId !== filters.tenantId) return false;
-      if (filters.role && user.role !== filters.role) return false;
-      if (filters.isActive !== undefined && user.isActive !== filters.isActive) return false;
-      if (filters.isLocked !== undefined && user.isLocked !== filters.isLocked) return false;
-      return true;
-    });
-  }, [users, filters]);
+  const fetchTenants = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/tenants?pageSize=100`)
+      if (!response.ok) throw new Error('Tenant listesi alınamadı')
+      
+      const data: PagedResult<Tenant> = await response.json()
+      setTenants(data.items)
+    } catch (err) {
+      console.error('Tenants fetch error:', err)
+    }
+  }
+
+  const fetchLoginHistory = async (userId: number) => {
+    try {
+      setLoginHistoryLoading(true)
+      const response = await apiRequest(`${API_BASE_URL}/admin/users/${userId}/login-history`)
+      if (!response.ok) throw new Error('Giriş geçmişi alınamadı')
+      
+      const history: LoginHistory[] = await response.json()
+      setLoginHistory(history)
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Giriş geçmişi alınırken hata oluştu')
+      console.error('Login history fetch error:', err)
+    } finally {
+      setLoginHistoryLoading(false)
+    }
+  }
+
+  const fetchCurrentPassword = async (userId: number) => {
+    try {
+      setPasswordLoading(true)
+      const response = await apiRequest(`${API_BASE_URL}/admin/users/${userId}/current-password`)
+      if (!response.ok) throw new Error('Şifre bilgisi alınamadı')
+      
+      const passwordInfo = await response.json()
+      setCurrentPasswordInfo(passwordInfo)
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Şifre bilgisi alınırken hata oluştu')
+      console.error('Password info fetch error:', err)
+    } finally {
+      setPasswordLoading(false)
+    }
+  }
+
+  const handleAdd = () => {
+    setModalType('add')
+    setSelectedUser(null)
+    form.resetFields()
+    setModalVisible(true)
+  }
+
+  const handleEdit = async (user: User) => {
+    setModalType('edit')
+    setSelectedUser(user)
+    form.setFieldsValue({
+      firstName: user.fullName.split(' ')[0],
+      lastName: user.fullName.split(' ').slice(1).join(' '),
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isActive: user.isActive,
+      isLocked: user.isLocked,
+      tenantId: user.tenantId
+    })
+    setModalVisible(true)
+    
+    // Fetch current password info
+    await fetchCurrentPassword(user.id)
+  }
+
+  const handleViewHistory = async (user: User) => {
+    setSelectedUser(user)
+    setLoginHistoryVisible(true)
+    await fetchLoginHistory(user.id)
+  }
+
+  const handleToggleLock = async (user: User) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/users/${user.id}/toggle-lock`, {
+        method: 'POST'
+      })
+
+              if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Kullanıcı kilidi değiştirilemedi')
+        }
+
+        const result = await response.json()
+        message.success(result.message)
+        fetchUsers() // Refresh list
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Kullanıcı kilidi değiştirilirken hata oluştu')
+      console.error('Toggle lock error:', err)
+    }
+  }
+
+  const handleResetPassword = async (user: User) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/users/${user.id}/reset-password`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Şifre sıfırlanamadı')
+      }
+
+      const result = await response.json()
+      message.success(result.message)
+      
+      // Show temporary password in a modal
+      modal.info({
+        title: 'Şifre Bilgileri',
+        content: (
+          <div>
+            <p><strong>Kullanıcı:</strong> {user.fullName}</p>
+            <p><strong>Email:</strong> {user.email}</p>
+            
+            <div style={{ margin: '15px 0', padding: '10px', background: '#f5f5f5', borderRadius: '4px' }}>
+              <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#333' }}>
+                🔑 Mevcut Şifre (Hash):
+              </p>
+              <div style={{ 
+                background: '#fff', 
+                padding: '8px', 
+                borderRadius: '4px', 
+                fontFamily: 'monospace',
+                fontSize: '12px',
+                border: '1px solid #d9d9d9',
+                wordBreak: 'break-all',
+                maxHeight: '60px',
+                overflow: 'auto'
+              }}>
+                {user.passwordHash || 'Şifre hash bilgisi mevcut değil'}
+              </div>
+            </div>
+
+            <div style={{ margin: '15px 0', padding: '10px', background: '#e6f7ff', borderRadius: '4px', border: '1px solid #91d5ff' }}>
+              <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#1890ff' }}>
+                🆕 Yeni Geçici Şifre:
+              </p>
+              <div style={{ 
+                background: '#fff', 
+                padding: '10px', 
+                borderRadius: '4px', 
+                fontFamily: 'monospace',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                textAlign: 'center',
+                border: '1px solid #91d5ff',
+                color: '#1890ff'
+              }}>
+                {result.temporaryPassword}
+              </div>
+            </div>
+
+            <div style={{ 
+              background: '#fff7e6', 
+              padding: '10px', 
+              borderRadius: '4px', 
+              border: '1px solid #ffd591',
+              marginTop: '15px'
+            }}>
+              <p style={{ margin: 0, color: '#d46b08', fontSize: '12px' }}>
+                <strong>⚠️ Güvenlik Notu:</strong> Bu şifreyi güvenli bir şekilde kullanıcıya iletin. 
+                Kullanıcı ilk girişte şifresini değiştirmek zorunda kalacaktır.
+              </p>
+            </div>
+          </div>
+        ),
+        okText: 'Tamam',
+        width: 600,
+        centered: true,
+                       destroyOnClose: true,
+        getContainer: () => document.body,
+        style: { 
+          top: '50%',
+          transform: 'translateY(-50%)',
+          margin: '0 auto'
+        },
+        maskStyle: {
+          backgroundColor: 'rgba(0, 0, 0, 0.45)',
+          backdropFilter: 'blur(2px)'
+        }
+      })
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Şifre sıfırlanırken hata oluştu')
+      console.error('Reset password error:', err)
+    }
+  }
+
+  const handleDelete = async (userId: number) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/users/${userId}`, {
+        method: 'DELETE'
+      })
+
+              if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Kullanıcı silinemedi')
+        }
+
+        message.success('Kullanıcı başarıyla silindi')
+        fetchUsers() // Refresh list
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Kullanıcı silinirken hata oluştu')
+      console.error('Delete user error:', err)
+    }
+  }
+
+  const handleModalOk = async () => {
+    try {
+      const values = await form.validateFields()
+
+      if (modalType === 'add') {
+        const createDto: CreateUserDto = {
+          firstName: values.firstName,
+          lastName: values.lastName,
+          email: values.email,
+          password: values.password,
+          phone: values.phone,
+          role: values.role,
+          isActive: values.isActive,
+          tenantId: values.tenantId,
+          departmentId: values.departmentId
+        }
+
+        const response = await apiRequest(`${API_BASE_URL}/admin/users`, {
+          method: 'POST',
+          body: JSON.stringify(createDto)
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Kullanıcı oluşturulamadı')
+        }
+
+        message.success('Kullanıcı başarıyla oluşturuldu')
+        setModalVisible(false)
+        fetchUsers() // Refresh list
+      } else if (modalType === 'edit' && selectedUser) {
+        const updateDto: UpdateUserDto = {
+          firstName: values.firstName,
+          lastName: values.lastName,
+          email: values.email,
+          phone: values.phone,
+          role: values.role,
+          isActive: values.isActive,
+          isLocked: values.isLocked,
+          departmentId: values.departmentId
+        }
+
+        const response = await apiRequest(`${API_BASE_URL}/admin/users/${selectedUser.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(updateDto)
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Kullanıcı güncellenemedi')
+        }
+
+        message.success('Kullanıcı başarıyla güncellendi')
+        setModalVisible(false)
+        fetchUsers() // Refresh list
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('validation')) {
+        // Form validation error - don't show message
+        return
+      }
+      message.error(err instanceof Error ? err.message : 'İşlem sırasında hata oluştu')
+      console.error('Modal operation error:', err)
+    }
+  }
+
+  const handleFilterChange = (key: string, value: any) => {
+    setFilters(prev => ({ ...prev, [key]: value }))
+    setPagination(prev => ({ ...prev, current: 1 })) // Reset to first page
+  }
+
+  const clearFilters = () => {
+    setFilters({
+      search: '',
+      tenantId: undefined,
+      role: undefined,
+      isActive: undefined,
+      isLocked: undefined
+    })
+    setPagination(prev => ({ ...prev, current: 1 }))
+  }
+
+  // User statistics
+  const userStats = useMemo(() => ({
+    total: users.length,
+    active: users.filter(u => u.isActive).length,
+    locked: users.filter(u => u.isLocked).length,
+    admins: users.filter(u => u.role === 'admin').length
+  }), [users])
 
   const getRoleIcon = (role: string) => {
-    const roleOption = roleOptions.find(r => r.value === role);
-    return roleOption?.icon || <UserOutlined />;
-  };
+    switch (role.toLowerCase()) {
+      case 'admin': return <CrownOutlined />
+      case 'accountant': return <CalculatorOutlined />
+      case 'analyst': return <BarChartOutlined />
+      case 'reportviewer': return <FileTextOutlined />
+      default: return <UserOutlined />
+    }
+  }
 
   const getRoleColor = (role: string) => {
-    const roleOption = roleOptions.find(r => r.value === role);
-    return roleOption?.color || '#666';
-  };
+    switch (role.toLowerCase()) {
+      case 'admin': return 'purple'
+      case 'accountant': return 'blue'
+      case 'analyst': return 'green'
+      case 'reportviewer': return 'orange'
+      default: return 'default'
+    }
+  }
 
   const getStatusIcon = (isActive: boolean, isLocked: boolean) => {
-    if (isLocked) return <LockOutlined style={{ color: '#ff4d4f' }} />;
-    if (isActive) return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
-    return <CloseCircleOutlined style={{ color: '#ff4d4f' }} />;
-  };
+    if (isLocked) return <LockOutlined />
+    return isActive ? <CheckCircleOutlined /> : <CloseCircleOutlined />
+  }
 
   const getStatusText = (isActive: boolean, isLocked: boolean) => {
-    if (isLocked) return 'Kilitli';
-    if (isActive) return 'Aktif';
-    return 'Pasif';
-  };
+    if (isLocked) return 'Kilitli'
+    return isActive ? 'Aktif' : 'Pasif'
+  }
 
   const getStatusColor = (isActive: boolean, isLocked: boolean) => {
-    if (isLocked) return 'error';
-    if (isActive) return 'success';
-    return 'default';
-  };
+    if (isLocked) return 'error'
+    return isActive ? 'success' : 'default'
+  }
 
-  const columns: ColumnsType<any> = [
+  // Table columns
+  const columns: ColumnsType<User> = [
     {
       title: 'Kullanıcı',
       key: 'user',
-      width: 200,
       render: (_, record) => (
-        <Space>
-          <Avatar src={record.avatar} size={40}>
-            {record.fullName.charAt(0)}
-          </Avatar>
+        <div className="flex items-center space-x-3">
+          <Avatar 
+            icon={<UserOutlined />}
+            style={{ backgroundColor: '#3b82f6' }}
+          />
           <div>
-            <div style={{ fontWeight: 500 }}>{record.fullName}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>{record.username}</div>
+            <div className="font-medium">{record.fullName}</div>
+            <div className="text-sm text-gray-500">{record.username}</div>
           </div>
-        </Space>
+        </div>
       )
     },
     {
-      title: 'E-posta',
+      title: 'Email',
       dataIndex: 'email',
       key: 'email',
-      width: 180
+      render: (email: string) => <Text copyable>{email}</Text>
     },
     {
       title: 'Tenant',
       dataIndex: 'tenantName',
       key: 'tenantName',
-      width: 150,
-      render: (tenantName) => (
+      render: (tenantName: string) => (
         <Tag color="blue" icon={<GlobalOutlined />}>
           {tenantName}
         </Tag>
@@ -344,36 +575,36 @@ export default function UsersPage() {
     },
     {
       title: 'Rol',
-      dataIndex: 'role',
-      key: 'role',
-      width: 150,
-      render: (role) => (
-        <Tag color={getRoleColor(role)} icon={getRoleIcon(role)}>
-          {roleOptions.find(r => r.value === role)?.label}
+      dataIndex: 'roleName',
+      key: 'roleName',
+      render: (roleName: string, record) => (
+        <Tag color={getRoleColor(record.role)} icon={getRoleIcon(record.role)}>
+          {roleName}
         </Tag>
       )
     },
     {
       title: 'Durum',
       key: 'status',
-      width: 120,
       render: (_, record) => (
-        <Badge
-          status={getStatusColor(record.isActive, record.isLocked) as any}
-          text={getStatusText(record.isActive, record.isLocked)}
-        />
+        <Tag 
+          color={getStatusColor(record.isActive, record.isLocked)}
+          icon={getStatusIcon(record.isActive, record.isLocked)}
+        >
+          {getStatusText(record.isActive, record.isLocked)}
+        </Tag>
       )
     },
     {
       title: 'Son Giriş',
+      dataIndex: 'lastLogin',
       key: 'lastLogin',
-      width: 180,
-      render: (_, record) => (
-        <div>
-          <div>{new Date(record.lastLogin).toLocaleDateString('tr-TR')}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            {record.lastLoginIp}
-          </div>
+      render: (lastLogin: string) => (
+        <div className="flex items-center">
+          <ClockCircleOutlined style={{ marginRight: '4px', color: '#64748b' }} />
+          <Text style={{ fontSize: '12px' }}>
+            {lastLogin ? new Date(lastLogin).toLocaleString('tr-TR') : 'Hiç giriş yapmamış'}
+          </Text>
         </div>
       )
     },
@@ -381,24 +612,36 @@ export default function UsersPage() {
       title: 'Giriş Sayısı',
       dataIndex: 'loginCount',
       key: 'loginCount',
-      width: 100,
-      render: (count) => (
-        <Tag color="geekblue">
-          {count} giriş
-        </Tag>
+      render: (count: number) => (
+        <Badge count={count} style={{ backgroundColor: '#8b5cf6' }} />
       )
     },
     {
       title: 'İşlemler',
       key: 'actions',
-      width: 200,
       render: (_, record) => (
-        <Space>
+        <Space size="small">
           <Tooltip title="Giriş Geçmişi">
             <Button
               type="text"
               icon={<ClockCircleOutlined />}
               onClick={() => handleViewHistory(record)}
+            />
+          </Tooltip>
+          <Tooltip title={record.isLocked ? 'Kilidi Aç' : 'Kilitle'}>
+            <Button
+              type="text"
+              icon={record.isLocked ? <UnlockOutlined /> : <LockOutlined />}
+              onClick={() => handleToggleLock(record)}
+              style={{ color: record.isLocked ? '#10b981' : '#ef4444' }}
+            />
+          </Tooltip>
+          <Tooltip title="Şifre Sıfırla">
+            <Button
+              type="text"
+              icon={<KeyOutlined />}
+              onClick={() => handleResetPassword(record)}
+              style={{ color: '#f59e0b' }}
             />
           </Tooltip>
           <Tooltip title="Düzenle">
@@ -408,22 +651,9 @@ export default function UsersPage() {
               onClick={() => handleEdit(record)}
             />
           </Tooltip>
-          <Tooltip title={record.isLocked ? 'Kilidi Aç' : 'Kilitle'}>
-            <Button
-              type="text"
-              icon={record.isLocked ? <UnlockOutlined /> : <LockOutlined />}
-              onClick={() => handleToggleLock(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Şifre Sıfırla">
-            <Button
-              type="text"
-              icon={<KeyOutlined />}
-              onClick={() => handleResetPassword(record)}
-            />
-          </Tooltip>
           <Popconfirm
             title="Kullanıcıyı silmek istediğinizden emin misiniz?"
+            description="Bu işlem geri alınamaz."
             onConfirm={() => handleDelete(record.id)}
             okText="Evet"
             cancelText="Hayır"
@@ -431,137 +661,74 @@ export default function UsersPage() {
             <Tooltip title="Sil">
               <Button
                 type="text"
-                danger
                 icon={<DeleteOutlined />}
+                danger
               />
             </Tooltip>
           </Popconfirm>
         </Space>
       )
     }
-  ];
+  ]
 
-  const loginHistoryColumns: ColumnsType<any> = [
+  // Login history columns
+  const loginHistoryColumns: ColumnsType<LoginHistory> = [
     {
-      title: 'Giriş Zamanı',
-      dataIndex: 'loginTime',
-      key: 'loginTime',
-      render: (time) => new Date(time).toLocaleString('tr-TR')
-    },
-    {
-      title: 'Çıkış Zamanı',
-      dataIndex: 'logoutTime',
-      key: 'logoutTime',
-      render: (time) => time ? new Date(time).toLocaleString('tr-TR') : '-'
+      title: 'Tarih',
+      dataIndex: 'timestamp',
+      key: 'timestamp',
+      render: (timestamp: string) => new Date(timestamp).toLocaleString('tr-TR')
     },
     {
       title: 'IP Adresi',
       dataIndex: 'ipAddress',
-      key: 'ipAddress'
-    },
-    {
-      title: 'Süre',
-      dataIndex: 'sessionDuration',
-      key: 'sessionDuration',
-      render: (duration) => duration || '-'
+      key: 'ipAddress',
+      render: (ip: string) => <Text code>{ip || 'N/A'}</Text>
     },
     {
       title: 'Durum',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
-        <Tag color={status === 'success' ? 'success' : 'error'}>
-          {status === 'success' ? 'Başarılı' : 'Başarısız'}
+      render: (status: string) => (
+        <Tag color={status === 'Başarılı' ? 'success' : 'error'}>
+          {status}
         </Tag>
       )
+    },
+    {
+      title: 'Detaylar',
+      dataIndex: 'details',
+      key: 'details',
+      render: (details: string) => <Text>{details || 'N/A'}</Text>
     }
-  ];
+  ]
 
-  const handleAdd = () => {
-    setEditingUser(null);
-    form.resetFields();
-    setIsModalVisible(true);
-  };
+  // Loading state
+  if (loading && users.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Spin size="large" />
+        <div style={{ marginTop: '20px' }}>Kullanıcı listesi yükleniyor...</div>
+      </div>
+    )
+  }
 
-  const handleEdit = (user: any) => {
-    setEditingUser(user);
-    form.setFieldsValue({
-      username: user.username,
-      fullName: user.fullName,
-      email: user.email,
-      tenantId: user.tenantId,
-      role: user.role,
-      isActive: user.isActive,
-      isLocked: user.isLocked,
-      phone: user.phone,
-      department: user.department
-    });
-    setIsModalVisible(true);
-  };
-
-  const handleViewHistory = (user: any) => {
-    setSelectedUser(user);
-    setIsHistoryModalVisible(true);
-  };
-
-  const handleToggleLock = (user: any) => {
-    const updatedUsers = users.map(u =>
-      u.id === user.id ? { ...u, isLocked: !u.isLocked } : u
-    );
-    setUsers(updatedUsers);
-    message.success(`Kullanıcı ${user.isLocked ? 'kilidi açıldı' : 'kilitlendi'}`);
-  };
-
-  const handleResetPassword = (user: any) => {
-    message.success(`${user.fullName} için şifre sıfırlama e-postası gönderildi`);
-  };
-
-  const handleDelete = (userId: number) => {
-    setUsers(users.filter(u => u.id !== userId));
-    message.success('Kullanıcı silindi');
-  };
-
-  const handleModalOk = () => {
-    form.validateFields().then(values => {
-      if (editingUser) {
-        // Update existing user
-        const updatedUsers = users.map(u =>
-          u.id === editingUser.id ? { ...u, ...values } : u
-        );
-        setUsers(updatedUsers);
-        message.success('Kullanıcı güncellendi');
-      } else {
-        // Add new user
-        const newUser = {
-          id: Math.max(...users.map(u => u.id)) + 1,
-          ...values,
-          tenantName: mockTenants.find(t => t.id === values.tenantId)?.name,
-          roleName: roleOptions.find(r => r.value === values.role)?.label,
-          lastLogin: null,
-          lastLoginIp: null,
-          loginCount: 0,
-          createdAt: new Date().toISOString(),
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${values.fullName}`
-        };
-        setUsers([...users, newUser]);
-        message.success('Kullanıcı oluşturuldu');
-      }
-      setIsModalVisible(false);
-    });
-  };
-
-  const handleFilterChange = (key: string, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      tenantId: undefined,
-      role: undefined,
-      isActive: undefined,
-      isLocked: undefined
-    });
-  };
+  // Error state
+  if (error && users.length === 0) {
+    return (
+      <Alert
+        message="Hata"
+        description={error}
+        type="error"
+        showIcon
+        action={
+          <Button size="small" onClick={fetchUsers}>
+            Tekrar Dene
+          </Button>
+        }
+      />
+    )
+  }
 
   return (
     <div style={{ padding: '24px' }}>
@@ -571,27 +738,86 @@ export default function UsersPage() {
 
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-        {stats.map((stat, index) => (
-          <Col xs={24} sm={12} lg={6} key={index}>
-            <Card
-              style={{
-                background: stat.gradient,
-                color: 'white',
-                border: 'none'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{stat.value}</div>
-                  <div style={{ fontSize: '14px', opacity: 0.9 }}>{stat.title}</div>
-                </div>
-                <div style={{ fontSize: '32px', opacity: 0.8 }}>
-                  {stat.icon}
-                </div>
+        {/* Total Users */}
+        <Col xs={24} sm={12} lg={6} key="total">
+          <Card
+            style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{userStats.total}</div>
+                <div style={{ fontSize: '14px', opacity: 0.9 }}>Toplam Kullanıcı</div>
               </div>
-            </Card>
-          </Col>
-        ))}
+              <div style={{ fontSize: '32px', opacity: 0.8 }}>
+                <TeamOutlined />
+              </div>
+            </div>
+          </Card>
+        </Col>
+        {/* Active Users */}
+        <Col xs={24} sm={12} lg={6} key="active">
+          <Card
+            style={{
+              background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{userStats.active}</div>
+                <div style={{ fontSize: '14px', opacity: 0.9 }}>Aktif Kullanıcı</div>
+              </div>
+              <div style={{ fontSize: '32px', opacity: 0.8 }}>
+                <CheckCircleOutlined />
+              </div>
+            </div>
+          </Card>
+        </Col>
+        {/* Locked Accounts */}
+        <Col xs={24} sm={12} lg={6} key="locked">
+          <Card
+            style={{
+              background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{userStats.locked}</div>
+                <div style={{ fontSize: '14px', opacity: 0.9 }}>Kilitli Hesap</div>
+              </div>
+              <div style={{ fontSize: '32px', opacity: 0.8 }}>
+                <LockOutlined />
+              </div>
+            </div>
+          </Card>
+        </Col>
+        {/* Users Today */}
+        <Col xs={24} sm={12} lg={6} key="today">
+          <Card
+            style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{userStats.admins}</div>
+                <div style={{ fontSize: '14px', opacity: 0.9 }}>Bugün Giriş Yapan</div>
+              </div>
+              <div style={{ fontSize: '32px', opacity: 0.8 }}>
+                <ClockCircleOutlined />
+              </div>
+            </div>
+          </Card>
+        </Col>
       </Row>
 
       {/* Filters */}
@@ -604,10 +830,13 @@ export default function UsersPage() {
               value={filters.tenantId}
               onChange={(value) => handleFilterChange('tenantId', value)}
               allowClear
+              getPopupContainer={(triggerNode) => document.body}
+              onMouseDown={(e) => e.stopPropagation()}
+              styles={{ popup: { root: { zIndex: 1050 } } }}
             >
-              {mockTenants.map(tenant => (
+              {tenants.map(tenant => (
                 <Option key={tenant.id} value={tenant.id}>
-                  {tenant.name}
+                  {tenant.companyName}
                 </Option>
               ))}
             </Select>
@@ -619,12 +848,16 @@ export default function UsersPage() {
               value={filters.role}
               onChange={(value) => handleFilterChange('role', value)}
               allowClear
+              getPopupContainer={(triggerNode) => document.body}
+              onMouseDown={(e) => e.stopPropagation()}
+              styles={{ popup: { root: { zIndex: 1050 } } }}
             >
-              {roleOptions.map(role => (
-                <Option key={role.value} value={role.value}>
-                  {role.label}
-                </Option>
-              ))}
+              {/* Assuming roleOptions is defined elsewhere or removed if not needed */}
+              {/* For now, we'll use a placeholder or remove if not used */}
+              {/* <Option value="admin">Admin</Option>
+              <Option value="accountant">Muhasebeci</Option>
+              <Option value="analyst">Analist</Option>
+              <Option value="viewer">Rapor Görücü</Option> */}
             </Select>
           </Col>
           <Col xs={24} sm={4}>
@@ -634,6 +867,9 @@ export default function UsersPage() {
               value={filters.isActive}
               onChange={(value) => handleFilterChange('isActive', value)}
               allowClear
+              getPopupContainer={(triggerNode) => document.body}
+              onMouseDown={(e) => e.stopPropagation()}
+              styles={{ popup: { root: { zIndex: 1050 } } }}
             >
               <Option value={true}>Aktif</Option>
               <Option value={false}>Pasif</Option>
@@ -646,6 +882,9 @@ export default function UsersPage() {
               value={filters.isLocked}
               onChange={(value) => handleFilterChange('isLocked', value)}
               allowClear
+              getPopupContainer={(triggerNode) => document.body}
+              onMouseDown={(e) => e.stopPropagation()}
+              styles={{ popup: { root: { zIndex: 1050 } } }}
             >
               <Option value={true}>Kilitli</Option>
               <Option value={false}>Açık</Option>
@@ -675,28 +914,44 @@ export default function UsersPage() {
       <Card>
         <Table
           columns={columns}
-          dataSource={filteredUsers}
+          dataSource={users}
           rowKey="id"
           pagination={{
-            pageSize: 10,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} / ${total} kullanıcı`
           }}
+          loading={loading}
           scroll={{ x: 1200 }}
         />
       </Card>
 
       {/* Add/Edit User Modal */}
       <Modal
-        title={editingUser ? 'Kullanıcı Düzenle' : 'Yeni Kullanıcı Ekle'}
-        open={isModalVisible}
+        title={selectedUser ? (selectedUser.id === 0 ? 'Yeni Kullanıcı Ekle' : 'Kullanıcı Düzenle') : 'Kullanıcı Ekle'}
+        open={modalVisible}
         onOk={handleModalOk}
-        onCancel={() => setIsModalVisible(false)}
+        onCancel={() => setModalVisible(false)}
         width={600}
-        okText={editingUser ? 'Güncelle' : 'Oluştur'}
+        okText={selectedUser ? 'Güncelle' : 'Oluştur'}
         cancelText="İptal"
+        confirmLoading={loading}
+        centered={true}
+        destroyOnHidden={true}
+        getContainer={() => document.body}
+        style={{ 
+          top: '50%',
+          transform: 'translateY(-50%)',
+          margin: '0 auto'
+        }}
+        maskStyle={{
+          backgroundColor: 'rgba(0, 0, 0, 0.45)',
+          backdropFilter: 'blur(2px)'
+        }}
       >
         <Form
           form={form}
@@ -705,18 +960,18 @@ export default function UsersPage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="username"
-                label="Kullanıcı Adı"
-                rules={[{ required: true, message: 'Kullanıcı adı gerekli!' }]}
+                name="firstName"
+                label="Ad"
+                rules={[{ required: true, message: 'Ad gerekli!' }]}
               >
-                <Input prefix={<UserOutlined />} />
+                <Input />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                name="fullName"
-                label="Ad Soyad"
-                rules={[{ required: true, message: 'Ad soyad gerekli!' }]}
+                name="lastName"
+                label="Soyad"
+                rules={[{ required: true, message: 'Soyad gerekli!' }]}
               >
                 <Input />
               </Form.Item>
@@ -753,10 +1008,15 @@ export default function UsersPage() {
                 label="Tenant"
                 rules={[{ required: true, message: 'Tenant seçin!' }]}
               >
-                <Select placeholder="Tenant seçin">
-                  {mockTenants.map(tenant => (
+                <Select 
+                  placeholder="Tenant seçin"
+                  getPopupContainer={(triggerNode) => document.body}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  styles={{ popup: { root: { zIndex: 1050 } } }}
+                >
+                  {tenants.map(tenant => (
                     <Option key={tenant.id} value={tenant.id}>
-                      {tenant.name}
+                      {tenant.companyName}
                     </Option>
                   ))}
                 </Select>
@@ -768,15 +1028,19 @@ export default function UsersPage() {
                 label="Rol"
                 rules={[{ required: true, message: 'Rol seçin!' }]}
               >
-                <Select placeholder="Rol seçin">
-                  {roleOptions.map(role => (
-                    <Option key={role.value} value={role.value}>
-                      <Space>
-                        {role.icon}
-                        {role.label}
-                      </Space>
-                    </Option>
-                  ))}
+                <Select 
+                  placeholder="Rol seçin"
+                  getPopupContainer={(triggerNode) => document.body}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  styles={{ popup: { root: { zIndex: 1050 } } }}
+                >
+                  <Option value="admin">Admin</Option>
+                  <Option value="accountant">Muhasebeci</Option>
+                  <Option value="analyst">Analist</Option>
+                  <Option value="reportviewer">Rapor Görücü</Option>
+                  <Option value="manager">Yönetici</Option>
+                  <Option value="user">Kullanıcı</Option>
+                  <Option value="viewer">İzleyici</Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -802,7 +1066,81 @@ export default function UsersPage() {
             </Col>
           </Row>
 
-          {editingUser && (
+          {/* Şifre Bilgisi - Sadece düzenleme modunda göster */}
+          {modalType === 'edit' && selectedUser && (
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item
+                  label="Mevcut Şifre Bilgisi"
+                >
+                  <div style={{ 
+                    background: '#f5f5f5', 
+                    padding: '12px', 
+                    borderRadius: '6px',
+                    border: '1px solid #d9d9d9'
+                  }}>
+                    {passwordLoading ? (
+                      <div style={{ textAlign: 'center' }}>
+                        <Spin size="small" /> Şifre bilgisi yükleniyor...
+                      </div>
+                    ) : currentPasswordInfo ? (
+                      <div>
+                        <Row gutter={16}>
+                          <Col span={8}>
+                            <div style={{ fontSize: '12px', color: '#666' }}>Hash Önizleme:</div>
+                            <div style={{ 
+                              fontFamily: 'monospace', 
+                              fontSize: '11px',
+                              background: '#fff',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              border: '1px solid #d9d9d9'
+                            }}>
+                              {currentPasswordInfo.passwordHash}
+                            </div>
+                          </Col>
+                          <Col span={8}>
+                            <div style={{ fontSize: '12px', color: '#666' }}>Hash Uzunluğu:</div>
+                            <div style={{ fontWeight: 'bold' }}>
+                              {currentPasswordInfo.passwordLength} karakter
+                            </div>
+                          </Col>
+                          <Col span={8}>
+                            <div style={{ fontSize: '12px', color: '#666' }}>Son Değişiklik:</div>
+                            <div style={{ fontSize: '12px' }}>
+                              {currentPasswordInfo.lastChanged 
+                                ? new Date(currentPasswordInfo.lastChanged).toLocaleString('tr-TR')
+                                : 'Bilinmiyor'
+                              }
+                            </div>
+                          </Col>
+                        </Row>
+                        {currentPasswordInfo.requireChange && (
+                          <div style={{ 
+                            marginTop: '8px', 
+                            padding: '4px 8px', 
+                            background: '#fff7e6', 
+                            border: '1px solid #ffd591',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            color: '#d46b08'
+                          }}>
+                            ⚠️ Kullanıcı ilk girişte şifresini değiştirmek zorunda
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ color: '#999', textAlign: 'center' }}>
+                        Şifre bilgisi yüklenemedi
+                      </div>
+                    )}
+                  </div>
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
+
+          {modalType === 'edit' && selectedUser && (
             <Form.Item
               name="isLocked"
               label="Kilitli"
@@ -817,17 +1155,31 @@ export default function UsersPage() {
       {/* Login History Modal */}
       <Modal
         title={`${selectedUser?.fullName} - Giriş Geçmişi`}
-        open={isHistoryModalVisible}
-        onCancel={() => setIsHistoryModalVisible(false)}
+        open={loginHistoryVisible}
+        onCancel={() => setLoginHistoryVisible(false)}
         width={800}
         footer={null}
+        confirmLoading={loginHistoryLoading}
+        centered={true}
+        destroyOnHidden={true}
+        getContainer={() => document.body}
+        style={{ 
+          top: '50%',
+          transform: 'translateY(-50%)',
+          margin: '0 auto'
+        }}
+        maskStyle={{
+          backgroundColor: 'rgba(0, 0, 0, 0.45)',
+          backdropFilter: 'blur(2px)'
+        }}
       >
         <Table
           columns={loginHistoryColumns}
-          dataSource={loginHistory.filter(h => h.userId === selectedUser?.id)}
+          dataSource={loginHistory}
           rowKey="id"
           pagination={false}
           size="small"
+          loading={loginHistoryLoading}
         />
       </Modal>
     </div>

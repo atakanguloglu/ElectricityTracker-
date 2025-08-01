@@ -16,9 +16,11 @@ import {
   Form,
   Input,
   Select,
-  message,
   Popconfirm,
-  Divider
+  Divider,
+  Spin,
+  Alert,
+  App
 } from 'antd'
 import { 
   TeamOutlined,
@@ -29,6 +31,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   StopOutlined,
+  PlayCircleOutlined,
   DollarOutlined,
   CalendarOutlined,
   BarChartOutlined,
@@ -38,176 +41,176 @@ import {
   CreditCardOutlined,
   FileTextOutlined,
   GlobalOutlined,
-  FlagOutlined
+  FlagOutlined,
+  GiftOutlined
 } from '@ant-design/icons'
-import { getUser, isAdmin, getFullName } from '@/utils/auth'
+import { getUser, isAdmin, getFullName, apiRequest } from '@/utils/auth'
 import { logger } from '@/utils/logger'
 
 const { Title, Text } = Typography
 const { Option } = Select
 
+// API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api'
+
+// Types
+interface Tenant {
+  id: number
+  companyName: string
+  facilityCode: string
+  domain: string
+  adminEmail: string
+  status: string
+  subscription: string
+  userCount: number
+  facilityCount: number
+  createdAt: string
+  lastLogin?: string
+  licenseExpiry?: string
+  totalConsumption?: string
+  paymentStatus: string
+  currency: string
+  language: string
+  logo?: string
+  monthlyFee: number
+  lastPayment?: string
+}
+
+interface CreateTenantDto {
+  companyName: string
+  facilityCode: string
+  domain: string
+  adminEmail: string
+  subscription: string
+  currency: string
+  language: string
+  autoCreateAdmin: boolean
+}
+
+interface UpdateTenantDto {
+  companyName: string
+  facilityCode: string
+  domain: string
+  adminEmail: string
+  subscription: string
+  currency: string
+  language: string
+}
+
+interface PagedResult<T> {
+  items: T[]
+  totalCount: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
 export default function AdminTenantsPage() {
+  const { message } = App.useApp()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [tenants, setTenants] = useState<any[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [tenants, setTenants] = useState<Tenant[]>([])
   const [modalVisible, setModalVisible] = useState(false)
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add')
-  const [selectedTenant, setSelectedTenant] = useState<any>(null)
+  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null)
   const [form] = Form.useForm()
+  
+  // Delete confirmation modal
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false)
+  const [tenantToDelete, setTenantToDelete] = useState<Tenant | null>(null)
+  
+  // Suspend confirmation modal
+  const [suspendModalVisible, setSuspendModalVisible] = useState(false)
+  const [tenantToSuspend, setTenantToSuspend] = useState<Tenant | null>(null)
   const router = useRouter()
+  
+  // Yeni state'ler
+  const [currencies, setCurrencies] = useState<any[]>([])
+  const [subscriptionPlans, setSubscriptionPlans] = useState<any[]>([])
+  const [subscriptionModalVisible, setSubscriptionModalVisible] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState<any>(null)
+  const [subscriptionForm] = Form.useForm()
 
-  // Mock tenant data
-  const mockTenants = [
-    {
-      id: 1,
-      companyName: 'ABC Şirketi',
-      facilityCode: 'ABC001',
-      domain: 'abc.example.com',
-      adminEmail: 'admin@abc.example.com',
-      status: 'active',
-      createdAt: '2024-01-10',
-      userCount: 25,
-      facilityCount: 8,
-      subscription: 'premium',
-      lastLogin: '2024-01-15 09:30:00',
-      licenseExpiry: '2024-12-31',
-      totalConsumption: '1,250 kWh',
-      paymentStatus: 'paid',
-      currency: 'TRY',
-      language: 'tr',
-      logo: 'https://via.placeholder.com/100x40/3b82f6/ffffff?text=ABC',
-      monthlyFee: 299.99,
-      lastPayment: '2024-01-01'
-    },
-    {
-      id: 2,
-      companyName: 'XYZ Ltd.',
-      facilityCode: 'XYZ002',
-      domain: 'xyz.example.com',
-      adminEmail: 'admin@xyz.example.com',
-      status: 'active',
-      createdAt: '2024-01-08',
-      userCount: 15,
-      facilityCount: 5,
-      subscription: 'standard',
-      lastLogin: '2024-01-15 08:15:00',
-      licenseExpiry: '2024-11-30',
-      totalConsumption: '850 kWh',
-      paymentStatus: 'paid',
-      currency: 'USD',
-      language: 'en',
-      logo: 'https://via.placeholder.com/100x40/10b981/ffffff?text=XYZ',
-      monthlyFee: 199.99,
-      lastPayment: '2024-01-01'
-    },
-    {
-      id: 3,
-      companyName: 'DEF Teknoloji',
-      facilityCode: 'DEF003',
-      domain: 'def.example.com',
-      adminEmail: 'admin@def.example.com',
-      status: 'suspended',
-      createdAt: '2024-01-05',
-      userCount: 8,
-      facilityCount: 3,
-      subscription: 'basic',
-      lastLogin: '2024-01-14 16:45:00',
-      licenseExpiry: '2024-10-31',
-      totalConsumption: '450 kWh',
-      paymentStatus: 'overdue',
-      currency: 'TRY',
-      language: 'tr',
-      logo: 'https://via.placeholder.com/100x40/ef4444/ffffff?text=DEF',
-      monthlyFee: 99.99,
-      lastPayment: '2023-12-01'
-    },
-    {
-      id: 4,
-      companyName: 'GHI Endüstri',
-      facilityCode: 'GHI004',
-      domain: 'ghi.example.com',
-      adminEmail: 'admin@ghi.example.com',
-      status: 'active',
-      createdAt: '2024-01-12',
-      userCount: 32,
-      facilityCount: 12,
-      subscription: 'premium',
-      lastLogin: '2024-01-15 10:20:00',
-      licenseExpiry: '2024-12-31',
-      totalConsumption: '2,100 kWh',
-      paymentStatus: 'paid',
-      currency: 'TRY',
-      language: 'tr',
-      logo: 'https://via.placeholder.com/100x40/10b981/ffffff?text=GHI',
-      monthlyFee: 399.99,
-      lastPayment: '2024-01-01'
-    },
-    {
-      id: 5,
-      companyName: 'JKL Enerji',
-      facilityCode: 'JKL005',
-      domain: 'jkl.example.com',
-      adminEmail: 'admin@jkl.example.com',
-      status: 'pending',
-      createdAt: '2024-01-15',
-      userCount: 0,
-      facilityCount: 0,
-      subscription: 'basic',
-      lastLogin: null,
-      licenseExpiry: '2024-12-31',
-      totalConsumption: '0 kWh',
-      paymentStatus: 'pending',
-      currency: 'TRY',
-      language: 'tr',
-      logo: 'https://via.placeholder.com/100x40/f59e0b/ffffff?text=JKL',
-      monthlyFee: 99.99,
-      lastPayment: null
-    }
-  ]
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0
+  })
 
-
-
+  // Fetch tenants on component mount
   useEffect(() => {
-    const currentUser = getUser()
-    
-    if (!currentUser) {
-      message.error('Oturum bulunamadı. Lütfen giriş yapın.')
-      router.push('/login')
-      return
-    }
+    fetchTenants()
+    fetchCurrencies()
+    fetchSubscriptionPlans()
+  }, [pagination.current, pagination.pageSize])
 
-    if (!isAdmin()) {
-      message.error('Bu sayfaya erişim yetkiniz yok.')
-      router.push('/dashboard')
-      return
-    }
+  const fetchTenants = async () => {
+    try {
+      setLoading(true)
+      setError(null)
 
-    setUser(currentUser)
-    setTenants(mockTenants)
-    setLoading(false)
-    
-    // Log admin tenants page access
-    logger.info('Admin tenants page accessed', 'AdminTenantsPage', {
-      userId: currentUser.id,
-      userEmail: currentUser.email
-    })
-  }, [router])
+      const params = new URLSearchParams({
+        page: pagination.current.toString(),
+        pageSize: pagination.pageSize.toString()
+      })
+
+      const response = await apiRequest(`${API_BASE_URL}/admin/tenants?${params}`)
+      if (!response.ok) throw new Error('Tenant listesi alınamadı')
+      
+      const data: PagedResult<Tenant> = await response.json()
+      
+      setTenants(data.items)
+      setPagination(prev => ({
+        ...prev,
+        total: data.totalCount
+      }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bilinmeyen hata oluştu')
+      console.error('Tenant fetch error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchCurrencies = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/currencies`)
+      if (!response.ok) throw new Error('Para birimleri alınamadı')
+      const data = await response.json()
+      setCurrencies(data)
+    } catch (err) {
+      console.error('Currency fetch error:', err)
+    }
+  }
+
+  const fetchSubscriptionPlans = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/subscription-plans`)
+      if (!response.ok) throw new Error('Abonelik planları alınamadı')
+      const data = await response.json()
+      setSubscriptionPlans(data)
+    } catch (err) {
+      console.error('Subscription plans fetch error:', err)
+    }
+  }
 
   const generateFacilityCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
     const numbers = '0123456789'
     let result = ''
-    
+
     // 3 harf
     for (let i = 0; i < 3; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length))
     }
-    
+
     // 3 rakam
     for (let i = 0; i < 3; i++) {
       result += numbers.charAt(Math.floor(Math.random() * numbers.length))
     }
-    
+
     return result
   }
 
@@ -222,116 +225,273 @@ export default function AdminTenantsPage() {
     setModalVisible(true)
   }
 
-  const handleEditTenant = (tenant: any) => {
+  const handleEditTenant = (tenant: Tenant) => {
     setModalType('edit')
     setSelectedTenant(tenant)
-    form.setFieldsValue(tenant)
+    form.setFieldsValue({
+      companyName: tenant.companyName,
+      facilityCode: tenant.facilityCode,
+      domain: tenant.domain,
+      adminEmail: tenant.adminEmail,
+      subscription: tenant.subscription,
+      currency: tenant.currency,
+      language: tenant.language
+    })
     setModalVisible(true)
   }
 
-  const handleViewTenant = (tenant: any) => {
+  const handleViewTenant = (tenant: Tenant) => {
     setModalType('view')
     setSelectedTenant(tenant)
-    form.setFieldsValue(tenant)
+    form.setFieldsValue({
+      companyName: tenant.companyName,
+      facilityCode: tenant.facilityCode,
+      domain: tenant.domain,
+      adminEmail: tenant.adminEmail,
+      subscription: tenant.subscription,
+      currency: tenant.currency,
+      language: tenant.language
+    })
     setModalVisible(true)
   }
 
-  const handleDeleteTenant = (tenant: any) => {
-    setTenants(prev => prev.filter(t => t.id !== tenant.id))
-    message.success(`${tenant.companyName} başarıyla silindi`)
+  const handleDeleteTenant = (tenant: Tenant) => {
+    setTenantToDelete(tenant)
+    setDeleteModalVisible(true)
   }
 
-  const handleAccessTenant = (tenant: any) => {
-    // Tenant paneline admin olarak giriş yapma simülasyonu
-    message.success(`${tenant.companyName} paneline yönlendiriliyorsunuz...`)
+  const confirmDeleteTenant = async () => {
+    if (!tenantToDelete) return
     
-    // Gerçek uygulamada burada tenant'a özel URL'ye yönlendirme yapılır
-    // router.push(`/tenant/${tenant.domain}/admin`)
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/tenants/${tenantToDelete.id}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) throw new Error('Tenant silinemedi')
+
+      message.success('Tenant başarıyla silindi')
+      setDeleteModalVisible(false)
+      setTenantToDelete(null)
+      fetchTenants() // Refresh list
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Tenant silinirken hata oluştu')
+      console.error('Delete tenant error:', err)
+    }
+  }
+
+  const handleAccessTenant = async (tenant: Tenant) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/tenants/${tenant.id}/access`, {
+        method: 'POST'
+      })
+      
+      if (!response.ok) throw new Error('Tenant erişimi sağlanamadı')
+      
+      const accessData = await response.json()
+      message.success(`${tenant.companyName} paneline yönlendiriliyorsunuz...`)
+      
+      // Yeni sekmede tenant paneline aç
+      window.open(accessData.accessUrl, '_blank')
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Tenant erişimi sağlanırken hata oluştu')
+      console.error('Tenant access error:', err)
+    }
+  }
+
+  const handleToggleTenantStatus = async (tenant: Tenant) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/tenants/${tenant.id}/toggle-status`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) throw new Error('Tenant durumu güncellenemedi')
+
+      const data = await response.json()
+      message.success(data.message)
+      fetchTenants() // Listeyi yenile
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Tenant durumu güncellenirken hata oluştu')
+      console.error('Toggle tenant status error:', err)
+    }
+  }
+
+  const handleSuspendTenant = (tenant: Tenant) => {
+    setTenantToSuspend(tenant)
+    setSuspendModalVisible(true)
+  }
+
+  const confirmSuspendTenant = async () => {
+    if (!tenantToSuspend) return
     
-    // Şimdilik yeni sekmede açma simülasyonu
-    setTimeout(() => {
-      window.open(`http://${tenant.domain}`, '_blank')
-    }, 1000)
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/tenants/${tenantToSuspend.id}/suspend`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason: 'Admin tarafından askıya alındı' })
+      })
+
+      if (!response.ok) throw new Error('Tenant askıya alınamadı')
+
+      const data = await response.json()
+      message.success(data.message)
+      setSuspendModalVisible(false)
+      setTenantToSuspend(null)
+      fetchTenants() // Listeyi yenile
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Tenant askıya alınırken hata oluştu')
+      console.error('Suspend tenant error:', err)
+    }
+  }
+
+  const handleActivateTenant = async (tenant: Tenant) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/tenants/${tenant.id}/activate`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) throw new Error('Tenant aktifleştirilemedi')
+
+      const data = await response.json()
+      message.success(data.message)
+      fetchTenants() // Listeyi yenile
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Tenant aktifleştirilirken hata oluştu')
+      console.error('Activate tenant error:', err)
+    }
+  }
+
+  const handleManageSubscriptions = () => {
+    router.push('/admin/subscription-plans')
   }
 
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields()
-      
+
       if (modalType === 'add') {
-        const newTenant = {
-          id: Math.max(...tenants.map(t => t.id)) + 1,
+        const createDto: CreateTenantDto = {
           ...values,
-          status: 'pending',
-          createdAt: new Date().toISOString().split('T')[0],
-          userCount: 0,
-          facilityCount: 0,
-          lastLogin: null,
-          totalConsumption: '0 kWh',
-          paymentStatus: 'pending',
-          monthlyFee: values.subscription === 'premium' ? 299.99 : 
-                     values.subscription === 'standard' ? 199.99 : 99.99,
-          lastPayment: null
+          autoCreateAdmin: true
         }
-        setTenants(prev => [...prev, newTenant])
-        message.success('Tenant başarıyla eklendi')
-        
-        // Otomatik admin kullanıcısı oluşturma simülasyonu
-        if (values.autoCreateAdmin) {
-          message.info('Admin kullanıcısı otomatik olarak oluşturuldu')
+
+        const response = await apiRequest(`${API_BASE_URL}/admin/tenants`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(createDto)
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Tenant oluşturulamadı')
         }
-      } else if (modalType === 'edit') {
-        setTenants(prev => prev.map(t => 
-          t.id === selectedTenant.id ? { ...t, ...values } : t
-        ))
+
+        const newTenant = await response.json()
+        message.success('Tenant başarıyla oluşturuldu')
+        setModalVisible(false)
+        fetchTenants() // Refresh list
+      } else if (modalType === 'edit' && selectedTenant) {
+        const updateDto: UpdateTenantDto = values
+
+        const response = await apiRequest(`${API_BASE_URL}/admin/tenants/${selectedTenant.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(updateDto)
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Tenant güncellenemedi')
+        }
+
+        const updatedTenant = await response.json()
         message.success('Tenant başarıyla güncellendi')
+        setModalVisible(false)
+        fetchTenants() // Refresh list
       }
+    } catch (err) {
+      console.error('Modal operation error:', err)
       
-      setModalVisible(false)
-    } catch (error) {
-      console.error('Form validation failed:', error)
+      if (err instanceof Error) {
+        if (err.message.includes('validation')) {
+          // Form validation error - don't show message
+          return
+        }
+        message.error(err.message)
+      } else {
+        message.error('İşlem sırasında hata oluştu')
+      }
     }
   }
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'green'
-      case 'suspended':
-        return 'red'
-      case 'pending':
-        return 'orange'
-      default:
-        return 'default'
+    switch (status.toLowerCase()) {
+      case 'active': return 'success'
+      case 'suspended': return 'warning'
+      case 'expired': return 'error'
+      case 'pending': return 'processing'
+      default: return 'default'
     }
   }
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <CheckCircleOutlined />
-      case 'suspended':
-        return <StopOutlined />
-      case 'pending':
-        return <ClockCircleOutlined />
-      default:
-        return <ClockCircleOutlined />
+    switch (status.toLowerCase()) {
+      case 'active': return <CheckCircleOutlined />
+      case 'suspended': return <StopOutlined />
+      case 'expired': return <ClockCircleOutlined />
+      case 'pending': return <ClockCircleOutlined />
+      default: return <ClockCircleOutlined />
     }
   }
 
   const getSubscriptionColor = (subscription: string) => {
-    switch (subscription) {
-      case 'premium':
-        return 'purple'
-      case 'standard':
-        return 'blue'
-      case 'basic':
-        return 'green'
-      default:
-        return 'default'
+    switch (subscription.toLowerCase()) {
+      case 'premium': return 'purple'
+      case 'standard': return 'blue'
+      case 'basic': return 'green'
+      default: return 'default'
     }
   }
 
+  // Tenant statistics
+  const tenantStatCards = [
+    {
+      title: 'Toplam Tenant',
+      value: tenants.length,
+      icon: <TeamOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />,
+      color: '#3b82f6',
+      gradient: 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
+    },
+    {
+      title: 'Aktif Tenant',
+      value: tenants.filter(t => t.status === 'active').length,
+      icon: <CheckCircleOutlined style={{ fontSize: '24px', color: '#10b981' }} />,
+      color: '#10b981',
+      gradient: 'linear-gradient(135deg, #10b981, #059669)'
+    },
+    {
+      title: 'Toplam Kullanıcı',
+      value: tenants.reduce((sum, t) => sum + t.userCount, 0),
+      icon: <UserOutlined style={{ fontSize: '24px', color: '#8b5cf6' }} />,
+      color: '#8b5cf6',
+      gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)'
+    },
+    {
+      title: 'Toplam Tesis',
+      value: tenants.reduce((sum, t) => sum + t.facilityCount, 0),
+      icon: <BuildOutlined style={{ fontSize: '24px', color: '#f59e0b' }} />,
+      color: '#f59e0b',
+      gradient: 'linear-gradient(135deg, #f59e0b, #d97706)'
+    }
+  ]
+
+  // Table columns
   const columns = [
     {
       title: 'Şirket Adı',
@@ -353,194 +513,177 @@ export default function AdminTenantsPage() {
       title: 'Domain',
       dataIndex: 'domain',
       key: 'domain',
-      render: (text: string) => <Text className="text-gray-600">{text}</Text>
+      render: (text: string) => <Text code>{text}</Text>
     },
     {
       title: 'Admin Email',
       dataIndex: 'adminEmail',
       key: 'adminEmail',
-      render: (text: string) => <Text className="text-blue-600">{text}</Text>
+      render: (text: string) => <Text>{text}</Text>
     },
     {
       title: 'Durum',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => (
-        <Tag color={getStatusColor(status)} icon={getStatusIcon(status)}>
-          {status === 'active' ? 'Aktif' : 
-           status === 'suspended' ? 'Askıya Alınmış' : 'Beklemede'}
-        </Tag>
+      render: (status: string, record: Tenant) => (
+        <Space direction="vertical" size="small">
+          <Tag color={getStatusColor(status)} icon={getStatusIcon(status)}>
+            {status === 'active' ? 'Aktif' : 
+             status === 'suspended' ? 'Askıya Alınmış' :
+             status === 'expired' ? 'Süresi Dolmuş' :
+             status === 'pending' ? 'Beklemede' : status}
+          </Tag>
+          <Tag 
+            color={record.paymentStatus === 'overdue' ? 'error' : 
+                   record.paymentStatus === 'paid' ? 'success' : 
+                   record.paymentStatus === 'pending' ? 'warning' : 'default'}
+            style={{ fontSize: '10px' }}
+          >
+            {record.paymentStatus === 'overdue' ? 'Ödeme Gecikmiş' :
+             record.paymentStatus === 'paid' ? 'Ödendi' :
+             record.paymentStatus === 'pending' ? 'Beklemede' :
+             record.paymentStatus === 'cancelled' ? 'İptal' : record.paymentStatus}
+          </Tag>
+        </Space>
       )
     },
     {
-      title: 'Abonelik',
+      title: 'Paket',
       dataIndex: 'subscription',
       key: 'subscription',
       render: (subscription: string) => (
         <Tag color={getSubscriptionColor(subscription)}>
-          {subscription === 'premium' ? 'Premium' : 
-           subscription === 'standard' ? 'Standart' : 'Temel'}
+          {subscription === 'premium' ? 'Premium' :
+           subscription === 'standard' ? 'Standard' :
+           subscription === 'basic' ? 'Basic' : subscription}
         </Tag>
       )
     },
     {
-      title: 'Kullanıcı',
+      title: 'Kullanıcı Sayısı',
       dataIndex: 'userCount',
       key: 'userCount',
-      render: (count: number) => <Text>{count}</Text>
+      render: (count: number) => (
+        <div className="flex items-center">
+          <UserOutlined style={{ marginRight: '4px', color: '#8b5cf6' }} />
+          <Text>{count}</Text>
+        </div>
+      )
     },
     {
-      title: 'Tesis',
+      title: 'Tesis Sayısı',
       dataIndex: 'facilityCount',
       key: 'facilityCount',
-      render: (count: number) => <Text>{count}</Text>
+      render: (count: number) => (
+        <div className="flex items-center">
+          <BuildOutlined style={{ marginRight: '4px', color: '#f59e0b' }} />
+          <Text>{count}</Text>
+        </div>
+      )
     },
     {
-      title: 'Lisans Süresi',
-      dataIndex: 'licenseExpiry',
-      key: 'licenseExpiry',
+      title: 'Oluşturulma Tarihi',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
       render: (date: string) => (
         <div className="flex items-center">
-          <CalendarOutlined style={{ marginRight: '4px', color: '#64748b' }} />
-          <Text style={{ fontSize: '12px' }}>{date}</Text>
+          <CalendarOutlined style={{ marginRight: '4px', color: '#10b981' }} />
+          <Text>{new Date(date).toLocaleDateString('tr-TR')}</Text>
         </div>
       )
     },
     {
-      title: 'Aylık Ücret',
-      dataIndex: 'monthlyFee',
-      key: 'monthlyFee',
-      render: (fee: number) => (
+      title: 'Son Giriş',
+      dataIndex: 'lastLogin',
+      key: 'lastLogin',
+      render: (date: string) => (
         <div className="flex items-center">
-          <DollarOutlined style={{ marginRight: '4px', color: '#f59e0b' }} />
-          <Text style={{ fontSize: '12px', fontWeight: '600' }}>₺{fee?.toLocaleString()}</Text>
+          <ClockCircleOutlined style={{ marginRight: '4px', color: '#3b82f6' }} />
+          <Text>{date ? new Date(date).toLocaleString('tr-TR') : 'Hiç giriş yapmamış'}</Text>
         </div>
-      )
-    },
-    {
-      title: 'Toplam Tüketim',
-      dataIndex: 'totalConsumption',
-      key: 'totalConsumption',
-      render: (consumption: string) => (
-        <div className="flex items-center">
-          <BarChartOutlined style={{ marginRight: '4px', color: '#8b5cf6' }} />
-          <Text style={{ fontSize: '12px' }}>{consumption}</Text>
-        </div>
-      )
-    },
-    {
-      title: 'Para Birimi',
-      dataIndex: 'currency',
-      key: 'currency',
-      render: (currency: string) => (
-        <Tag color="blue" style={{ fontSize: '11px' }}>
-          {currency}
-        </Tag>
-      )
-    },
-    {
-      title: 'Dil',
-      dataIndex: 'language',
-      key: 'language',
-      render: (lang: string) => (
-        <Tag color="green" style={{ fontSize: '11px' }}>
-          {lang === 'tr' ? 'Türkçe' : 'English'}
-        </Tag>
       )
     },
     {
       title: 'İşlemler',
       key: 'actions',
-      render: (record: any) => (
-        <Space>
+      render: (_: any, record: Tenant) => (
+        <Space size="small">
           <Button
             type="text"
-            size="small"
             icon={<EyeOutlined />}
             onClick={() => handleViewTenant(record)}
-            title="Detayları Görüntüle"
+            title="Görüntüle"
           />
           <Button
             type="text"
-            size="small"
             icon={<EditOutlined />}
             onClick={() => handleEditTenant(record)}
             title="Düzenle"
           />
           <Button
             type="text"
-            size="small"
-            icon={<GlobalOutlined />}
+            icon={<SettingOutlined />}
             onClick={() => handleAccessTenant(record)}
-            style={{ color: '#10b981' }}
             title="Tenant Paneline Gir"
+            style={{ color: '#8b5cf6' }}
           />
-          <Popconfirm
-            title="Bu tenant'ı silmek istediğinizden emin misiniz?"
-            onConfirm={() => handleDeleteTenant(record)}
-            okText="Evet"
-            cancelText="Hayır"
-          >
+          {/* Durum Toggle Butonu */}
+          <Button
+            type="text"
+            icon={record.status === 'active' ? <StopOutlined /> : <PlayCircleOutlined />}
+            onClick={() => handleToggleTenantStatus(record)}
+            style={{ 
+              color: record.status === 'active' ? '#f59e0b' : '#10b981' 
+            }}
+            title={record.status === 'active' ? 'Pasifleştir' : 'Aktifleştir'}
+          />
+          
+          {/* Manuel Askıya Alma (Detaylı) */}
+          {record.status === 'active' && (
             <Button
               type="text"
-              size="small"
-              icon={<DeleteOutlined />}
-              danger
-              title="Sil"
+              icon={<StopOutlined />}
+              style={{ color: '#dc2626' }}
+              title="Askıya Al (Detaylı)"
+              onClick={() => handleSuspendTenant(record)}
             />
-          </Popconfirm>
+          )}
+          <Button
+            type="text"
+            icon={<DeleteOutlined />}
+            danger
+            title="Sil"
+            onClick={() => handleDeleteTenant(record)}
+          />
         </Space>
       )
     }
   ]
 
-  const tenantStats = {
-    total: tenants.length,
-    active: tenants.filter(t => t.status === 'active').length,
-    suspended: tenants.filter(t => t.status === 'suspended').length,
-    pending: tenants.filter(t => t.status === 'pending').length
+  // Loading state
+  if (loading && tenants.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Spin size="large" />
+        <div style={{ marginTop: '20px' }}>Tenant listesi yükleniyor...</div>
+      </div>
+    )
   }
 
-  // Enhanced tenant statistics cards
-  const tenantStatCards = [
-    {
-      title: 'Toplam Tenant',
-      value: tenantStats.total,
-      icon: <TeamOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />,
-      color: '#3b82f6',
-      gradient: 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
-    },
-    {
-      title: 'Aktif Tenant',
-      value: tenantStats.active,
-      icon: <CheckCircleOutlined style={{ fontSize: '24px', color: '#10b981' }} />,
-      color: '#10b981',
-      gradient: 'linear-gradient(135deg, #10b981, #059669)'
-    },
-    {
-      title: 'Toplam Kullanıcı',
-      value: tenants.reduce((sum, t) => sum + t.userCount, 0),
-      icon: <UserOutlined style={{ fontSize: '24px', color: '#8b5cf6' }} />,
-      color: '#8b5cf6',
-      gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)'
-    },
-    {
-      title: 'Aylık Gelir',
-      value: `₺${tenants.reduce((sum, t) => sum + (t.monthlyFee || 0), 0).toLocaleString()}`,
-      icon: <DollarOutlined style={{ fontSize: '24px', color: '#f59e0b' }} />,
-      color: '#f59e0b',
-      gradient: 'linear-gradient(135deg, #f59e0b, #d97706)'
-    }
-  ]
-
-  if (loading) {
+  // Error state
+  if (error && tenants.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Yükleniyor...</p>
-        </div>
-      </div>
+      <Alert
+        message="Hata"
+        description={error}
+        type="error"
+        showIcon
+        action={
+          <Button size="small" onClick={fetchTenants}>
+            Tekrar Dene
+          </Button>
+        }
+      />
     )
   }
 
@@ -590,14 +733,22 @@ export default function AdminTenantsPage() {
       {/* Tenants Table */}
       <Card 
         title="Tenant Listesi"
-        extra={
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />}
-            onClick={handleAddTenant}
-          >
-            Yeni Tenant Ekle
-          </Button>
+                extra={
+          <Space>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              onClick={handleAddTenant}
+            >
+              Yeni Tenant Ekle
+            </Button>
+            <Button 
+              icon={<GiftOutlined />} 
+              onClick={handleManageSubscriptions}
+            >
+              Paket Yönetimi
+            </Button>
+          </Space>
         }
         className="shadow-sm"
       >
@@ -606,7 +757,9 @@ export default function AdminTenantsPage() {
           dataSource={tenants}
           rowKey="id"
           pagination={{
-            pageSize: 10,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) => 
@@ -625,9 +778,16 @@ export default function AdminTenantsPage() {
         open={modalVisible}
         onOk={modalType !== 'view' ? handleModalOk : undefined}
         onCancel={() => setModalVisible(false)}
-        width={800}
+        width="90%"
         okText={modalType === 'add' ? 'Ekle' : 'Güncelle'}
         cancelText="İptal"
+                  styles={{
+            mask: { zIndex: 999 },
+            wrapper: { zIndex: 1000 }
+          }}
+          centered
+          destroyOnHidden
+          getContainer={() => document.body}
       >
         <Form
           form={form}
@@ -716,60 +876,91 @@ export default function AdminTenantsPage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="adminEmail"
-                label="Admin Email"
-                rules={[
-                  { required: true, message: 'Admin email gerekli' },
-                  { type: 'email', message: 'Geçerli email adresi girin' }
-                ]}
-              >
-                <Input placeholder="admin@example.com" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
                 name="subscription"
                 label="Abonelik"
                 rules={[{ required: true, message: 'Abonelik seçin' }]}
               >
-                <Select placeholder="Abonelik seçin">
-                  <Option value="basic">Temel (₺99.99/ay)</Option>
-                  <Option value="standard">Standart (₺199.99/ay)</Option>
-                  <Option value="premium">Premium (₺299.99/ay)</Option>
+                <Select 
+                  placeholder="Abonelik seçin"
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                  optionFilterProp="children"
+                  styles={{
+                    popup: {
+                      root: { zIndex: 1050 }
+                    }
+                  }}
+                  getPopupContainer={(triggerNode) => document.body}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  {subscriptionPlans.map(plan => (
+                    <Option key={plan.type} value={plan.type}>
+                      {plan.name} ({plan.currency === 'TRY' ? '₺' : plan.currency === 'USD' ? '$' : plan.currency === 'EUR' ? '€' : plan.currency}{plan.monthlyFee}/ay)
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="currency"
                 label="Para Birimi"
                 rules={[{ required: true, message: 'Para birimi seçin' }]}
               >
-                <Select placeholder="Para birimi seçin">
-                  <Option value="TRY">Türk Lirası (₺)</Option>
-                  <Option value="USD">Amerikan Doları ($)</Option>
-                  <Option value="EUR">Euro (€)</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="language"
-                label="Dil"
-                rules={[{ required: true, message: 'Dil seçin' }]}
-              >
-                <Select placeholder="Dil seçin">
-                  <Option value="tr">Türkçe</Option>
-                  <Option value="en">English</Option>
+                <Select 
+                  placeholder="Para birimi seçin"
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                  optionFilterProp="children"
+                  styles={{
+                    popup: {
+                      root: { zIndex: 1050 }
+                    }
+                  }}
+                  getPopupContainer={(triggerNode) => document.body}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  {currencies.map(currency => (
+                    <Option key={currency.code} value={currency.code}>
+                      {currency.symbol} {currency.name} ({currency.code})
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="language"
+                label="Dil"
+                rules={[{ required: true, message: 'Dil seçin' }]}
+              >
+                <Select 
+                  placeholder="Dil seçin"
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                  optionFilterProp="children"
+                  styles={{
+                    popup: {
+                      root: { zIndex: 1050 }
+                    }
+                  }}
+                  getPopupContainer={(triggerNode) => document.body}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <Option value="tr">Türkçe</Option>
+                  <Option value="en">English</Option>
+                </Select>
+              </Form.Item>
+            </Col>
             <Col span={12}>
               <Form.Item
                 name="licenseExpiry"
@@ -779,6 +970,9 @@ export default function AdminTenantsPage() {
                 <Input type="date" />
               </Form.Item>
             </Col>
+          </Row>
+
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="logo"
@@ -787,18 +981,27 @@ export default function AdminTenantsPage() {
                 <Input placeholder="https://example.com/logo.png" />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Divider orientation="left">Otomatik Kullanıcı Oluşturma</Divider>
-          
-          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="autoCreateAdmin"
                 label="Admin Kullanıcısı Oluştur"
                 valuePropName="checked"
               >
-                <Select placeholder="Admin kullanıcısı oluşturulsun mu?">
+                <Select 
+                  placeholder="Admin kullanıcısı oluşturulsun mu?"
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                  }
+                  optionFilterProp="children"
+                  styles={{
+                    popup: {
+                      root: { zIndex: 1050 }
+                    }
+                  }}
+                  getPopupContainer={(triggerNode) => document.body}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
                   <Option value={true}>Evet, otomatik oluştur</Option>
                   <Option value={false}>Hayır, manuel oluştur</Option>
                 </Select>
@@ -952,6 +1155,70 @@ export default function AdminTenantsPage() {
           }
         }
       `}</style>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        title="Tenant Silme Onayı"
+        open={deleteModalVisible}
+        onOk={confirmDeleteTenant}
+        onCancel={() => {
+          setDeleteModalVisible(false)
+          setTenantToDelete(null)
+        }}
+        okText="Evet, Sil"
+        cancelText="İptal"
+        okButtonProps={{ danger: true }}
+        centered
+        destroyOnHidden
+        getContainer={() => document.body}
+        width={500}
+        style={{ zIndex: 1000 }}
+        styles={{
+          mask: { zIndex: 999 },
+          wrapper: { zIndex: 1000 }
+        }}
+      >
+        <div style={{ padding: '20px 0' }}>
+          <p>
+            <strong>{tenantToDelete?.companyName}</strong> adlı tenant'ı silmek istediğinizden emin misiniz?
+          </p>
+          <p style={{ color: '#666', marginTop: '10px' }}>
+            Bu işlem geri alınamaz ve tenant'a ait tüm veriler kalıcı olarak silinecektir.
+          </p>
+        </div>
+      </Modal>
+
+      {/* Suspend Confirmation Modal */}
+      <Modal
+        title="Tenant Askıya Alma Onayı"
+        open={suspendModalVisible}
+        onOk={confirmSuspendTenant}
+        onCancel={() => {
+          setSuspendModalVisible(false)
+          setTenantToSuspend(null)
+        }}
+        okText="Evet, Askıya Al"
+        cancelText="İptal"
+        okButtonProps={{ style: { backgroundColor: '#dc2626', borderColor: '#dc2626' } }}
+        centered
+        destroyOnHidden
+        getContainer={() => document.body}
+        width={500}
+        style={{ zIndex: 1000 }}
+        styles={{
+          mask: { zIndex: 999 },
+          wrapper: { zIndex: 1000 }
+        }}
+      >
+        <div style={{ padding: '20px 0' }}>
+          <p>
+            <strong>{tenantToSuspend?.companyName}</strong> adlı tenant'ı askıya almak istediğinizden emin misiniz?
+          </p>
+          <p style={{ color: '#666', marginTop: '10px' }}>
+            Bu işlem tenant'ın tüm kullanıcılarını ve API anahtarlarını pasif yapacaktır.
+          </p>
+        </div>
+      </Modal>
     </div>
   )
 } 

@@ -84,6 +84,7 @@ import {
   AreaChartOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { apiRequest } from '@/utils/auth';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -92,6 +93,105 @@ const { Panel } = Collapse;
 const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 const { Step } = Steps;
+
+// API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api';
+
+// Types
+interface SystemHealth {
+  status: string;
+  timestamp: string;
+  system: {
+    cpuUsage: number;
+    memoryUsage: number;
+    memoryLimit: number;
+    memoryPercentage: number;
+    threadCount: number;
+    handleCount: number;
+    processTime: number;
+  };
+  database: {
+    status: string;
+    connectionString: string;
+    pendingMigrations: string[];
+  };
+  services: {
+    apiService: string;
+    logService: string;
+    authService: string;
+  };
+}
+
+interface PerformanceMetrics {
+  timestamp: string;
+  timeRange: {
+    start: string;
+    end: string;
+  };
+  system: {
+    cpuUsage: number;
+    memoryUsage: number;
+    memoryLimit: number;
+    memoryPercentage: number;
+    threadCount: number;
+    handleCount: number;
+    processTime: number;
+  };
+  database: {
+    totalTenants: number;
+    totalUsers: number;
+    totalApiKeys: number;
+    activeApiKeys: number;
+    totalLogs: number;
+    recentLogs: number;
+  };
+  apiUsage: {
+    totalRequests: number;
+    errorRate: number;
+    averageResponseTime: number;
+    peakHour: string;
+  };
+}
+
+interface Alert {
+  id: string;
+  type: string;
+  level: string;
+  title: string;
+  message: string;
+  timestamp: string;
+  isActive: boolean;
+}
+
+interface MonitoringDashboard {
+  systemStatus: {
+    status: string;
+    uptime: number;
+    cpuUsage: number;
+    memoryUsage: number;
+    threadCount: number;
+  };
+  databaseMetrics: {
+    totalTenants: number;
+    activeTenants: number;
+    totalUsers: number;
+    activeUsers: number;
+    totalApiKeys: number;
+    activeApiKeys: number;
+  };
+  recentActivity: {
+    newLogs: number;
+    errorLogs: number;
+    warningLogs: number;
+    newUsers: number;
+    newApiKeys: number;
+  };
+  performance: {
+    averageResponseTime: number;
+    errorRate: number;
+    totalRequests: number;
+  };
+}
 
 // Mock data
 const mockServers = [
@@ -356,10 +456,93 @@ export default function SystemMonitoringPage() {
     alertType: undefined
   });
 
+  // Backend API states
+  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
+  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
+  const [monitoringDashboard, setMonitoringDashboard] = useState<MonitoringDashboard | null>(null);
+  const [backendAlerts, setBackendAlerts] = useState<Alert[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch backend data
+  const fetchSystemHealth = async () => {
+    try {
+      setLoading(true);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/system-health`);
+      if (!response.ok) throw new Error('Sistem sağlığı alınamadı');
+      const data = await response.json();
+      setSystemHealth(data);
+    } catch (err) {
+      setError('Sistem sağlığı alınırken hata oluştu');
+      console.error('System health fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPerformanceMetrics = async () => {
+    try {
+      setLoading(true);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/performance-metrics`);
+      if (!response.ok) throw new Error('Performans metrikleri alınamadı');
+      const data = await response.json();
+      setPerformanceMetrics(data);
+    } catch (err) {
+      setError('Performans metrikleri alınırken hata oluştu');
+      console.error('Performance metrics fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMonitoringDashboard = async () => {
+    try {
+      setLoading(true);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/dashboard`);
+      if (!response.ok) throw new Error('Monitoring dashboard alınamadı');
+      const data = await response.json();
+      setMonitoringDashboard(data);
+    } catch (err) {
+      setError('Monitoring dashboard alınırken hata oluştu');
+      console.error('Monitoring dashboard fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAlerts = async () => {
+    try {
+      setLoading(true);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/alerts`);
+      if (!response.ok) throw new Error('Uyarılar alınamadı');
+      const data = await response.json();
+      setBackendAlerts(data.items || []);
+    } catch (err) {
+      setError('Uyarılar alınırken hata oluştu');
+      console.error('Alerts fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchSystemHealth();
+    fetchPerformanceMetrics();
+    fetchMonitoringDashboard();
+    fetchAlerts();
+  }, []);
+
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      // Simulate real-time updates
+      // Refresh backend data
+      fetchSystemHealth();
+      fetchPerformanceMetrics();
+      fetchMonitoringDashboard();
+      fetchAlerts();
+      
+      // Simulate real-time updates for mock data
       setServers(prev => prev.map(server => ({
         ...server,
         cpu: Math.floor(Math.random() * 100),

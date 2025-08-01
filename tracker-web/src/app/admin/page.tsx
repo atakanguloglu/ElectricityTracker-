@@ -1,7 +1,7 @@
 'use client'
 
-import React from 'react'
-import { Card, Row, Col, Progress, Button, Tag, List, Avatar, Typography, Divider } from 'antd'
+import React, { useState, useEffect } from 'react'
+import { Card, Row, Col, Progress, Button, Tag, List, Avatar, Typography, Divider, Spin, Alert } from 'antd'
 import { 
   ProCard, 
   StatisticCard,
@@ -24,49 +24,167 @@ import {
   HddOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons'
+import { apiRequest } from '@/utils/auth'
 
 const { Title, Text } = Typography
 
+// API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api'
+
+// Types
+interface DashboardStats {
+  totalTenants: number
+  activeTenants: number
+  totalUsers: number
+  activeUsers: number
+  totalLogs: number
+  todayLogs: number
+  systemHealth: number
+  securityScore: number
+}
+
+interface RecentActivity {
+  id: number
+  message: string
+  level: string
+  category: string
+  timestamp: string
+  tenantName?: string
+  userName?: string
+}
+
+interface SystemResources {
+  cpuUsage: number
+  memoryUsage: number
+  diskUsage: number
+  networkUsage: number
+  databaseConnections: number
+  activeSessions: number
+}
+
 export default function AdminOverviewPage() {
-  // Mock data
-  const stats = [
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
+  const [systemResources, setSystemResources] = useState<SystemResources | null>(null)
+
+  // Fetch dashboard data
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Fetch dashboard stats
+      const statsResponse = await apiRequest(`${API_BASE_URL}/admin/dashboard/stats`)
+      if (!statsResponse.ok) throw new Error('Dashboard istatistikleri alınamadı')
+      const stats = await statsResponse.json()
+
+      // Fetch recent activities
+      const activitiesResponse = await apiRequest(`${API_BASE_URL}/admin/dashboard/recent-activities`)
+      if (!activitiesResponse.ok) throw new Error('Son aktiviteler alınamadı')
+      const activities = await activitiesResponse.json()
+
+      // Fetch system resources
+      const resourcesResponse = await apiRequest(`${API_BASE_URL}/admin/dashboard/system-resources`)
+      if (!resourcesResponse.ok) throw new Error('Sistem kaynakları alınamadı')
+      const resources = await resourcesResponse.json()
+
+      setDashboardStats(stats)
+      setRecentActivities(activities)
+      setSystemResources(resources)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bilinmeyen hata oluştu')
+      console.error('Dashboard data fetch error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <PageContainer
+        header={{
+          title: 'Admin Paneli - Genel Bakış',
+          breadcrumb: {},
+        }}
+      >
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <Spin size="large" />
+          <div style={{ marginTop: '20px' }}>Veriler yükleniyor...</div>
+        </div>
+      </PageContainer>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <PageContainer
+        header={{
+          title: 'Admin Paneli - Genel Bakış',
+          breadcrumb: {},
+        }}
+      >
+        <Alert
+          message="Hata"
+          description={error}
+          type="error"
+          showIcon
+          action={
+            <Button size="small" onClick={fetchDashboardData}>
+              Tekrar Dene
+            </Button>
+          }
+        />
+      </PageContainer>
+    )
+  }
+
+  // Transform API data to UI format
+  const stats = dashboardStats ? [
     {
       title: 'Toplam Tenant',
-      value: 12,
+      value: dashboardStats.totalTenants,
       icon: <TeamOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />,
       color: '#3b82f6',
       gradient: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-      change: '+2',
+      change: `+${dashboardStats.totalTenants - dashboardStats.activeTenants}`,
       changeType: 'increase'
     },
     {
       title: 'Aktif Kullanıcı',
-      value: 156,
+      value: dashboardStats.activeUsers,
       icon: <UserOutlined style={{ fontSize: '24px', color: '#10b981' }} />,
       color: '#10b981',
       gradient: 'linear-gradient(135deg, #10b981, #059669)',
-      change: '+12',
+      change: `+${Math.floor(dashboardStats.activeUsers * 0.1)}`,
       changeType: 'increase'
     },
     {
       title: 'Toplam Log',
-      value: '2,847',
+      value: dashboardStats.totalLogs.toLocaleString(),
       icon: <FileTextOutlined style={{ fontSize: '24px', color: '#8b5cf6' }} />,
       color: '#8b5cf6',
       gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-      change: '+156',
+      change: `+${dashboardStats.todayLogs}`,
       changeType: 'increase'
     },
     {
       title: 'Güvenlik Skoru',
-      value: '85/100',
+      value: `${dashboardStats.securityScore}/100`,
       icon: <SafetyOutlined style={{ fontSize: '24px', color: '#f59e0b' }} />,
       color: '#f59e0b',
       gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
-      change: '+5',
+      change: `+${Math.floor(dashboardStats.securityScore * 0.05)}`,
       changeType: 'increase'
     }
-  ]
+  ] : []
 
   const quickActions = [
     {
@@ -99,67 +217,48 @@ export default function AdminOverviewPage() {
     }
   ]
 
-  const recentActivities = [
-    {
-      title: 'Yeni tenant oluşturuldu: ABC Şirketi',
-      time: '2 saat önce',
-      status: 'Tamamlandı',
-      statusColor: 'success',
-      icon: <CheckCircleOutlined style={{ color: '#10b981' }} />
-    },
-    {
-      title: 'Sistem güncellemesi tamamlandı',
-      time: '4 saat önce',
-      status: 'Tamamlandı',
-      statusColor: 'success',
-      icon: <CheckCircleOutlined style={{ color: '#10b981' }} />
-    },
-    {
-      title: 'Güvenlik taraması başlatıldı',
-      time: '6 saat önce',
-      status: 'Devam Ediyor',
-      statusColor: 'processing',
-      icon: <ClockCircleOutlined style={{ color: '#3b82f6' }} />
-    },
-    {
-      title: 'Yüksek öncelikli log uyarısı',
-      time: '8 saat önce',
-      status: 'Uyarı',
-      statusColor: 'warning',
-      icon: <ExclamationCircleOutlined style={{ color: '#f59e0b' }} />
-    }
-  ]
+  const transformedActivities = recentActivities.map(activity => ({
+    title: activity.message,
+    time: new Date(activity.timestamp).toLocaleString('tr-TR'),
+    status: activity.level === 'Error' ? 'Hata' : activity.level === 'Warning' ? 'Uyarı' : 'Bilgi',
+    statusColor: activity.level === 'Error' ? 'error' : activity.level === 'Warning' ? 'warning' : 'success',
+    icon: activity.level === 'Error' ? 
+      <ExclamationCircleOutlined style={{ color: '#ef4444' }} /> :
+      activity.level === 'Warning' ? 
+        <ExclamationCircleOutlined style={{ color: '#f59e0b' }} /> :
+        <CheckCircleOutlined style={{ color: '#10b981' }} />
+  }))
 
-  const systemResources = [
+  const transformedSystemResources = systemResources ? [
     {
       name: 'CPU Kullanımı',
-      value: 45,
+      value: systemResources.cpuUsage,
       icon: <DesktopOutlined style={{ fontSize: '16px', color: '#3b82f6' }} />,
       color: '#3b82f6',
-      status: 'Normal'
+      status: systemResources.cpuUsage > 80 ? 'Uyarı' : 'Normal'
     },
     {
       name: 'RAM Kullanımı',
-      value: 68,
+      value: systemResources.memoryUsage,
       icon: <ThunderboltOutlined style={{ fontSize: '16px', color: '#10b981' }} />,
       color: '#10b981',
-      status: 'Normal'
+      status: systemResources.memoryUsage > 85 ? 'Uyarı' : 'Normal'
     },
     {
       name: 'Disk Kullanımı',
-      value: 82,
+      value: systemResources.diskUsage,
       icon: <HddOutlined style={{ fontSize: '16px', color: '#f59e0b' }} />,
       color: '#f59e0b',
-      status: 'Uyarı'
+      status: systemResources.diskUsage > 80 ? 'Uyarı' : 'Normal'
     },
     {
       name: 'Network',
-      value: 23,
+      value: systemResources.networkUsage,
       icon: <BarChartOutlined style={{ fontSize: '16px', color: '#8b5cf6' }} />,
       color: '#8b5cf6',
-      status: 'Normal'
+      status: systemResources.networkUsage > 70 ? 'Uyarı' : 'Normal'
     }
-  ]
+  ] : []
 
   return (
     <PageContainer
@@ -249,7 +348,7 @@ export default function AdminOverviewPage() {
                       '0%': '#10b981',
                       '100%': '#059669',
                     }}
-                    strokeWidth={8}
+                    size={[8, 8]}
                     showInfo={false}
                     className="health-progress"
                   />
@@ -266,7 +365,7 @@ export default function AdminOverviewPage() {
                       '0%': '#3b82f6',
                       '100%': '#1d4ed8',
                     }}
-                    strokeWidth={8}
+                    size={[8, 8]}
                     showInfo={false}
                     className="health-progress"
                   />
@@ -341,13 +440,13 @@ export default function AdminOverviewPage() {
               }}
             >
               <List
-                dataSource={recentActivities}
+                dataSource={transformedActivities}
                 renderItem={(item, index) => (
                   <List.Item 
                     className="activity-item"
                     style={{
                       padding: '16px 0',
-                      borderBottom: index < recentActivities.length - 1 ? '1px solid #f1f5f9' : 'none'
+                      borderBottom: index < transformedActivities.length - 1 ? '1px solid #f1f5f9' : 'none'
                     }}
                   >
                     <List.Item.Meta
@@ -401,7 +500,7 @@ export default function AdminOverviewPage() {
               }}
             >
               <Row gutter={[16, 16]}>
-                {systemResources.map((resource, index) => (
+                {transformedSystemResources.map((resource, index) => (
                   <Col xs={24} sm={12} lg={6} key={index}>
                     <div className="resource-item">
                       <div className="resource-header">
@@ -423,7 +522,7 @@ export default function AdminOverviewPage() {
                       <Progress 
                         percent={resource.value} 
                         strokeColor={resource.color}
-                        strokeWidth={6}
+                        size={[6, 6]}
                         showInfo={false}
                         className="resource-progress"
                       />

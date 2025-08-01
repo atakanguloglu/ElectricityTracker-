@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Row, Col, Card, Statistic, Progress, Table, Tag, Button, Space, Typography, Alert, Avatar } from 'antd'
 import { 
   ThunderboltOutlined, 
@@ -65,15 +66,131 @@ const alertsData = [
   },
 ]
 
+// API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api'
+
+// Types
+interface DashboardStats {
+  tenantName: string
+  userCount: number
+  departmentCount: number
+  facilityCount: number
+  meterCount: number
+  totalConsumption: number
+  activeAlerts: number
+  subscriptionStatus: string
+  subscriptionEndDate: string
+}
+
+interface ConsumptionChartData {
+  month: string
+  consumption: number
+  target: number
+}
+
+interface FacilityDistributionData {
+  name: string
+  consumption: number
+  color: string
+}
+
+interface AlertData {
+  id: number
+  facility: string
+  type: string
+  severity: string
+  time: string
+  status: string
+}
+
 export default function DashboardPage() {
+  const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
+  const [consumptionData, setConsumptionData] = useState<ConsumptionChartData[]>([])
+  const [facilityData, setFacilityData] = useState<FacilityDistributionData[]>([])
+  const [alertsData, setAlertsData] = useState<AlertData[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const currentUser = getUser()
     setUser(currentUser)
-    setLoading(false)
+    fetchDashboardData()
   }, [])
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setError('Token bulunamadı')
+        return
+      }
+
+      // Fetch dashboard stats
+      const statsResponse = await fetch(`${API_BASE_URL}/dashboard/stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!statsResponse.ok) {
+        throw new Error('Dashboard istatistikleri alınamadı')
+      }
+
+      const stats = await statsResponse.json()
+      setDashboardStats(stats)
+
+      // Fetch consumption chart data
+      const chartResponse = await fetch(`${API_BASE_URL}/dashboard/consumption-chart`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (chartResponse.ok) {
+        const chartData = await chartResponse.json()
+        setConsumptionData(chartData)
+      }
+
+      // Fetch facility distribution data
+      const facilityResponse = await fetch(`${API_BASE_URL}/dashboard/facility-distribution`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (facilityResponse.ok) {
+        const facilityChartData = await facilityResponse.json()
+        setFacilityData(facilityChartData)
+      }
+
+      // Fetch recent alerts
+      const alertsResponse = await fetch(`${API_BASE_URL}/dashboard/recent-alerts`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (alertsResponse.ok) {
+        const alerts = await alertsResponse.json()
+        setAlertsData(alerts)
+      }
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bilinmeyen hata oluştu')
+      console.error('Dashboard data fetch error:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const alertColumns = [
     {
@@ -133,6 +250,20 @@ export default function DashboardPage() {
             <p className="mt-4 text-gray-600">Yükleniyor...</p>
           </div>
         </div>
+      </MainLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <MainLayout>
+        <Alert
+          message="Hata"
+          description={error}
+          type="error"
+          showIcon
+          className="mb-6"
+        />
       </MainLayout>
     )
   }
@@ -197,15 +328,14 @@ export default function DashboardPage() {
           <Card className="shadow-sm">
             <Statistic
               title="Toplam Tüketim"
-              value={11250}
+              value={dashboardStats?.totalConsumption || 0}
               suffix="kWh"
               prefix={<ThunderboltOutlined className="text-blue-500" />}
               valueStyle={{ color: '#3b82f6' }}
             />
             <div className="mt-2">
               <Text type="secondary" className="text-sm">
-                <ArrowUpOutlined className="text-red-500 mr-1" />
-                +5.2% geçen aya göre
+                Bu ay
               </Text>
             </div>
           </Card>
@@ -213,16 +343,14 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card className="shadow-sm">
             <Statistic
-              title="Maliyet"
-              value={2250}
-              suffix="₺"
-              prefix={<DollarOutlined className="text-green-500" />}
+              title="Kullanıcı Sayısı"
+              value={dashboardStats?.userCount || 0}
+              prefix={<UserOutlined className="text-green-500" />}
               valueStyle={{ color: '#10b981' }}
             />
             <div className="mt-2">
               <Text type="secondary" className="text-sm">
-                <ArrowDownOutlined className="text-green-500 mr-1" />
-                -2.1% geçen aya göre
+                Aktif kullanıcılar
               </Text>
             </div>
           </Card>
@@ -230,14 +358,15 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card className="shadow-sm">
             <Statistic
-              title="Verimlilik"
-              value={87.5}
-              suffix="%"
-              prefix={<RiseOutlined className="text-orange-500" />}
+              title="Tesis Sayısı"
+              value={dashboardStats?.facilityCount || 0}
+              prefix={<BuildOutlined className="text-orange-500" />}
               valueStyle={{ color: '#f59e0b' }}
             />
             <div className="mt-2">
-              <Progress percent={87.5} size="small" showInfo={false} />
+              <Text type="secondary" className="text-sm">
+                Toplam tesis
+              </Text>
             </div>
           </Card>
         </Col>
@@ -245,7 +374,7 @@ export default function DashboardPage() {
           <Card className="shadow-sm">
             <Statistic
               title="Aktif Uyarılar"
-              value={3}
+              value={dashboardStats?.activeAlerts || 0}
               prefix={<AlertOutlined className="text-red-500" />}
               valueStyle={{ color: '#ef4444' }}
             />
@@ -273,21 +402,21 @@ export default function DashboardPage() {
             className="shadow-sm"
           >
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={consumptionData}>
+              <LineChart data={consumptionData.length > 0 ? consumptionData : []}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
+                <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip />
                 <Line 
                   type="monotone" 
-                  dataKey="tüketim" 
+                  dataKey="consumption" 
                   stroke="#3b82f6" 
                   strokeWidth={2}
                   name="Tüketim"
                 />
                 <Line 
                   type="monotone" 
-                  dataKey="hedef" 
+                  dataKey="target" 
                   stroke="#10b981" 
                   strokeWidth={2}
                   strokeDasharray="5 5"
@@ -302,11 +431,11 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={facilityData}
+                  data={facilityData.length > 0 ? facilityData : []}
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
-                  dataKey="value"
+                  dataKey="consumption"
                   label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                 >
                   {facilityData.map((entry, index) => (
@@ -334,7 +463,7 @@ export default function DashboardPage() {
           >
             <Table 
               columns={alertColumns} 
-              dataSource={alertsData} 
+              dataSource={alertsData.length > 0 ? alertsData : []} 
               pagination={false}
               size="small"
             />

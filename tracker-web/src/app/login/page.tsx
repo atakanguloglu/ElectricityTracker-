@@ -100,7 +100,7 @@ export default function LoginPage() {
 
   const handleDemoLogin = () => {
     form.setFieldsValue({
-      email: 'admin@example.com',
+      email: 'admin@demo-elektrik.com',
       password: 'password',
       remember: true
     })

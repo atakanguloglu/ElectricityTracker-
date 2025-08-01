@@ -30,7 +30,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ConfigProvider locale={tr_TR}>
+        <ConfigProvider 
+          locale={tr_TR}
+          theme={{
+            token: {
+              // React 19 uyumluluğu için
+              motion: false, // Animasyonları devre dışı bırak
+            },
+          }}
+        >
           <App>
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
               {children}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   Card,
@@ -34,7 +34,9 @@ import {
   Avatar,
   Steps,
   Upload,
-  Dropdown
+  Dropdown,
+  Spin,
+  App
 } from 'antd';
 import {
   FileTextOutlined,
@@ -65,9 +67,11 @@ import {
   FileZipOutlined,
   CalendarOutlined,
   ClearOutlined,
-  ExportOutlined
+  ExportOutlined,
+  ApiOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { apiRequest } from '@/utils/auth';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -77,225 +81,79 @@ const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 const { Step } = Steps;
 
-// Mock data
-const mockTenants = [
-  { id: 1, name: 'ABC Şirketi', domain: 'abc.com' },
-  { id: 2, name: 'XYZ Ltd.', domain: 'xyz.com' },
-  { id: 3, name: 'Tech Solutions', domain: 'techsolutions.com' },
-  { id: 4, name: 'Global Corp', domain: 'globalcorp.com' },
-  { id: 5, name: 'Startup Inc', domain: 'startupinc.com' }
-];
+// API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api';
 
-const mockLogs = [
-  {
-    id: 1,
-    timestamp: '2024-01-15T10:30:00Z',
-    level: 'info',
-    category: 'user_action',
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    userId: 1,
-    username: 'admin.abc',
-    action: 'tenant_created',
-    description: 'Yeni tenant oluşturuldu: ABC Şirketi',
-    details: {
-      tenantName: 'ABC Şirketi',
-      domain: 'abc.com',
-      subscription: 'Pro',
-      adminEmail: 'admin@abc.com'
-    },
-    ipAddress: '192.168.1.100',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    sessionId: 'sess_123456789',
-    duration: 1250,
-    status: 'success'
-  },
-  {
-    id: 2,
-    timestamp: '2024-01-15T10:25:00Z',
-    level: 'error',
-    category: 'system_error',
-    tenantId: null,
-    tenantName: null,
-    userId: null,
-    username: null,
-    action: 'database_connection_failed',
-    description: 'Veritabanı bağlantısı başarısız',
-    details: {
-      errorCode: 'DB_CONN_001',
-      errorMessage: 'Connection timeout after 30 seconds',
-      database: 'electricity_tracker_prod',
-      retryCount: 3
-    },
-    ipAddress: '10.0.0.1',
-    userAgent: null,
-    sessionId: null,
-    duration: 30000,
-    status: 'failed'
-  },
-  {
-    id: 3,
-    timestamp: '2024-01-15T10:20:00Z',
-    level: 'warning',
-    category: 'security',
-    tenantId: 2,
-    tenantName: 'XYZ Ltd.',
-    userId: null,
-    username: 'unknown_user',
-    action: 'failed_login_attempt',
-    description: 'Başarısız giriş denemesi',
-    details: {
-      attemptedUsername: 'admin@xyz.com',
-      reason: 'Invalid password',
-      attemptCount: 5,
-      lockoutDuration: 300
-    },
-    ipAddress: '192.168.2.50',
-    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-    sessionId: null,
-    duration: 0,
-    status: 'failed'
-  },
-  {
-    id: 4,
-    timestamp: '2024-01-15T10:15:00Z',
-    level: 'info',
-    category: 'user_action',
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    userId: 2,
-    username: 'muhasebe.abc',
-    action: 'invoice_created',
-    description: 'Yeni fatura oluşturuldu',
-    details: {
-      invoiceNumber: 'INV-2024-001',
-      amount: 1250.50,
-      currency: 'TRY',
-      customerName: 'ABC Şirketi',
-      items: [
-        { name: 'Elektrik Tüketimi', quantity: 1000, unit: 'kWh', price: 1.25 }
-      ]
-    },
-    ipAddress: '192.168.1.101',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    sessionId: 'sess_123456790',
-    duration: 850,
-    status: 'success'
-  },
-  {
-    id: 5,
-    timestamp: '2024-01-15T10:10:00Z',
-    level: 'error',
-    category: 'system_error',
-    tenantId: 3,
-    tenantName: 'Tech Solutions',
-    userId: 3,
-    username: 'analist.tech',
-    action: 'api_rate_limit_exceeded',
-    description: 'API rate limit aşıldı',
-    details: {
-      endpoint: '/api/consumption/data',
-      rateLimit: 1000,
-      currentUsage: 1050,
-      resetTime: '2024-01-15T11:00:00Z'
-    },
-    ipAddress: '192.168.3.25',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    sessionId: 'sess_123456791',
-    duration: 0,
-    status: 'failed'
-  },
-  {
-    id: 6,
-    timestamp: '2024-01-15T10:05:00Z',
-    level: 'info',
-    category: 'user_action',
-    tenantId: 4,
-    tenantName: 'Global Corp',
-    userId: 5,
-    username: 'admin.global',
-    action: 'user_created',
-    description: 'Yeni kullanıcı oluşturuldu',
-    details: {
-      newUserId: 6,
-      newUsername: 'analist.global',
-      newUserEmail: 'analist@globalcorp.com',
-      role: 'analyst',
-      department: 'Analiz'
-    },
-    ipAddress: '192.168.4.10',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    sessionId: 'sess_123456792',
-    duration: 650,
-    status: 'success'
-  },
-  {
-    id: 7,
-    timestamp: '2024-01-15T10:00:00Z',
-    level: 'warning',
-    category: 'security',
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    userId: 1,
-    username: 'admin.abc',
-    action: 'suspicious_activity',
-    description: 'Şüpheli aktivite tespit edildi',
-    details: {
-      activityType: 'multiple_failed_requests',
-      requestCount: 150,
-      timeWindow: '5 minutes',
-      threshold: 100
-    },
-    ipAddress: '192.168.1.100',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    sessionId: 'sess_123456793',
-    duration: 0,
-    status: 'warning'
-  },
-  {
-    id: 8,
-    timestamp: '2024-01-15T09:55:00Z',
-    level: 'info',
-    category: 'user_action',
-    tenantId: 2,
-    tenantName: 'XYZ Ltd.',
-    userId: 3,
-    username: 'analist.xyz',
-    action: 'report_generated',
-    description: 'Rapor oluşturuldu',
-    details: {
-      reportType: 'consumption_analysis',
-      reportFormat: 'PDF',
-      reportSize: '2.5 MB',
-      timeRange: '2024-01-01 to 2024-01-15'
-    },
-    ipAddress: '192.168.2.50',
-    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-    sessionId: 'sess_123456794',
-    duration: 3200,
-    status: 'success'
-  }
-];
+// Types
+interface Tenant {
+  id: number;
+  companyName: string;
+  domain: string;
+}
 
-const logCategories = [
-  { value: 'user_action', label: 'Kullanıcı Aksiyonları', icon: <UserOutlined />, color: '#1890ff' },
-  { value: 'system_error', label: 'Sistem Hataları', icon: <BugOutlined />, color: '#ff4d4f' },
-  { value: 'security', label: 'Güvenlik', icon: <SafetyOutlined />, color: '#faad14' },
-  { value: 'api', label: 'API', icon: <KeyOutlined />, color: '#722ed1' },
-  { value: 'database', label: 'Veritabanı', icon: <BarChartOutlined />, color: '#52c41a' }
-];
+interface SystemLog {
+  id: number;
+  timestamp: string;
+  level: string;
+  category: string;
+  message: string;
+  details?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  exception?: string;
+  stackTrace?: string;
+  tenantId?: number;
+  tenantName?: string;
+  userId?: number;
+  userName?: string;
+  userEmail?: string;
+}
 
-const logLevels = [
-  { value: 'info', label: 'Bilgi', icon: <InfoCircleOutlined />, color: '#1890ff' },
-  { value: 'warning', label: 'Uyarı', icon: <WarningOutlined />, color: '#faad14' },
-  { value: 'error', label: 'Hata', icon: <ExclamationCircleOutlined />, color: '#ff4d4f' },
-  { value: 'debug', label: 'Debug', icon: <BugOutlined />, color: '#722ed1' }
-];
+interface LogStats {
+  totalLogs: number;
+  errorLogs: number;
+  warningLogs: number;
+  infoLogs: number;
+  errorRate: number;
+  levelBreakdown: Array<{ level: string; count: number }>;
+  categoryBreakdown: Array<{ category: string; count: number }>;
+}
+
+interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
 
 export default function LogsPage() {
-  const [logs, setLogs] = useState(mockLogs);
-  const [isDetailDrawerVisible, setIsDetailDrawerVisible] = useState(false);
-  const [selectedLog, setSelectedLog] = useState<any>(null);
+  const { message } = App.useApp();
+
+  // States
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [logs, setLogs] = useState<SystemLog[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [logStats, setLogStats] = useState<LogStats | null>(null);
+  const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null);
+  const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [logToDelete, setLogToDelete] = useState<SystemLog | null>(null);
+  const [cleanupModalVisible, setCleanupModalVisible] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [form] = Form.useForm();
+
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 50,
+    total: 0
+  });
+
+  // Filters state
   const [filters, setFilters] = useState<{
     tenantId?: number;
     category?: string;
@@ -312,118 +170,318 @@ export default function LogsPage() {
     status: undefined
   });
 
-  // Statistics
-  const stats = useMemo(() => [
-    {
-      title: 'Toplam Log',
-      value: logs.length,
-      icon: <FileTextOutlined />,
-      color: '#1890ff',
-      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-    },
-    {
-      title: 'Hata Logları',
-      value: logs.filter(l => l.level === 'error').length,
-      icon: <ExclamationCircleOutlined />,
-      color: '#ff4d4f',
-      gradient: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)'
-    },
-    {
-      title: 'Güvenlik Uyarıları',
-      value: logs.filter(l => l.category === 'security').length,
-      icon: <SafetyOutlined />,
-      color: '#faad14',
-      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
-    },
-    {
-      title: 'Bugün',
-      value: logs.filter(l => {
-        const today = new Date().toDateString();
-        const logDate = new Date(l.timestamp).toDateString();
-        return logDate === today;
-      }).length,
-      icon: <ClockCircleOutlined />,
-      color: '#52c41a',
-      gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
-    }
-  ], [logs]);
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchLogs();
+    fetchTenants();
+    fetchLogStats();
+  }, []); // Only run once on mount
 
-  // Filtered logs
-  const filteredLogs = useMemo(() => {
-    return logs.filter(log => {
-      // Tenant filter
-      if (filters.tenantId && log.tenantId !== filters.tenantId) return false;
+  // Fetch logs when filters change
+  useEffect(() => {
+    fetchLogs();
+  }, [pagination.current, pagination.pageSize, filters.tenantId, filters.category, filters.level, filters.dateRange, filters.searchText]);
+
+  // Fetch stats when date range changes
+  useEffect(() => {
+    fetchLogStats();
+  }, [filters.dateRange]);
+
+  // Global click handler to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
       
-      // Category filter
-      if (filters.category && log.category !== filters.category) return false;
+      // Export dropdown dışına tıklandıysa kapat
+      if (!target.closest('.ant-dropdown') && !target.closest('.ant-btn[data-export-button]')) {
+        setDropdownOpen(false);
+      }
       
-      // Level filter
-      if (filters.level && log.level !== filters.level) return false;
-      
-      // Status filter
-      if (filters.status && log.status !== filters.status) return false;
-      
-      // Date range filter
+      // DatePicker dışına tıklandıysa kapat
+      if (!target.closest('.ant-picker-dropdown') && !target.closest('.ant-picker')) {
+        setDatePickerOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const fetchLogs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        page: pagination.current.toString(),
+        pageSize: pagination.pageSize.toString()
+      });
+
+      if (filters.tenantId) params.append('tenantId', filters.tenantId.toString());
+      if (filters.category) params.append('category', filters.category);
+      if (filters.level) params.append('level', filters.level);
+      if (filters.searchText) params.append('searchText', filters.searchText);
       if (filters.dateRange && filters.dateRange.length === 2) {
-        const logDate = new Date(log.timestamp);
-        const startDate = filters.dateRange[0]?.startOf('day')?.toDate();
-        const endDate = filters.dateRange[1]?.endOf('day')?.toDate();
-        if (startDate && endDate && (logDate < startDate || logDate > endDate)) return false;
+        params.append('startDate', filters.dateRange[0].toISOString());
+        params.append('endDate', filters.dateRange[1].toISOString());
+      }
+
+      console.log('Fetching logs with params:', params.toString());
+
+      const response = await apiRequest(`${API_BASE_URL}/admin/log?${params}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Log listesi alınamadı');
       }
       
-      // Search text filter
-      if (filters.searchText) {
-        const searchLower = filters.searchText.toLowerCase();
-        const searchableText = [
-          log.description,
-          log.action,
-          log.username,
-          log.tenantName,
-          log.ipAddress,
-          JSON.stringify(log.details)
-        ].join(' ').toLowerCase();
-        if (!searchableText.includes(searchLower)) return false;
-      }
+      const data: PagedResult<SystemLog> = await response.json();
       
-      return true;
+      console.log('Logs fetched successfully:', data.items.length, 'items');
+      
+      setLogs(data.items);
+      setPagination(prev => ({
+        ...prev,
+        total: data.totalCount
+      }));
+    } catch (err) {
+      console.error('Logs fetch error:', err);
+      setError(err instanceof Error ? err.message : 'Bilinmeyen hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTenants = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/tenants?pageSize=100`);
+      if (!response.ok) throw new Error('Tenant listesi alınamadı');
+      
+      const data: PagedResult<Tenant> = await response.json();
+      setTenants(data.items);
+    } catch (err) {
+      console.error('Tenants fetch error:', err);
+    }
+  };
+
+  const fetchLogStats = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (filters.dateRange && filters.dateRange.length === 2) {
+        params.append('startDate', filters.dateRange[0].toISOString());
+        params.append('endDate', filters.dateRange[1].toISOString());
+      }
+
+      console.log('Fetching log stats with params:', params.toString());
+
+      const response = await apiRequest(`${API_BASE_URL}/admin/log/stats?${params}`);
+      if (!response.ok) throw new Error('Log istatistikleri alınamadı');
+      
+      const data: LogStats = await response.json();
+      console.log('Log stats received:', data);
+      setLogStats(data);
+    } catch (err) {
+      console.error('Log stats fetch error:', err);
+    }
+  };
+
+  const handleViewDetails = async (log: SystemLog) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/log/${log.id}`);
+      if (!response.ok) throw new Error('Log detayları alınamadı');
+      
+      const logDetail: SystemLog = await response.json();
+      setSelectedLog(logDetail);
+      setDetailDrawerVisible(true);
+    } catch (err) {
+      message.error('Log detayları alınamadı');
+      console.error('Log detail fetch error:', err);
+    }
+  };
+
+  const handleDelete = (log: SystemLog) => {
+    setLogToDelete(log);
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!logToDelete) return;
+    
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/log/${logToDelete.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Log silinemedi');
+      }
+
+      message.success('Log başarıyla silindi');
+      setDeleteModalVisible(false);
+      setLogToDelete(null);
+      fetchLogs(); // Refresh list
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Log silinirken hata oluştu');
+      console.error('Delete log error:', err);
+    }
+  };
+
+  const handleFilterChange = (key: string, value: any) => {
+    console.log(`Filter changed: ${key} =`, value);
+    
+    // Clear previous timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setPagination(prev => ({ ...prev, current: 1 }));
+    
+    // Debounce search text changes
+    if (key === 'searchText') {
+      const timeout = setTimeout(() => {
+        fetchLogs();
+      }, 500);
+      setSearchTimeout(timeout);
+    }
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      tenantId: undefined,
+      category: undefined,
+      level: undefined,
+      dateRange: undefined,
+      searchText: '',
+      status: undefined
     });
-  }, [logs, filters]);
+    setPagination(prev => ({ ...prev, current: 1 }));
+  };
+
+  const exportLogs = async (format: string) => {
+    try {
+      console.log(`Exporting logs in ${format} format...`);
+      message.loading(`${format.toUpperCase()} export başlatılıyor...`, 0);
+      
+      const params = new URLSearchParams({
+        format: format,
+        pageSize: '10000' // Export all logs
+      });
+
+      if (filters.tenantId) params.append('tenantId', filters.tenantId.toString());
+      if (filters.category) params.append('category', filters.category);
+      if (filters.level) params.append('level', filters.level);
+      if (filters.searchText) params.append('searchText', filters.searchText);
+      if (filters.dateRange && filters.dateRange.length === 2) {
+        params.append('startDate', filters.dateRange[0].toISOString());
+        params.append('endDate', filters.dateRange[1].toISOString());
+      }
+
+      console.log('Export params:', params.toString());
+
+      const response = await apiRequest(`${API_BASE_URL}/admin/log/export?${params}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Log export edilemedi');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `logs_${new Date().toISOString().split('T')[0]}.${format}`;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 100);
+
+      message.destroy();
+      message.success(`${format.toUpperCase()} formatında loglar export edildi`);
+      console.log(`Export completed: ${format}`);
+    } catch (err) {
+      message.destroy();
+      console.error('Export logs error:', err);
+      message.error(err instanceof Error ? err.message : 'Log export edilirken hata oluştu');
+    }
+  };
+
+  const cleanupOldLogs = async (daysToKeep: number = 30) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/log/cleanup?daysToKeep=${daysToKeep}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Eski loglar temizlenemedi');
+      }
+
+      const result = await response.json();
+      message.success(result.message);
+      setCleanupModalVisible(false);
+      fetchLogs(); // Refresh list
+      fetchLogStats(); // Refresh stats
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'Eski loglar temizlenirken hata oluştu');
+      console.error('Cleanup logs error:', err);
+    }
+  };
 
   const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'info': return 'blue';
-      case 'warning': return 'orange';
-      case 'error': return 'red';
-      case 'debug': return 'purple';
+    switch (level.toLowerCase()) {
+      case 'error': return 'error';
+      case 'warning': return 'warning';
+      case 'info': return 'processing';
+      case 'debug': return 'default';
       default: return 'default';
     }
   };
 
   const getLevelIcon = (level: string) => {
-    switch (level) {
-      case 'info': return <InfoCircleOutlined />;
-      case 'warning': return <WarningOutlined />;
+    switch (level.toLowerCase()) {
       case 'error': return <ExclamationCircleOutlined />;
+      case 'warning': return <WarningOutlined />;
+      case 'info': return <InfoCircleOutlined />;
       case 'debug': return <BugOutlined />;
-      default: return <InfoCircleOutlined />;
+      default: return <FileTextOutlined />;
     }
   };
 
   const getCategoryColor = (category: string) => {
-    const cat = logCategories.find(c => c.value === category);
-    return cat?.color || '#666';
+    switch (category.toLowerCase()) {
+      case 'user': return 'blue';
+      case 'system': return 'green';
+      case 'security': return 'red';
+      case 'api': return 'purple';
+      default: return 'default';
+    }
   };
 
   const getCategoryIcon = (category: string) => {
-    const cat = logCategories.find(c => c.value === category);
-    return cat?.icon || <FileTextOutlined />;
+    switch (category.toLowerCase()) {
+      case 'user': return <UserOutlined />;
+      case 'system': return <SettingOutlined />;
+      case 'security': return <SafetyOutlined />;
+      case 'api': return <ApiOutlined />;
+      default: return <FileTextOutlined />;
+    }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'success': return 'success';
-      case 'failed': return 'error';
+      case 'error': return 'error';
       case 'warning': return 'warning';
+      case 'info': return 'processing';
       default: return 'default';
     }
   };
@@ -431,27 +489,63 @@ export default function LogsPage() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'success': return 'Başarılı';
-      case 'failed': return 'Başarısız';
+      case 'error': return 'Hata';
       case 'warning': return 'Uyarı';
+      case 'info': return 'Bilgi';
       default: return 'Bilinmiyor';
     }
   };
 
   const formatDuration = (duration: number) => {
     if (duration < 1000) return `${duration}ms`;
-    return `${(duration / 1000).toFixed(2)}s`;
+    if (duration < 60000) return `${(duration / 1000).toFixed(1)}s`;
+    return `${(duration / 60000).toFixed(1)}m`;
   };
 
-  const columns: ColumnsType<any> = [
+  // Statistics
+  const stats = useMemo(() => [
+    {
+      title: 'Toplam Log',
+      value: logStats?.totalLogs || 0,
+      icon: <FileTextOutlined />,
+      color: '#1890ff',
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    },
+    {
+      title: 'Hata Logları',
+      value: logStats?.errorLogs || 0,
+      icon: <ExclamationCircleOutlined />,
+      color: '#ff4d4f',
+      gradient: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)'
+    },
+    {
+      title: 'Uyarı Logları',
+      value: logStats?.warningLogs || 0,
+      icon: <WarningOutlined />,
+      color: '#faad14',
+      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+    },
+    {
+      title: 'Hata Oranı',
+      value: logStats ? `${logStats.errorRate.toFixed(1)}%` : '0%',
+      icon: <BarChartOutlined />,
+      color: '#722ed1',
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    }
+  ], [logStats]);
+
+  // Table columns
+  const columns: ColumnsType<SystemLog> = [
     {
       title: 'Zaman',
+      dataIndex: 'timestamp',
       key: 'timestamp',
-      width: 150,
-      render: (_, record) => (
+      width: 180,
+      render: (timestamp) => (
         <div>
-          <div>{new Date(record.timestamp).toLocaleDateString('tr-TR')}</div>
+          <div>{new Date(timestamp).toLocaleDateString('tr-TR')}</div>
           <div style={{ fontSize: '12px', color: '#666' }}>
-            {new Date(record.timestamp).toLocaleTimeString('tr-TR')}
+            {new Date(timestamp).toLocaleTimeString('tr-TR')}
           </div>
         </div>
       )
@@ -462,35 +556,34 @@ export default function LogsPage() {
       key: 'level',
       width: 100,
       render: (level) => (
-        <Tag color={getLevelColor(level)} icon={getLevelIcon(level)}>
-          {logLevels.find(l => l.value === level)?.label}
-        </Tag>
+        <Badge
+          status={getLevelColor(level) as any}
+          text={level}
+        />
       )
     },
     {
       title: 'Kategori',
       dataIndex: 'category',
       key: 'category',
-      width: 150,
+      width: 120,
       render: (category) => (
         <Tag color={getCategoryColor(category)} icon={getCategoryIcon(category)}>
-          {logCategories.find(c => c.value === category)?.label}
+          {category}
         </Tag>
       )
     },
     {
-      title: 'Açıklama',
-      key: 'description',
-      width: 250,
-      render: (_, record) => (
-        <div>
-          <div style={{ fontWeight: 500, marginBottom: '4px' }}>
-            {record.description}
+      title: 'Mesaj',
+      dataIndex: 'message',
+      key: 'message',
+      ellipsis: true,
+      render: (message) => (
+        <Tooltip title={message}>
+          <div style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {message}
           </div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            {record.action}
-          </div>
-        </div>
+        </Tooltip>
       )
     },
     {
@@ -510,14 +603,15 @@ export default function LogsPage() {
     },
     {
       title: 'Kullanıcı',
-      key: 'user',
+      dataIndex: 'userName',
+      key: 'userName',
       width: 150,
-      render: (_, record) => (
-        record.username ? (
+      render: (userName, record) => (
+        userName ? (
           <div>
-            <div style={{ fontWeight: 500 }}>{record.username}</div>
+            <div>{userName}</div>
             <div style={{ fontSize: '12px', color: '#666' }}>
-              {record.ipAddress}
+              {record.userEmail}
             </div>
           </div>
         ) : (
@@ -526,24 +620,15 @@ export default function LogsPage() {
       )
     },
     {
-      title: 'Durum',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status) => (
-        <Badge
-          status={getStatusColor(status) as any}
-          text={getStatusText(status)}
-        />
-      )
-    },
-    {
-      title: 'Süre',
-      key: 'duration',
-      width: 100,
-      render: (_, record) => (
-        record.duration > 0 ? (
-          <Text code>{formatDuration(record.duration)}</Text>
+      title: 'IP Adresi',
+      dataIndex: 'ipAddress',
+      key: 'ipAddress',
+      width: 120,
+      render: (ipAddress) => (
+        ipAddress ? (
+          <Text code style={{ fontSize: '12px' }}>
+            {ipAddress}
+          </Text>
         ) : (
           <Text type="secondary">-</Text>
         )
@@ -554,138 +639,76 @@ export default function LogsPage() {
       key: 'actions',
       width: 120,
       render: (_, record) => (
-        <Space>
+        <Space size="small">
           <Tooltip title="Detayları Görüntüle">
             <Button
               type="text"
               icon={<EyeOutlined />}
+              size="small"
               onClick={() => handleViewDetails(record)}
             />
           </Tooltip>
-          <Popconfirm
-            title="Bu logu silmek istediğinizden emin misiniz?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Evet"
-            cancelText="Hayır"
-          >
-            <Tooltip title="Sil">
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Tooltip>
-          </Popconfirm>
+          <Tooltip title="Sil">
+            <Button
+              type="text"
+              icon={<DeleteOutlined />}
+              size="small"
+              danger
+              onClick={() => handleDelete(record)}
+            />
+          </Tooltip>
         </Space>
       )
     }
   ];
 
-  const handleViewDetails = (log: any) => {
-    setSelectedLog(log);
-    setIsDetailDrawerVisible(true);
-  };
+  // Loading state
+  if (loading && logs.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Spin size="large" />
+        <div style={{ marginTop: '20px' }}>Loglar yükleniyor...</div>
+      </div>
+    );
+  }
 
-  const handleDelete = (logId: number) => {
-    setLogs(logs.filter(l => l.id !== logId));
-    message.success('Log silindi');
-  };
-
-  const handleFilterChange = (key: string, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      tenantId: undefined,
-      category: undefined,
-      level: undefined,
-      dateRange: undefined,
-      searchText: '',
-      status: undefined
-    });
-  };
-
-  const exportLogs = (format: string) => {
-    const data = filteredLogs.map(log => ({
-      ID: log.id,
-      Zaman: new Date(log.timestamp).toLocaleString('tr-TR'),
-      Seviye: logLevels.find(l => l.value === log.level)?.label,
-      Kategori: logCategories.find(c => c.value === log.category)?.label,
-      Açıklama: log.description,
-      Aksiyon: log.action,
-      Tenant: log.tenantName || '-',
-      Kullanıcı: log.username || '-',
-      IP: log.ipAddress || '-',
-      Durum: getStatusText(log.status),
-      Süre: log.duration > 0 ? formatDuration(log.duration) : '-',
-      Detaylar: JSON.stringify(log.details, null, 2)
-    }));
-
-    if (format === 'excel') {
-      message.info('Excel export özelliği yakında eklenecek');
-    } else if (format === 'csv') {
-      message.info('CSV export özelliği yakında eklenecek');
-    } else if (format === 'json') {
-      const jsonStr = JSON.stringify(data, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `logs_${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      message.success('JSON dosyası indirildi');
-    }
-  };
-
-  const exportMenuItems = [
-    {
-      key: 'excel',
-      icon: <FileExcelOutlined />,
-      label: 'Excel (.xlsx)',
-      onClick: () => exportLogs('excel')
-    },
-    {
-      key: 'csv',
-      icon: <FileTextOutlined />,
-      label: 'CSV (.csv)',
-      onClick: () => exportLogs('csv')
-    },
-    {
-      key: 'json',
-      icon: <FileTextOutlined />,
-      label: 'JSON (.json)',
-      onClick: () => exportLogs('json')
-    }
-  ];
+  // Error state
+  if (error && logs.length === 0) {
+    return (
+      <Alert
+        message="Hata"
+        description={error}
+        type="error"
+        showIcon
+        action={
+          <Button size="small" onClick={fetchLogs}>
+            Tekrar Dene
+          </Button>
+        }
+      />
+    );
+  }
 
   return (
     <div style={{ padding: '24px' }}>
-      <Title level={2}>
-        <FileTextOutlined /> Sistem Logları
-      </Title>
+      <div style={{ marginBottom: '24px' }}>
+        <Title level={2}>Sistem Logları</Title>
+        <Text type="secondary">
+          Sistem genelinde oluşan tüm logları görüntüleyin, filtreleyin ve yönetin.
+        </Text>
+      </div>
 
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
         {stats.map((stat, index) => (
           <Col xs={24} sm={12} lg={6} key={index}>
-            <Card
-              style={{
-                background: stat.gradient,
-                color: 'white',
-                border: 'none'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{stat.value}</div>
-                  <div style={{ fontSize: '14px', opacity: 0.9 }}>{stat.title}</div>
-                </div>
-                <div style={{ fontSize: '32px', opacity: 0.8 }}>
-                  {stat.icon}
-                </div>
-              </div>
+            <Card>
+              <Statistic
+                title={stat.title}
+                value={stat.value}
+                prefix={stat.icon}
+                valueStyle={{ color: stat.color }}
+              />
             </Card>
           </Col>
         ))}
@@ -694,117 +717,197 @@ export default function LogsPage() {
       {/* Filters */}
       <Card style={{ marginBottom: '24px' }}>
         <Row gutter={[16, 16]} align="middle">
-          <Col xs={24} sm={6}>
+          <Col xs={24} sm={8} lg={6}>
+            <Select
+              placeholder="Tenant Seçin"
+              style={{ width: '100%' }}
+              value={filters.tenantId}
+              onChange={(value) => handleFilterChange('tenantId', value)}
+              allowClear
+              getPopupContainer={(triggerNode) => document.body}
+              onMouseDown={(e) => e.stopPropagation()}
+              styles={{ popup: { root: { zIndex: 1050 } } }}
+            >
+              {tenants.map(tenant => (
+                <Option key={tenant.id} value={tenant.id}>
+                  {tenant.companyName}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} sm={8} lg={6}>
+            <Select
+              placeholder="Kategori Seçin"
+              style={{ width: '100%' }}
+              value={filters.category}
+              onChange={(value) => handleFilterChange('category', value)}
+              allowClear
+              getPopupContainer={(triggerNode) => document.body}
+              onMouseDown={(e) => e.stopPropagation()}
+              styles={{ popup: { root: { zIndex: 1050 } } }}
+            >
+              <Option value="User">Kullanıcı</Option>
+              <Option value="System">Sistem</Option>
+              <Option value="Security">Güvenlik</Option>
+              <Option value="API">API</Option>
+            </Select>
+          </Col>
+          <Col xs={24} sm={8} lg={6}>
+            <Select
+              placeholder="Seviye Seçin"
+              style={{ width: '100%' }}
+              value={filters.level}
+              onChange={(value) => handleFilterChange('level', value)}
+              allowClear
+              getPopupContainer={(triggerNode) => document.body}
+              onMouseDown={(e) => e.stopPropagation()}
+              styles={{ popup: { root: { zIndex: 1050 } } }}
+            >
+              <Option value="Info">Bilgi</Option>
+              <Option value="Warning">Uyarı</Option>
+              <Option value="Error">Hata</Option>
+              <Option value="Debug">Debug</Option>
+            </Select>
+          </Col>
+          <Col xs={24} sm={8} lg={6}>
+            <RangePicker
+              style={{ width: '100%' }}
+              value={filters.dateRange}
+              onChange={(dates) => {
+                console.log('Date range changed:', dates);
+                handleFilterChange('dateRange', dates);
+              }}
+              placeholder={['Başlangıç', 'Bitiş']}
+              format="DD/MM/YYYY"
+              allowClear
+              showTime={false}
+              disabledDate={(current) => current && current.isAfter(new Date())}
+              disabled={loading}
+              suffixIcon={loading ? <Spin size="small" /> : undefined}
+              getPopupContainer={(triggerNode) => document.body}
+              open={datePickerOpen}
+              onOpenChange={(open) => {
+                setDatePickerOpen(open);
+              }}
+            />
+          </Col>
+          <Col xs={24} sm={8} lg={6}>
             <Input
-              placeholder="Log ara..."
+              placeholder="Arama..."
               prefix={<SearchOutlined />}
               value={filters.searchText}
               onChange={(e) => handleFilterChange('searchText', e.target.value)}
               allowClear
             />
           </Col>
-          <Col xs={24} sm={4}>
-            <Select
-              placeholder="Tenant"
-              style={{ width: '100%' }}
-              value={filters.tenantId}
-              onChange={(value) => handleFilterChange('tenantId', value)}
-              allowClear
-            >
-              {mockTenants.map(tenant => (
-                <Option key={tenant.id} value={tenant.id}>
-                  {tenant.name}
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} sm={4}>
-            <Select
-              placeholder="Kategori"
-              style={{ width: '100%' }}
-              value={filters.category}
-              onChange={(value) => handleFilterChange('category', value)}
-              allowClear
-            >
-              {logCategories.map(cat => (
-                <Option key={cat.value} value={cat.value}>
-                  {cat.label}
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} sm={4}>
-            <Select
-              placeholder="Seviye"
-              style={{ width: '100%' }}
-              value={filters.level}
-              onChange={(value) => handleFilterChange('level', value)}
-              allowClear
-            >
-              {logLevels.map(level => (
-                <Option key={level.value} value={level.value}>
-                  {level.label}
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} sm={4}>
-            <Select
-              placeholder="Durum"
-              style={{ width: '100%' }}
-              value={filters.status}
-              onChange={(value) => handleFilterChange('status', value)}
-              allowClear
-            >
-              <Option value="success">Başarılı</Option>
-              <Option value="failed">Başarısız</Option>
-              <Option value="warning">Uyarı</Option>
-            </Select>
-          </Col>
-          <Col xs={24} sm={2}>
+          <Col xs={24} sm={8} lg={6}>
             <Space>
-              <Button
-                icon={<FilterOutlined />}
-                onClick={clearFilters}
+              <Button onClick={clearFilters}>
+                Filtreleri Temizle
+              </Button>
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <Button 
+                  icon={<ExportOutlined />}
+                  data-export-button="true"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDropdownOpen(!dropdownOpen);
+                  }}
+                >
+                  Export
+                </Button>
+                {dropdownOpen && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      zIndex: 1050,
+                      background: 'white',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: '6px',
+                      boxShadow: '0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05)',
+                      minWidth: '120px'
+                    }}
+                  >
+                    <div 
+                      style={{
+                        padding: '4px 0',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingLeft: '12px',
+                        paddingRight: '12px',
+                        paddingTop: '8px',
+                        paddingBottom: '8px',
+                        fontSize: '14px'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      onClick={() => {
+                        console.log('Excel export clicked');
+                        exportLogs('excel');
+                        setDropdownOpen(false);
+                      }}
+                    >
+                      <FileExcelOutlined style={{ marginRight: '8px', color: '#52c41a' }} />
+                      Excel Export
+                    </div>
+                    <div 
+                      style={{
+                        padding: '4px 0',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingLeft: '12px',
+                        paddingRight: '12px',
+                        paddingTop: '8px',
+                        paddingBottom: '8px',
+                        fontSize: '14px'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      onClick={() => {
+                        console.log('CSV export clicked');
+                        exportLogs('csv');
+                        setDropdownOpen(false);
+                      }}
+                    >
+                      <FileExcelOutlined style={{ marginRight: '8px', color: '#52c41a' }} />
+                      CSV Export
+                    </div>
+                    <div 
+                      style={{
+                        padding: '4px 0',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingLeft: '12px',
+                        paddingRight: '12px',
+                        paddingTop: '8px',
+                        paddingBottom: '8px',
+                        fontSize: '14px'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      onClick={() => {
+                        console.log('JSON export clicked');
+                        exportLogs('json');
+                        setDropdownOpen(false);
+                      }}
+                    >
+                      <FileTextOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
+                      JSON Export
+                    </div>
+                  </div>
+                )}
+              </div>
+              <Button 
+                icon={<DeleteOutlined />} 
+                danger
+                onClick={() => setCleanupModalVisible(true)}
               >
                 Temizle
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-        
-        <Row gutter={[16, 16]} style={{ marginTop: '16px' }}>
-          <Col xs={24} sm={8}>
-            <RangePicker
-              style={{ width: '100%' }}
-              value={filters.dateRange}
-              onChange={(dates) => handleFilterChange('dateRange', dates)}
-              placeholder={['Başlangıç Tarihi', 'Bitiş Tarihi']}
-            />
-          </Col>
-          <Col xs={24} sm={16}>
-            <Space>
-              <Button
-                type="primary"
-                icon={<ReloadOutlined />}
-                onClick={() => message.info('Loglar yenilendi')}
-              >
-                Yenile
-              </Button>
-              <Dropdown
-                menu={{ items: exportMenuItems }}
-                placement="bottomRight"
-              >
-                <Button icon={<ExportOutlined />}>
-                  Dışa Aktar
-                </Button>
-              </Dropdown>
-              <Button
-                icon={<DeleteOutlined />}
-                danger
-                onClick={() => message.info('Toplu silme özelliği yakında eklenecek')}
-              >
-                Toplu Sil
               </Button>
             </Space>
           </Col>
@@ -815,128 +918,210 @@ export default function LogsPage() {
       <Card>
         <Table
           columns={columns}
-          dataSource={filteredLogs}
+          dataSource={logs}
           rowKey="id"
           pagination={{
-            pageSize: 20,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} / ${total} log`
+            showTotal: (total, range) => 
+              `${range[0]}-${range[1]} / ${total} log`,
+            onChange: (page, pageSize) => {
+              setPagination(prev => ({
+                ...prev,
+                current: page,
+                pageSize: pageSize || 50
+              }));
+            }
           }}
+          loading={loading}
           scroll={{ x: 1200 }}
         />
       </Card>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        title="Log Silme Onayı"
+        open={deleteModalVisible}
+        onOk={confirmDelete}
+        onCancel={() => {
+          setDeleteModalVisible(false);
+          setLogToDelete(null);
+        }}
+        okText="Evet, Sil"
+        cancelText="İptal"
+        okButtonProps={{ danger: true }}
+        centered
+        destroyOnHidden
+        getContainer={() => document.body}
+        style={{ 
+          top: '50%',
+          transform: 'translateY(-50%)',
+          margin: '0 auto'
+        }}
+        styles={{
+          mask: {
+            backgroundColor: 'rgba(0, 0, 0, 0.45)',
+            backdropFilter: 'blur(2px)'
+          }
+        }}
+      >
+        <p>
+          <strong>"{logToDelete?.message}"</strong> logunu silmek istediğinizden emin misiniz?
+        </p>
+        <p style={{ color: '#666', fontSize: '12px' }}>
+          Bu işlem geri alınamaz.
+        </p>
+      </Modal>
+
+      {/* Cleanup Confirmation Modal */}
+      <Modal
+        title="Eski Logları Temizleme Onayı"
+        open={cleanupModalVisible}
+        onOk={() => cleanupOldLogs(30)}
+        onCancel={() => setCleanupModalVisible(false)}
+        okText="Evet, Temizle"
+        cancelText="İptal"
+        okButtonProps={{ danger: true }}
+        centered
+        destroyOnHidden
+        getContainer={() => document.body}
+        style={{ 
+          top: '50%',
+          transform: 'translateY(-50%)',
+          margin: '0 auto'
+        }}
+        styles={{
+          mask: {
+            backgroundColor: 'rgba(0, 0, 0, 0.45)',
+            backdropFilter: 'blur(2px)'
+          }
+        }}
+      >
+        <p>
+          30 günden eski tüm logları silmek istediğinizden emin misiniz?
+        </p>
+        <p style={{ color: '#666', fontSize: '12px' }}>
+          Bu işlem geri alınamaz ve tüm eski loglar kalıcı olarak silinecektir.
+        </p>
+      </Modal>
 
       {/* Log Detail Drawer */}
       <Drawer
         title="Log Detayları"
         placement="right"
         width={600}
-        open={isDetailDrawerVisible}
-        onClose={() => setIsDetailDrawerVisible(false)}
+        open={detailDrawerVisible}
+        onClose={() => setDetailDrawerVisible(false)}
         extra={
           <Space>
             <Button
               icon={<DownloadOutlined />}
               onClick={() => {
                 if (selectedLog) {
-                  const jsonStr = JSON.stringify(selectedLog, null, 2);
-                  const blob = new Blob([jsonStr], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
+                  const dataStr = JSON.stringify(selectedLog, null, 2);
+                  const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                  const url = window.URL.createObjectURL(dataBlob);
                   const a = document.createElement('a');
                   a.href = url;
                   a.download = `log_${selectedLog.id}.json`;
+                  document.body.appendChild(a);
                   a.click();
-                  URL.revokeObjectURL(url);
-                  message.success('Log detayları indirildi');
+                  window.URL.revokeObjectURL(url);
+                  document.body.removeChild(a);
                 }
               }}
             >
               JSON İndir
+            </Button>
+            <Button onClick={() => setDetailDrawerVisible(false)}>
+              Kapat
             </Button>
           </Space>
         }
       >
         {selectedLog && (
           <div>
-            <Tabs defaultActiveKey="overview">
-              <TabPane tab="Genel Bakış" key="overview">
-                <Descriptions column={1} bordered size="small">
-                  <Descriptions.Item label="ID">{selectedLog.id}</Descriptions.Item>
-                  <Descriptions.Item label="Zaman">
-                    {new Date(selectedLog.timestamp).toLocaleString('tr-TR')}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Seviye">
-                    <Tag color={getLevelColor(selectedLog.level)} icon={getLevelIcon(selectedLog.level)}>
-                      {logLevels.find(l => l.value === selectedLog.level)?.label}
-                    </Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Kategori">
-                    <Tag color={getCategoryColor(selectedLog.category)} icon={getCategoryIcon(selectedLog.category)}>
-                      {logCategories.find(c => c.value === selectedLog.category)?.label}
-                    </Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Aksiyon">{selectedLog.action}</Descriptions.Item>
-                  <Descriptions.Item label="Açıklama">{selectedLog.description}</Descriptions.Item>
-                  <Descriptions.Item label="Durum">
-                    <Badge status={getStatusColor(selectedLog.status) as any} text={getStatusText(selectedLog.status)} />
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Süre">
-                    {selectedLog.duration > 0 ? formatDuration(selectedLog.duration) : '-'}
-                  </Descriptions.Item>
-                </Descriptions>
+            <Descriptions column={1} bordered size="small">
+              <Descriptions.Item label="ID">{selectedLog.id}</Descriptions.Item>
+              <Descriptions.Item label="Zaman">
+                {new Date(selectedLog.timestamp).toLocaleString('tr-TR')}
+              </Descriptions.Item>
+                             <Descriptions.Item label="Seviye">
+                 <Badge
+                   status={getLevelColor(selectedLog.level) as any}
+                   text={selectedLog.level}
+                 />
+               </Descriptions.Item>
+              <Descriptions.Item label="Kategori">
+                <Tag color={getCategoryColor(selectedLog.category)} icon={getCategoryIcon(selectedLog.category)}>
+                  {selectedLog.category}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Mesaj">{selectedLog.message}</Descriptions.Item>
+              {selectedLog.tenantName && (
+                <Descriptions.Item label="Tenant">
+                  <Tag color="blue">{selectedLog.tenantName}</Tag>
+                </Descriptions.Item>
+              )}
+              {selectedLog.userName && (
+                <Descriptions.Item label="Kullanıcı">
+                  <div>
+                    <div>{selectedLog.userName}</div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      {selectedLog.userEmail}
+                    </div>
+                  </div>
+                </Descriptions.Item>
+              )}
+              {selectedLog.ipAddress && (
+                <Descriptions.Item label="IP Adresi">
+                  <Text code>{selectedLog.ipAddress}</Text>
+                </Descriptions.Item>
+              )}
+              {selectedLog.userAgent && (
+                <Descriptions.Item label="User Agent">
+                  <Text style={{ fontSize: '12px' }}>{selectedLog.userAgent}</Text>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
 
-                <Divider />
-
-                <Title level={5}>Kullanıcı Bilgileri</Title>
-                <Descriptions column={1} bordered size="small">
-                  <Descriptions.Item label="Tenant">{selectedLog.tenantName || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="Kullanıcı">{selectedLog.username || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="IP Adresi">{selectedLog.ipAddress || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="Session ID">{selectedLog.sessionId || '-'}</Descriptions.Item>
-                  <Descriptions.Item label="User Agent">
-                    <Text code style={{ fontSize: '12px' }}>
-                      {selectedLog.userAgent || '-'}
-                    </Text>
-                  </Descriptions.Item>
-                </Descriptions>
-              </TabPane>
-
-              <TabPane tab="Detaylar" key="details">
-                <div style={{ marginBottom: '16px' }}>
-                  <Text strong>JSON Görünümü:</Text>
-                </div>
+            {selectedLog.details && (
+              <div style={{ marginTop: '16px' }}>
+                <Title level={5}>Detaylar</Title>
                 <TextArea
-                  value={JSON.stringify(selectedLog.details, null, 2)}
-                  rows={15}
-                  style={{ fontFamily: 'monospace', fontSize: '12px' }}
+                  value={selectedLog.details}
+                  rows={4}
                   readOnly
                 />
-              </TabPane>
+              </div>
+            )}
 
-              <TabPane tab="Timeline" key="timeline">
-                <Timeline>
-                  <Timeline.Item color="blue">
-                    <p>Log Oluşturuldu</p>
-                    <p style={{ fontSize: '12px', color: '#666' }}>
-                      {new Date(selectedLog.timestamp).toLocaleString('tr-TR')}
-                    </p>
-                  </Timeline.Item>
-                  {selectedLog.duration > 0 && (
-                    <Timeline.Item color="green">
-                      <p>İşlem Tamamlandı</p>
-                      <p style={{ fontSize: '12px', color: '#666' }}>
-                        Süre: {formatDuration(selectedLog.duration)}
-                      </p>
-                    </Timeline.Item>
-                  )}
-                  <Timeline.Item color={selectedLog.status === 'success' ? 'green' : 'red'}>
-                    <p>Sonuç: {getStatusText(selectedLog.status)}</p>
-                  </Timeline.Item>
-                </Timeline>
-              </TabPane>
-            </Tabs>
+            {selectedLog.exception && (
+              <div style={{ marginTop: '16px' }}>
+                <Title level={5}>Hata</Title>
+                <TextArea
+                  value={selectedLog.exception}
+                  rows={6}
+                  readOnly
+                  style={{ fontFamily: 'monospace', fontSize: '12px' }}
+                />
+              </div>
+            )}
+
+            {selectedLog.stackTrace && (
+              <div style={{ marginTop: '16px' }}>
+                <Title level={5}>Stack Trace</Title>
+                <TextArea
+                  value={selectedLog.stackTrace}
+                  rows={8}
+                  readOnly
+                  style={{ fontFamily: 'monospace', fontSize: '11px' }}
+                />
+              </div>
+            )}
           </div>
         )}
       </Drawer>

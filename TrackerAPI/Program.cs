@@ -128,11 +128,14 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Database migration'ları otomatik uygula
+// Database migration'ları otomatik uygula ve test verilerini ekle
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     context.Database.Migrate();
+    
+    // Test verilerini ekle
+    DbInitializer.Initialize(context);
 }
 
 app.Run();

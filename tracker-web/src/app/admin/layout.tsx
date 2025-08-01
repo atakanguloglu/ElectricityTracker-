@@ -27,7 +27,8 @@ import {
   ControlOutlined,
   ClusterOutlined,
   ExperimentOutlined,
-  RobotOutlined
+  RobotOutlined,
+  GiftOutlined
 } from '@ant-design/icons'
 import { 
   ProLayout, 
@@ -161,6 +162,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           path: '/admin/billing',
           name: 'Fatura & Kaynak',
           icon: <FileTextOutlined className="menu-icon" />,
+        },
+        {
+          key: 'subscription-plans',
+          path: '/admin/subscription-plans',
+          name: 'Paket Yönetimi',
+          icon: <GiftOutlined className="menu-icon" />,
         }
       ]
     },

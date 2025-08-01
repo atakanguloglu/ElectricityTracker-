@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using ElectricityTrackerAPI.Models;
+using ElectricityTrackerAPI.Models.Logging;
 using ElectricityTrackerAPI.Data;
 using System.Text.Json;
 

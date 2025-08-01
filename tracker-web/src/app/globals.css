@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+/* React 19 + Ant Design v5 uyumluluk fix'leri */
+* {
+  box-sizing: border-box;
+}
+
+/* Ant Design wave effect'i devre dışı bırak */
+.ant-wave {
+  display: none !important;
+}
+
+/* Ant Design motion'ları devre dışı bırak */
+.ant-motion-collapse,
+.ant-motion-collapse-legacy {
+  transition: none !important;
+}
+
+/* React 19 hydration uyumluluğu */
+.ant-app {
+  min-height: 100vh;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -24,6 +45,304 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  scrollbar-gutter: stable;
+  overflow-x: hidden;
+}
+
+/* Prevent layout shift when scrollbar appears/disappears */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Ensure consistent layout during dropdown/modal interactions */
+* {
+  box-sizing: border-box;
+}
+
+/* Prevent dropdown/modal layout shifts */
+.ant-select-dropdown {
+  position: fixed !important;
+  z-index: 1050 !important;
+}
+
+.ant-modal-wrap {
+  position: fixed !important;
+  z-index: 1000 !important;
+}
+
+/* Smooth dropdown animations */
+.ant-select-dropdown {
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
+  transform-origin: top !important;
+}
+
+/* Prevent body scroll when modal is open */
+body.ant-scrolling-effect {
+  overflow: hidden !important;
+  padding-right: 0 !important;
+}
+
+/* Fix Popconfirm positioning and flickering */
+.ant-popover {
+  position: fixed !important;
+  z-index: 1060 !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+.ant-popover-inner {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+.ant-popover-arrow {
+  display: none !important;
+}
+
+/* Ensure Popconfirm doesn't cause layout shifts */
+.ant-popover-placement-left,
+.ant-popover-placement-right,
+.ant-popover-placement-top,
+.ant-popover-placement-bottom {
+  position: fixed !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Disable all animations for popovers */
+.ant-popover-enter,
+.ant-popover-leave,
+.ant-popover-appear {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Force stable positioning */
+.ant-popover-hidden {
+  display: none !important;
+}
+
+/* Prevent any transform animations */
+.ant-popover * {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+/* Fix modal positioning and stability */
+.ant-modal {
+  position: fixed !important;
+  z-index: 1000 !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  margin: 0 !important;
+}
+
+/* Fix dropdown positioning and stability */
+.ant-dropdown {
+  position: fixed !important;
+  z-index: 1050 !important;
+  animation: none !important;
+  transition: none !important;
+  pointer-events: auto !important;
+  transform: none !important;
+}
+
+.ant-dropdown-menu {
+  position: fixed !important;
+  z-index: 1050 !important;
+  animation: none !important;
+  transition: none !important;
+  pointer-events: auto !important;
+  transform: none !important;
+}
+
+.ant-dropdown-menu-item {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  user-select: none !important;
+}
+
+.ant-dropdown-menu-item:hover {
+  background-color: #f5f5f5 !important;
+}
+
+.ant-dropdown-menu-item:active {
+  background-color: #e6f7ff !important;
+}
+
+.ant-dropdown-menu-item * {
+  pointer-events: auto !important;
+}
+
+/* Auto close behavior */
+.ant-dropdown-hidden {
+  display: none !important;
+}
+
+.ant-dropdown-placement-bottomRight {
+  transform-origin: top right !important;
+}
+
+/* Export dropdown specific fixes */
+.ant-dropdown[data-export-dropdown] {
+  position: absolute !important;
+  z-index: 1050 !important;
+}
+
+.ant-dropdown[data-export-dropdown] .ant-dropdown-menu {
+  position: relative !important;
+  z-index: 1050 !important;
+}
+
+/* Prevent export button from triggering other dropdowns */
+.ant-btn[data-export-button] {
+  position: relative !important;
+  z-index: 1051 !important;
+}
+
+.ant-btn[data-export-button]:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+/* Fix date picker dropdown */
+.ant-picker-dropdown {
+  position: fixed !important;
+  z-index: 1050 !important;
+  animation: none !important;
+  transition: none !important;
+  pointer-events: auto !important;
+}
+
+.ant-picker-panel-container {
+  position: fixed !important;
+  z-index: 1050 !important;
+  animation: none !important;
+  transition: none !important;
+  pointer-events: auto !important;
+}
+
+.ant-picker-panel {
+  pointer-events: auto !important;
+}
+
+.ant-picker-cell {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.ant-picker-cell:hover {
+  background-color: #f5f5f5 !important;
+}
+
+.ant-picker-cell:active {
+  background-color: #e6f7ff !important;
+}
+
+.ant-picker-header {
+  pointer-events: auto !important;
+}
+
+.ant-picker-header button {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.ant-picker-header button:hover {
+  background-color: #f5f5f5 !important;
+}
+
+.ant-modal-mask {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 999 !important;
+  background-color: rgba(0, 0, 0, 0.45) !important;
+  backdrop-filter: blur(2px) !important;
+}
+
+.ant-modal-wrap {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 1000 !important;
+  overflow: auto !important;
+  outline: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.ant-modal-content {
+  position: relative !important;
+  background-color: #fff !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  margin: auto !important;
+  max-width: 90vw !important;
+  max-height: 90vh !important;
+  overflow: auto !important;
+}
+
+/* Ensure modal doesn't flicker */
+.ant-modal-root {
+  position: fixed !important;
+  z-index: 1000 !important;
+}
+
+/* Fix modal animation */
+.ant-modal-enter,
+.ant-modal-leave,
+.ant-modal-appear {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Ensure modal content is stable */
+.ant-modal-body {
+  padding: 24px !important;
+  font-size: 14px !important;
+  line-height: 1.5715 !important;
+  word-wrap: break-word !important;
+}
+
+/* Fix modal header and footer */
+.ant-modal-header {
+  padding: 16px 24px !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.ant-modal-footer {
+  padding: 10px 16px !important;
+  border-top: 1px solid #f0f0f0 !important;
+  text-align: right !important;
+}
+
+/* Prevent body scroll when modal is open */
+body.ant-scrolling-effect {
+  overflow: hidden !important;
+  padding-right: 0 !important;
+}
+
+/* Fix modal positioning for different screen sizes */
+@media (max-width: 768px) {
+  .ant-modal {
+    width: 95% !important;
+    margin: 10px !important;
+  }
+  
+  .ant-modal-content {
+    max-width: 95vw !important;
+    max-height: 95vh !important;
+  }
 }
 
 /* Admin Layout Custom Styles */

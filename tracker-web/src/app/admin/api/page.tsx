@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Table,
   Card,
@@ -28,7 +28,8 @@ import {
   InputNumber,
   Alert,
   Collapse,
-  App
+  App,
+  Spin
 } from 'antd';
 import {
   ApiOutlined,
@@ -55,208 +56,189 @@ import {
   UploadOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { apiRequest } from '@/utils/auth';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 const { TabPane } = Tabs;
 const { Panel } = Collapse;
 
-// Mock data
-const mockTenants = [
-  { id: 1, name: 'ABC Şirketi', domain: 'abc.com' },
-  { id: 2, name: 'XYZ Ltd.', domain: 'xyz.com' },
-  { id: 3, name: 'Tech Solutions', domain: 'techsolutions.com' },
-  { id: 4, name: 'Global Corp', domain: 'globalcorp.com' },
-  { id: 5, name: 'Startup Inc', domain: 'startupinc.com' }
-];
+// API base URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api';
 
-const mockApiKeys = [
-  {
-    id: 1,
-    name: 'ABC Production API',
-    key: 'abc_prod_sk_live_1234567890abcdef',
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    status: 'active',
-    permissions: ['read', 'write', 'delete'],
-    rateLimit: 1000,
-    rateLimitPeriod: 'minute',
-    createdAt: '2023-06-15T09:00:00Z',
-    lastUsed: '2024-01-15T10:30:00Z',
-    totalCalls: 15420,
-    errorRate: 0.02,
-    webhookUrl: 'https://webhook.abc.com/api/events',
-    webhookStatus: 'active'
-  },
-  {
-    id: 2,
-    name: 'ABC Development API',
-    key: 'abc_dev_sk_test_0987654321fedcba',
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    status: 'active',
-    permissions: ['read', 'write'],
-    rateLimit: 500,
-    rateLimitPeriod: 'minute',
-    createdAt: '2023-08-20T14:30:00Z',
-    lastUsed: '2024-01-14T16:45:00Z',
-    totalCalls: 8234,
-    errorRate: 0.05,
-    webhookUrl: null,
-    webhookStatus: null
-  },
-  {
-    id: 3,
-    name: 'XYZ Production API',
-    key: 'xyz_prod_sk_live_abcdef1234567890',
-    tenantId: 2,
-    tenantName: 'XYZ Ltd.',
-    status: 'active',
-    permissions: ['read', 'write', 'delete', 'admin'],
-    rateLimit: 2000,
-    rateLimitPeriod: 'minute',
-    createdAt: '2023-05-10T11:20:00Z',
-    lastUsed: '2024-01-15T08:15:00Z',
-    totalCalls: 28756,
-    errorRate: 0.01,
-    webhookUrl: 'https://api.xyz.com/webhooks/events',
-    webhookStatus: 'active'
-  },
-  {
-    id: 4,
-    name: 'Tech Solutions API',
-    key: 'tech_sol_sk_live_1234567890abcdef',
-    tenantId: 3,
-    tenantName: 'Tech Solutions',
-    status: 'inactive',
-    permissions: ['read'],
-    rateLimit: 100,
-    rateLimitPeriod: 'minute',
-    createdAt: '2023-09-05T15:45:00Z',
-    lastUsed: '2024-01-10T12:00:00Z',
-    totalCalls: 1234,
-    errorRate: 0.15,
-    webhookUrl: null,
-    webhookStatus: null
-  },
-  {
-    id: 5,
-    name: 'Global Corp API',
-    key: 'global_corp_sk_live_abcdef1234567890',
-    tenantId: 4,
-    tenantName: 'Global Corp',
-    status: 'active',
-    permissions: ['read', 'write'],
-    rateLimit: 1500,
-    rateLimitPeriod: 'minute',
-    createdAt: '2023-04-12T10:15:00Z',
-    lastUsed: '2024-01-15T09:30:00Z',
-    totalCalls: 18923,
-    errorRate: 0.03,
-    webhookUrl: 'https://webhooks.globalcorp.com/api/v1/events',
-    webhookStatus: 'error'
-  }
-];
+// Types
+interface Tenant {
+  id: number;
+  companyName: string;
+  domain: string;
+}
 
-const mockApiUsage = [
-  {
-    id: 1,
-    apiKeyId: 1,
-    date: '2024-01-15',
-    calls: 1250,
-    errors: 25,
-    avgResponseTime: 245,
-    peakHour: '14:00'
-  },
-  {
-    id: 2,
-    apiKeyId: 1,
-    date: '2024-01-14',
-    calls: 1180,
-    errors: 18,
-    avgResponseTime: 230,
-    peakHour: '15:30'
-  },
-  {
-    id: 3,
-    apiKeyId: 2,
-    date: '2024-01-15',
-    calls: 650,
-    errors: 32,
-    avgResponseTime: 280,
-    peakHour: '10:00'
-  },
-  {
-    id: 4,
-    apiKeyId: 3,
-    date: '2024-01-15',
-    calls: 2100,
-    errors: 21,
-    avgResponseTime: 195,
-    peakHour: '16:00'
-  }
-];
+interface ApiKey {
+  id: number;
+  name: string;
+  key: string;
+  tenantId: number;
+  tenantName: string;
+  status: string;
+  permissions: string;
+  rateLimit: number;
+  rateLimitPeriod: string;
+  createdAt: string;
+  lastUsed?: string;
+  totalCalls: number;
+  errorRate: number;
+  webhookUrl?: string;
+  webhookStatus?: string;
+}
 
-const mockWebhooks = [
-  {
-    id: 1,
-    apiKeyId: 1,
-    name: 'ABC Events Webhook',
-    url: 'https://webhook.abc.com/api/events',
-    events: ['user.created', 'data.updated', 'payment.completed'],
-    status: 'active',
-    lastDelivery: '2024-01-15T10:30:00Z',
-    successRate: 0.98,
-    retryCount: 3
-  },
-  {
-    id: 2,
-    apiKeyId: 3,
-    name: 'XYZ Integration Webhook',
-    url: 'https://api.xyz.com/webhooks/events',
-    events: ['all'],
-    status: 'active',
-    lastDelivery: '2024-01-15T08:15:00Z',
-    successRate: 0.99,
-    retryCount: 5
-  },
-  {
-    id: 3,
-    apiKeyId: 5,
-    name: 'Global Corp Events',
-    url: 'https://webhooks.globalcorp.com/api/v1/events',
-    events: ['user.created', 'data.updated'],
-    status: 'error',
-    lastDelivery: '2024-01-14T18:20:00Z',
-    successRate: 0.85,
-    retryCount: 3
-  }
-];
+interface CreateApiKeyDto {
+  name: string;
+  tenantId: number;
+  permissions: string;
+  rateLimit: number;
+  rateLimitPeriod: string;
+  webhookUrl?: string;
+}
 
+interface UpdateApiKeyDto {
+  name: string;
+  permissions: string;
+  rateLimit: number;
+  rateLimitPeriod: string;
+  webhookUrl?: string;
+}
+
+interface ApiUsageDto {
+  id: number;
+  date: string;
+  calls: number;
+  errors: number;
+  avgResponseTime: number;
+  peakHour: string;
+}
+
+interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+// Permission options
 const permissionOptions = [
-  { value: 'read', label: 'Okuma', icon: <EyeOutlined />, color: '#1890ff' },
-  { value: 'write', label: 'Yazma', icon: <EditOutlined />, color: '#52c41a' },
-  { value: 'delete', label: 'Silme', icon: <DeleteOutlined />, color: '#ff4d4f' },
-  { value: 'admin', label: 'Admin', icon: <SettingOutlined />, color: '#722ed1' }
+  { value: 'read', label: 'Okuma', icon: <EyeOutlined /> },
+  { value: 'write', label: 'Yazma', icon: <EditOutlined /> },
+  { value: 'delete', label: 'Silme', icon: <DeleteOutlined /> },
+  { value: 'admin', label: 'Yönetici', icon: <SettingOutlined /> }
 ];
 
-  const rateLimitPeriods = [
-    { value: 'second', label: 'Saniye' },
-    { value: 'minute', label: 'Dakika' },
-    { value: 'hour', label: 'Saat' },
-    { value: 'day', label: 'Gün' }
-  ];
+// Rate limit periods
+const rateLimitPeriods = [
+  { value: 'minute', label: 'Dakika' },
+  { value: 'hour', label: 'Saat' },
+  { value: 'day', label: 'Gün' }
+];
 
 export default function ApiManagementPage() {
   const { message } = App.useApp();
 
+  // States
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [apiUsage, setApiUsage] = useState<ApiUsageDto[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
+  const [selectedApiKey, setSelectedApiKey] = useState<ApiKey | null>(null);
+  const [showApiKey, setShowApiKey] = useState<number | null>(null);
+  const [form] = Form.useForm();
+
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0
+  });
+
+  // Filters state
+  const [filters, setFilters] = useState({
+    tenantId: undefined as number | undefined,
+    status: undefined as string | undefined,
+    hasWebhook: undefined as boolean | undefined
+  });
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchApiKeys();
+    fetchTenants();
+  }, [pagination.current, pagination.pageSize, filters]);
+
+  const fetchApiKeys = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        page: pagination.current.toString(),
+        pageSize: pagination.pageSize.toString()
+      });
+
+      if (filters.tenantId) params.append('tenantId', filters.tenantId.toString());
+      if (filters.status) params.append('status', filters.status);
+      if (filters.hasWebhook !== undefined) params.append('hasWebhook', filters.hasWebhook.toString());
+
+      const response = await apiRequest(`${API_BASE_URL}/admin/api-keys?${params}`);
+      if (!response.ok) throw new Error('API anahtarları alınamadı');
+      
+      const data: PagedResult<ApiKey> = await response.json();
+      
+      setApiKeys(data.items);
+      setPagination(prev => ({
+        ...prev,
+        total: data.totalCount
+      }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bilinmeyen hata oluştu');
+      console.error('API keys fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTenants = async () => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/tenants?pageSize=100`);
+      if (!response.ok) throw new Error('Tenant listesi alınamadı');
+      
+      const data: PagedResult<Tenant> = await response.json();
+      setTenants(data.items);
+    } catch (err) {
+      console.error('Tenants fetch error:', err);
+    }
+  };
+
+  const fetchApiUsage = async (apiKeyId: number) => {
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/admin/api-keys/${apiKeyId}/usage-stats`);
+      if (!response.ok) throw new Error('API kullanım istatistikleri alınamadı');
+      
+      const data: ApiUsageDto[] = await response.json();
+      setApiUsage(data);
+    } catch (err) {
+      message.error('API kullanım istatistikleri alınamadı');
+      console.error('API usage fetch error:', err);
+    }
+  };
+
   // Memoized options for better performance
   const tenantOptions = useMemo(() => 
-    mockTenants.map(tenant => (
+    tenants.map(tenant => (
       <Option key={tenant.id} value={tenant.id}>
-        {tenant.name}
+        {tenant.companyName}
       </Option>
-    )), []
+    )), [tenants]
   );
 
   const statusOptions = useMemo(() => [
@@ -271,11 +253,11 @@ export default function ApiManagementPage() {
 
   // Memoized options for modal dropdowns
   const modalTenantOptions = useMemo(() => 
-    mockTenants.map(tenant => (
+    tenants.map(tenant => (
       <Option key={tenant.id} value={tenant.id}>
-        {tenant.name}
+        {tenant.companyName}
       </Option>
-    )), []
+    )), [tenants]
   );
 
   const permissionSelectOptions = useMemo(() => 
@@ -296,22 +278,6 @@ export default function ApiManagementPage() {
       </Option>
     )), []
   );
-
-  const [apiKeys, setApiKeys] = useState(mockApiKeys);
-  const [apiUsage, setApiUsage] = useState(mockApiUsage);
-  const [webhooks, setWebhooks] = useState(mockWebhooks);
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isWebhookModalVisible, setIsWebhookModalVisible] = useState(false);
-  const [editingApiKey, setEditingApiKey] = useState<any>(null);
-  const [selectedApiKey, setSelectedApiKey] = useState<any>(null);
-  const [showApiKey, setShowApiKey] = useState<number | null>(null);
-  const [form] = Form.useForm();
-  const [webhookForm] = Form.useForm();
-  const [filters, setFilters] = useState({
-    tenantId: undefined,
-    status: undefined,
-    hasWebhook: undefined
-  });
 
   // Statistics
   const stats = useMemo(() => [
@@ -338,7 +304,9 @@ export default function ApiManagementPage() {
     },
     {
       title: 'Ortalama Hata Oranı',
-      value: `${(apiKeys.reduce((sum, key) => sum + key.errorRate, 0) / apiKeys.length * 100).toFixed(1)}%`,
+      value: apiKeys.length > 0 
+        ? `${(apiKeys.reduce((sum, key) => sum + key.errorRate, 0) / apiKeys.length * 100).toFixed(1)}%`
+        : '0%',
       icon: <ExclamationCircleOutlined />,
       color: '#ff4d4f',
       gradient: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)'
@@ -351,7 +319,7 @@ export default function ApiManagementPage() {
       if (filters.tenantId && key.tenantId !== filters.tenantId) return false;
       if (filters.status && key.status !== filters.status) return false;
       if (filters.hasWebhook !== undefined) {
-        const hasWebhook = key.webhookUrl !== null;
+        const hasWebhook = key.webhookUrl !== null && key.webhookUrl !== undefined;
         if (filters.hasWebhook !== hasWebhook) return false;
       }
       return true;
@@ -405,378 +373,146 @@ export default function ApiManagementPage() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    message.success('API anahtarı kopyalandı!');
+    message.success('API anahtarı panoya kopyalandı');
   };
-
-  const columns: ColumnsType<any> = [
-    {
-      title: 'API Anahtarı',
-      key: 'apiKey',
-      width: 250,
-      render: (_, record) => (
-        <div>
-          <div style={{ fontWeight: 500, marginBottom: '4px' }}>{record.name}</div>
-          <div style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace' }}>
-            {showApiKey === record.id ? record.key : `${record.key.substring(0, 20)}...`}
-            <Button
-              type="text"
-              size="small"
-              icon={showApiKey === record.id ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-              onClick={() => setShowApiKey(showApiKey === record.id ? null : record.id)}
-              style={{ marginLeft: '8px' }}
-            />
-            <Button
-              type="text"
-              size="small"
-              icon={<CopyOutlined />}
-              onClick={() => copyToClipboard(record.key)}
-              style={{ marginLeft: '4px' }}
-            />
-          </div>
-        </div>
-      )
-    },
-    {
-      title: 'Tenant',
-      dataIndex: 'tenantName',
-      key: 'tenantName',
-      width: 150,
-      render: (tenantName) => (
-        <Tag color="blue" icon={<GlobalOutlined />}>
-          {tenantName}
-        </Tag>
-      )
-    },
-    {
-      title: 'Durum',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status) => (
-        <Badge
-          status={getStatusColor(status) as any}
-          text={getStatusText(status)}
-        />
-      )
-    },
-    {
-      title: 'İzinler',
-      key: 'permissions',
-      width: 200,
-      render: (_, record) => (
-        <Space wrap>
-          {record.permissions.map((perm: string) => {
-            const permOption = permissionOptions.find(p => p.value === perm);
-            return (
-              <Tag key={perm} color={permOption?.color} icon={permOption?.icon}>
-                {permOption?.label}
-              </Tag>
-            );
-          })}
-        </Space>
-      )
-    },
-    {
-      title: 'Rate Limit',
-      key: 'rateLimit',
-      width: 120,
-      render: (_, record) => (
-        <div>
-          <div style={{ fontWeight: 500 }}>{record.rateLimit}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            / {record.rateLimitPeriod}
-          </div>
-        </div>
-      )
-    },
-    {
-      title: 'Kullanım (30 gün)',
-      key: 'usage',
-      width: 150,
-      render: (_, record) => (
-        <div>
-          <div style={{ fontWeight: 500 }}>{record.totalCalls.toLocaleString()}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            Hata: {(record.errorRate * 100).toFixed(1)}%
-          </div>
-        </div>
-      )
-    },
-    {
-      title: 'Webhook',
-      key: 'webhook',
-      width: 120,
-      render: (_, record) => (
-        <Badge
-          status={getWebhookStatusColor(record.webhookStatus) as any}
-          text={getWebhookStatusText(record.webhookStatus)}
-        />
-      )
-    },
-    {
-      title: 'Son Kullanım',
-      key: 'lastUsed',
-      width: 150,
-      render: (_, record) => (
-        <div>
-          <div>{new Date(record.lastUsed).toLocaleDateString('tr-TR')}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            {new Date(record.lastUsed).toLocaleTimeString('tr-TR')}
-          </div>
-        </div>
-      )
-    },
-    {
-      title: 'İşlemler',
-      key: 'actions',
-      width: 200,
-      render: (_, record) => (
-        <Space>
-          <Tooltip title="Kullanım İstatistikleri">
-            <Button
-              type="text"
-              icon={<BarChartOutlined />}
-              onClick={() => handleViewStats(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Webhook Yönetimi">
-            <Button
-              type="text"
-              icon={<LinkOutlined />}
-              onClick={() => handleManageWebhook(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Düzenle">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Yeniden Oluştur">
-            <Button
-              type="text"
-              icon={<ReloadOutlined />}
-              onClick={() => handleRegenerate(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="API anahtarını silmek istediğinizden emin misiniz?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Evet"
-            cancelText="Hayır"
-          >
-            <Tooltip title="Sil">
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      )
-    }
-  ];
-
-  const webhookColumns: ColumnsType<any> = [
-    {
-      title: 'Webhook Adı',
-      dataIndex: 'name',
-      key: 'name',
-      width: 200
-    },
-    {
-      title: 'URL',
-      dataIndex: 'url',
-      key: 'url',
-      width: 300,
-      render: (url) => (
-        <Text code style={{ fontSize: '12px' }}>
-          {url}
-        </Text>
-      )
-    },
-    {
-      title: 'Olaylar',
-      key: 'events',
-      width: 200,
-      render: (_, record) => (
-        <Space wrap>
-          {record.events.map((event: string) => (
-            <Tag key={event} color="blue">
-              {event}
-            </Tag>
-          ))}
-        </Space>
-      )
-    },
-    {
-      title: 'Durum',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status) => (
-        <Badge
-          status={getWebhookStatusColor(status) as any}
-          text={getWebhookStatusText(status)}
-        />
-      )
-    },
-    {
-      title: 'Başarı Oranı',
-      key: 'successRate',
-      width: 120,
-      render: (_, record) => (
-        <Progress
-          percent={record.successRate * 100}
-          size="small"
-          status={record.successRate > 0.95 ? 'success' : record.successRate > 0.8 ? 'normal' : 'exception'}
-        />
-      )
-    },
-    {
-      title: 'Son Teslimat',
-      key: 'lastDelivery',
-      width: 150,
-      render: (_, record) => (
-        <div>
-          <div>{new Date(record.lastDelivery).toLocaleDateString('tr-TR')}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            {new Date(record.lastDelivery).toLocaleTimeString('tr-TR')}
-          </div>
-        </div>
-      )
-    },
-    {
-      title: 'İşlemler',
-      key: 'actions',
-      width: 120,
-      render: (_, record) => (
-        <Space>
-          <Tooltip title="Düzenle">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleEditWebhook(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Webhook'u silmek istediğinizden emin misiniz?"
-            onConfirm={() => handleDeleteWebhook(record.id)}
-            okText="Evet"
-            cancelText="Hayır"
-          >
-            <Tooltip title="Sil">
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      )
-    }
-  ];
 
   const handleAdd = () => {
-    setEditingApiKey(null);
+    setModalType('add');
+    setSelectedApiKey(null);
     form.resetFields();
-    form.setFieldsValue({
-      status: 'active',
-      permissions: ['read'],
-      rateLimit: 1000,
-      rateLimitPeriod: 'minute'
-    });
-    setIsModalVisible(true);
+    setModalVisible(true);
   };
 
-  const handleEdit = (apiKey: any) => {
-    setEditingApiKey(apiKey);
+  const handleEdit = (apiKey: ApiKey) => {
+    setModalType('edit');
+    setSelectedApiKey(apiKey);
     form.setFieldsValue({
       name: apiKey.name,
       tenantId: apiKey.tenantId,
-      status: apiKey.status,
       permissions: apiKey.permissions,
       rateLimit: apiKey.rateLimit,
-      rateLimitPeriod: apiKey.rateLimitPeriod
+      rateLimitPeriod: apiKey.rateLimitPeriod,
+      webhookUrl: apiKey.webhookUrl
     });
-    setIsModalVisible(true);
+    setModalVisible(true);
   };
 
-  const handleViewStats = (apiKey: any) => {
-    setSelectedApiKey(apiKey);
-    // Burada istatistik modalı açılabilir
-    message.info(`${apiKey.name} için detaylı istatistikler yakında eklenecek`);
+  const handleViewStats = async (apiKey: ApiKey) => {
+    await fetchApiUsage(apiKey.id);
+    // Show stats in a modal or drawer
+    message.info(`${apiKey.name} için istatistikler yüklendi`);
   };
 
-  const handleManageWebhook = (apiKey: any) => {
-    setSelectedApiKey(apiKey);
-    setIsWebhookModalVisible(true);
-  };
-
-  const handleEditWebhook = (webhook: any) => {
-    webhookForm.setFieldsValue({
-      name: webhook.name,
-      url: webhook.url,
-      events: webhook.events,
-      retryCount: webhook.retryCount
+  const handleRegenerate = async (apiKey: ApiKey) => {
+    try {
+          const response = await apiRequest(`${API_BASE_URL}/admin/api-keys/${apiKey.id}/regenerate`, {
+      method: 'POST'
     });
-    // Webhook düzenleme modalı açılabilir
+
+      if (!response.ok) throw new Error('API anahtarı yenilenemedi');
+
+      const updatedApiKey: ApiKey = await response.json();
+      
+      setApiKeys(prev => prev.map(key => 
+        key.id === apiKey.id ? updatedApiKey : key
+      ));
+
+      message.success('API anahtarı başarıyla yenilendi');
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'API anahtarı yenilenirken hata oluştu');
+      console.error('Regenerate API key error:', err);
+    }
   };
 
-  const handleRegenerate = (apiKey: any) => {
-    const newKey = generateApiKey();
-    const updatedApiKeys = apiKeys.map(k =>
-      k.id === apiKey.id ? { ...k, key: newKey } : k
-    );
-    setApiKeys(updatedApiKeys);
-    message.success('API anahtarı yeniden oluşturuldu');
+  const handleToggleStatus = async (apiKey: ApiKey) => {
+    try {
+          const response = await apiRequest(`${API_BASE_URL}/admin/api-keys/${apiKey.id}/toggle-status`, {
+      method: 'POST'
+    });
+
+      if (!response.ok) throw new Error('API anahtarı durumu değiştirilemedi');
+
+      // Refresh the list
+      fetchApiKeys();
+      message.success('API anahtarı durumu başarıyla değiştirildi');
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'API anahtarı durumu değiştirilirken hata oluştu');
+      console.error('Toggle API key status error:', err);
+    }
   };
 
-  const handleDelete = (apiKeyId: number) => {
-    setApiKeys(apiKeys.filter(k => k.id !== apiKeyId));
-    message.success('API anahtarı silindi');
+  const handleDelete = async (apiKeyId: number) => {
+    try {
+          const response = await apiRequest(`${API_BASE_URL}/admin/api-keys/${apiKeyId}`, {
+      method: 'DELETE'
+    });
+
+      if (!response.ok) throw new Error('API anahtarı silinemedi');
+
+      message.success('API anahtarı başarıyla silindi');
+      fetchApiKeys(); // Refresh list
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'API anahtarı silinirken hata oluştu');
+      console.error('Delete API key error:', err);
+    }
   };
 
-  const handleDeleteWebhook = (webhookId: number) => {
-    setWebhooks(webhooks.filter(w => w.id !== webhookId));
-    message.success('Webhook silindi');
-  };
-
-  const handleModalOk = () => {
-    form.validateFields().then(values => {
-      if (editingApiKey) {
-        // Update existing API key
-        const updatedApiKeys = apiKeys.map(k =>
-          k.id === editingApiKey.id ? { ...k, ...values } : k
-        );
-        setApiKeys(updatedApiKeys);
-        message.success('API anahtarı güncellendi');
-      } else {
-        // Add new API key
-        const newApiKey = {
-          id: Math.max(...apiKeys.map(k => k.id)) + 1,
+  const handleModalOk = async () => {
+    try {
+      const values = await form.validateFields();
+      
+      if (modalType === 'add') {
+        const createDto: CreateApiKeyDto = {
           ...values,
-          key: generateApiKey(),
-          tenantName: mockTenants.find(t => t.id === values.tenantId)?.name,
-          createdAt: new Date().toISOString(),
-          lastUsed: new Date().toISOString(),
-          totalCalls: 0,
-          errorRate: 0,
-          webhookUrl: null,
-          webhookStatus: null
+          permissions: Array.isArray(values.permissions) ? values.permissions.join(',') : values.permissions
         };
-        setApiKeys([...apiKeys, newApiKey]);
-        message.success('API anahtarı oluşturuldu');
-      }
-      setIsModalVisible(false);
+
+            const response = await apiRequest(`${API_BASE_URL}/admin/api-keys`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(createDto)
     });
+
+        if (!response.ok) throw new Error('API anahtarı oluşturulamadı');
+
+        message.success('API anahtarı başarıyla oluşturuldu');
+        setModalVisible(false);
+        fetchApiKeys(); // Refresh list
+      } else if (modalType === 'edit' && selectedApiKey) {
+        const updateDto: UpdateApiKeyDto = {
+          ...values,
+          permissions: Array.isArray(values.permissions) ? values.permissions.join(',') : values.permissions
+        };
+
+            const response = await apiRequest(`${API_BASE_URL}/admin/api-keys/${selectedApiKey.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(updateDto)
+    });
+
+        if (!response.ok) throw new Error('API anahtarı güncellenemedi');
+
+        message.success('API anahtarı başarıyla güncellendi');
+        setModalVisible(false);
+        fetchApiKeys(); // Refresh list
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('validation')) {
+        // Form validation error - don't show message
+        return;
+      }
+      message.error(err instanceof Error ? err.message : 'İşlem sırasında hata oluştu');
+      console.error('Modal operation error:', err);
+    }
   };
 
   const handleFilterChange = useCallback((key: string, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+    setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
 
   const clearFilters = useCallback(() => {
@@ -785,34 +521,236 @@ export default function ApiManagementPage() {
       status: undefined,
       hasWebhook: undefined
     });
+    setPagination(prev => ({ ...prev, current: 1 }));
   }, []);
+
+  // Table columns
+  const columns: ColumnsType<ApiKey> = [
+    {
+      title: 'API Anahtarı',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{text}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>
+            {record.key.substring(0, 8)}...{record.key.substring(record.key.length - 8)}
+          </div>
+        </div>
+      )
+    },
+    {
+      title: 'Tenant',
+      dataIndex: 'tenantName',
+      key: 'tenantName',
+      render: (text) => <Tag color="blue">{text}</Tag>
+    },
+    {
+      title: 'Durum',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => (
+        <Badge 
+          status={getStatusColor(status) as any} 
+          text={getStatusText(status)} 
+        />
+      )
+    },
+    {
+      title: 'İzinler',
+      dataIndex: 'permissions',
+      key: 'permissions',
+      render: (permissions) => (
+        <Space>
+          {permissions.split(',').map((perm: string, index: number) => (
+            <Tag key={index} color="green" style={{ marginBottom: '2px' }}>
+              {perm.trim()}
+            </Tag>
+          ))}
+        </Space>
+      )
+    },
+    {
+      title: 'Rate Limit',
+      key: 'rateLimit',
+      render: (_, record) => (
+        <div>
+          <div>{record.rateLimit} / {record.rateLimitPeriod}</div>
+        </div>
+      )
+    },
+    {
+      title: 'Kullanım',
+      key: 'usage',
+      render: (_, record) => (
+        <div>
+          <div style={{ fontSize: '12px' }}>
+            {record.totalCalls.toLocaleString()} çağrı
+          </div>
+          <div style={{ fontSize: '12px', color: '#ff4d4f' }}>
+            %{(record.errorRate * 100).toFixed(1)} hata
+          </div>
+        </div>
+      )
+    },
+    {
+      title: 'Webhook',
+      key: 'webhook',
+      render: (_, record) => (
+        <div>
+          {record.webhookUrl ? (
+            <Badge 
+              status={getWebhookStatusColor(record.webhookStatus || '') as any} 
+              text={getWebhookStatusText(record.webhookStatus || '')} 
+            />
+          ) : (
+            <Tag color="default">Yok</Tag>
+          )}
+        </div>
+      )
+    },
+    {
+      title: 'Son Kullanım',
+      dataIndex: 'lastUsed',
+      key: 'lastUsed',
+      render: (lastUsed) => (
+        <div>
+          {lastUsed ? (
+            <div style={{ fontSize: '12px' }}>
+              {new Date(lastUsed).toLocaleDateString('tr-TR')}
+            </div>
+          ) : (
+            <Text type="secondary">Hiç kullanılmadı</Text>
+          )}
+        </div>
+      )
+    },
+    {
+      title: 'İşlemler',
+      key: 'actions',
+      render: (_, record) => (
+        <Space size="small">
+          <Tooltip title="İstatistikleri Görüntüle">
+            <Button 
+              type="text" 
+              icon={<BarChartOutlined />} 
+              size="small"
+              onClick={() => handleViewStats(record)}
+            />
+          </Tooltip>
+          <Tooltip title="API Anahtarını Göster/Gizle">
+            <Button 
+              type="text" 
+              icon={showApiKey === record.id ? <EyeInvisibleOutlined /> : <EyeOutlined />} 
+              size="small"
+              onClick={() => setShowApiKey(showApiKey === record.id ? null : record.id)}
+            />
+          </Tooltip>
+          <Tooltip title="Kopyala">
+            <Button 
+              type="text" 
+              icon={<CopyOutlined />} 
+              size="small"
+              onClick={() => copyToClipboard(record.key)}
+            />
+          </Tooltip>
+          <Tooltip title="Yenile">
+            <Popconfirm
+              title="API anahtarını yenilemek istediğinizden emin misiniz?"
+              onConfirm={() => handleRegenerate(record)}
+              okText="Evet"
+              cancelText="Hayır"
+            >
+              <Button 
+                type="text" 
+                icon={<ReloadOutlined />} 
+                size="small"
+              />
+            </Popconfirm>
+          </Tooltip>
+          <Tooltip title="Durumu Değiştir">
+            <Button 
+              type="text" 
+              icon={record.status === 'active' ? <CloseCircleOutlined /> : <CheckCircleOutlined />} 
+              size="small"
+              onClick={() => handleToggleStatus(record)}
+            />
+          </Tooltip>
+          <Tooltip title="Düzenle">
+            <Button 
+              type="text" 
+              icon={<EditOutlined />} 
+              size="small"
+              onClick={() => handleEdit(record)}
+            />
+          </Tooltip>
+          <Tooltip title="Sil">
+            <Popconfirm
+              title="Bu API anahtarını silmek istediğinizden emin misiniz?"
+              onConfirm={() => handleDelete(record.id)}
+              okText="Evet"
+              cancelText="Hayır"
+            >
+              <Button 
+                type="text" 
+                icon={<DeleteOutlined />} 
+                size="small"
+                danger
+              />
+            </Popconfirm>
+          </Tooltip>
+        </Space>
+      )
+    }
+  ];
+
+  // Loading state
+  if (loading && apiKeys.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Spin size="large" />
+        <div style={{ marginTop: '20px' }}>API anahtarları yükleniyor...</div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && apiKeys.length === 0) {
+    return (
+      <Alert
+        message="Hata"
+        description={error}
+        type="error"
+        showIcon
+        action={
+          <Button size="small" onClick={fetchApiKeys}>
+            Tekrar Dene
+          </Button>
+        }
+      />
+    );
+  }
 
   return (
     <div style={{ padding: '24px' }}>
-      <Title level={2}>
-        <ApiOutlined /> API Yönetimi
-      </Title>
+      <div style={{ marginBottom: '24px' }}>
+        <Title level={2}>API Yönetimi</Title>
+        <Text type="secondary">
+          Sistem genelinde API anahtarlarını yönetin, kullanım istatistiklerini takip edin ve webhook entegrasyonlarını yapılandırın.
+        </Text>
+      </div>
 
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
         {stats.map((stat, index) => (
           <Col xs={24} sm={12} lg={6} key={index}>
-            <Card
-              style={{
-                background: stat.gradient,
-                color: 'white',
-                border: 'none'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{stat.value}</div>
-                  <div style={{ fontSize: '14px', opacity: 0.9 }}>{stat.title}</div>
-                </div>
-                <div style={{ fontSize: '32px', opacity: 0.8 }}>
-                  {stat.icon}
-                </div>
-              </div>
+            <Card>
+              <Statistic
+                title={stat.title}
+                value={stat.value}
+                prefix={stat.icon}
+                valueStyle={{ color: stat.color }}
+              />
             </Card>
           </Col>
         ))}
@@ -821,7 +759,7 @@ export default function ApiManagementPage() {
       {/* Filters */}
       <Card style={{ marginBottom: '24px' }}>
         <Row gutter={[16, 16]} align="middle">
-          <Col xs={24} sm={6}>
+          <Col xs={24} sm={8} lg={6}>
             <Select
               placeholder="Tenant Seçin"
               style={{ width: '100%' }}
@@ -833,9 +771,9 @@ export default function ApiManagementPage() {
               {tenantOptions}
             </Select>
           </Col>
-          <Col xs={24} sm={6}>
+          <Col xs={24} sm={8} lg={6}>
             <Select
-              placeholder="Durum"
+              placeholder="Durum Seçin"
               style={{ width: '100%' }}
               value={filters.status}
               onChange={(value) => handleFilterChange('status', value)}
@@ -845,7 +783,7 @@ export default function ApiManagementPage() {
               {statusOptions}
             </Select>
           </Col>
-          <Col xs={24} sm={6}>
+          <Col xs={24} sm={8} lg={6}>
             <Select
               placeholder="Webhook Durumu"
               style={{ width: '100%' }}
@@ -857,20 +795,13 @@ export default function ApiManagementPage() {
               {webhookOptions}
             </Select>
           </Col>
-          <Col xs={24} sm={6}>
+          <Col xs={24} sm={8} lg={6}>
             <Space>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAdd}
-              >
-                Yeni API Anahtarı
-              </Button>
-              <Button
-                icon={<SettingOutlined />}
-                onClick={clearFilters}
-              >
+              <Button onClick={clearFilters}>
                 Filtreleri Temizle
+              </Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+                Yeni API Anahtarı
               </Button>
             </Space>
           </Col>
@@ -884,190 +815,149 @@ export default function ApiManagementPage() {
           dataSource={filteredApiKeys}
           rowKey="id"
           pagination={{
-            pageSize: 10,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} / ${total} API anahtarı`
+            showTotal: (total, range) => 
+              `${range[0]}-${range[1]} / ${total} API anahtarı`,
+            onChange: (page, pageSize) => {
+              setPagination(prev => ({
+                ...prev,
+                current: page,
+                pageSize: pageSize || 10
+              }));
+            }
           }}
-          scroll={{ x: 1400 }}
+          loading={loading}
         />
       </Card>
 
-      {/* Add/Edit API Key Modal */}
+      {/* API Key Modal */}
       <Modal
-        title={editingApiKey ? 'API Anahtarı Düzenle' : 'Yeni API Anahtarı Oluştur'}
-        open={isModalVisible}
+        title={modalType === 'add' ? 'Yeni API Anahtarı' : 'API Anahtarını Düzenle'}
+        open={modalVisible}
         onOk={handleModalOk}
-        onCancel={() => setIsModalVisible(false)}
-        width={700}
-        okText={editingApiKey ? 'Güncelle' : 'Oluştur'}
+        onCancel={() => setModalVisible(false)}
+        width={600}
+        okText={modalType === 'add' ? 'Oluştur' : 'Güncelle'}
         cancelText="İptal"
       >
         <Form
           form={form}
           layout="vertical"
+          initialValues={{
+            rateLimit: 1000,
+            rateLimitPeriod: 'minute',
+            permissions: ['read']
+          }}
         >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="name"
-                label="API Anahtarı Adı"
-                rules={[{ required: true, message: 'API anahtarı adı gerekli!' }]}
-              >
-                <Input prefix={<KeyOutlined />} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="tenantId"
-                label="Tenant"
-                rules={[{ required: true, message: 'Tenant seçin!' }]}
-              >
-                <Select placeholder="Tenant seçin" getPopupContainer={(triggerNode) => triggerNode.parentNode}>
-                  {modalTenantOptions}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item
+            name="name"
+            label="API Anahtarı Adı"
+            rules={[{ required: true, message: 'API anahtarı adı gerekli' }]}
+          >
+            <Input placeholder="Örn: Production API" />
+          </Form.Item>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="status"
-                label="Durum"
-              >
-                <Switch checkedChildren="Aktif" unCheckedChildren="Pasif" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="permissions"
-                label="İzinler"
-                rules={[{ required: true, message: 'En az bir izin seçin!' }]}
-              >
-                <Select mode="multiple" placeholder="İzinler seçin" getPopupContainer={(triggerNode) => triggerNode.parentNode}>
-                  {permissionSelectOptions}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item
+            name="tenantId"
+            label="Tenant"
+            rules={[{ required: true, message: 'Tenant seçimi gerekli' }]}
+          >
+            <Select
+              placeholder="Tenant seçin"
+              getPopupContainer={(triggerNode) => triggerNode.parentNode}
+            >
+              {modalTenantOptions}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="permissions"
+            label="İzinler"
+            rules={[{ required: true, message: 'En az bir izin seçimi gerekli' }]}
+          >
+            <Select
+              mode="multiple"
+              placeholder="İzinler seçin"
+              getPopupContainer={(triggerNode) => triggerNode.parentNode}
+            >
+              {permissionSelectOptions}
+            </Select>
+          </Form.Item>
 
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="rateLimit"
                 label="Rate Limit"
-                rules={[{ required: true, message: 'Rate limit gerekli!' }]}
+                rules={[{ required: true, message: 'Rate limit gerekli' }]}
               >
                 <InputNumber
                   min={1}
                   max={10000}
                   style={{ width: '100%' }}
-                  placeholder="İstek sayısı"
+                  placeholder="1000"
                 />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="rateLimitPeriod"
-                label="Rate Limit Periyodu"
-                rules={[{ required: true, message: 'Periyot seçin!' }]}
+                label="Periyot"
+                rules={[{ required: true, message: 'Periyot seçimi gerekli' }]}
               >
-                <Select placeholder="Periyot seçin" getPopupContainer={(triggerNode) => triggerNode.parentNode}>
+                <Select
+                  placeholder="Periyot seçin"
+                  getPopupContainer={(triggerNode) => triggerNode.parentNode}
+                >
                   {rateLimitPeriodOptions}
                 </Select>
               </Form.Item>
             </Col>
           </Row>
+
+          <Form.Item
+            name="webhookUrl"
+            label="Webhook URL (Opsiyonel)"
+          >
+            <Input placeholder="https://webhook.example.com/api/events" />
+          </Form.Item>
         </Form>
       </Modal>
 
-      {/* Webhook Management Modal */}
-      <Modal
-        title={`${selectedApiKey?.name} - Webhook Yönetimi`}
-        open={isWebhookModalVisible}
-        onCancel={() => setIsWebhookModalVisible(false)}
-        width={1000}
-        footer={null}
-      >
-        <Tabs defaultActiveKey="webhooks">
-          <TabPane tab="Webhook'lar" key="webhooks">
-            <div style={{ marginBottom: '16px' }}>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => message.info('Webhook ekleme özelliği yakında eklenecek')}
-              >
-                Yeni Webhook Ekle
-              </Button>
+      {/* API Key Display Modal */}
+      {showApiKey && (
+        <Modal
+          title="API Anahtarı"
+          open={!!showApiKey}
+          onCancel={() => setShowApiKey(null)}
+          footer={[
+            <Button key="copy" type="primary" onClick={() => {
+              const apiKey = apiKeys.find(k => k.id === showApiKey);
+              if (apiKey) copyToClipboard(apiKey.key);
+            }}>
+              Kopyala
+            </Button>,
+            <Button key="close" onClick={() => setShowApiKey(null)}>
+              Kapat
+            </Button>
+          ]}
+        >
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            <Text code style={{ fontSize: '16px', wordBreak: 'break-all' }}>
+              {apiKeys.find(k => k.id === showApiKey)?.key}
+            </Text>
+            <div style={{ marginTop: '16px' }}>
+              <Text type="secondary">
+                Bu anahtarı güvenli bir yerde saklayın ve kimseyle paylaşmayın.
+              </Text>
             </div>
-            <Table
-              columns={webhookColumns}
-              dataSource={webhooks.filter(w => w.apiKeyId === selectedApiKey?.id)}
-              rowKey="id"
-              pagination={false}
-              size="small"
-            />
-          </TabPane>
-          <TabPane tab="Webhook Ayarları" key="settings">
-            <Alert
-              message="Webhook Ayarları"
-              description="Webhook'lar için genel ayarlar burada yapılandırılabilir."
-              type="info"
-              showIcon
-              style={{ marginBottom: '16px' }}
-            />
-            <Collapse>
-              <Panel header="Genel Ayarlar" key="general">
-                <Form layout="vertical">
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Form.Item label="Maksimum Deneme Sayısı">
-                        <InputNumber min={1} max={10} defaultValue={3} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                      <Form.Item label="Timeout (saniye)">
-                        <InputNumber min={5} max={60} defaultValue={30} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Form.Item label="Retry Delay (saniye)">
-                        <InputNumber min={1} max={300} defaultValue={60} />
-                      </Form.Item>
-                    </Col>
-                    <Col span={12}>
-                      <Form.Item label="Batch Size">
-                        <InputNumber min={1} max={100} defaultValue={10} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </Form>
-              </Panel>
-              <Panel header="Güvenlik Ayarları" key="security">
-                <Form layout="vertical">
-                  <Form.Item label="Webhook Secret">
-                    <Input.Password placeholder="Webhook secret girin" />
-                  </Form.Item>
-                  <Form.Item label="IP Whitelist">
-                    <Select 
-                      mode="tags" 
-                      placeholder="IP adresleri ekleyin"
-                      getPopupContainer={(triggerNode) => triggerNode.parentNode}
-                    >
-                      <Option value="192.168.1.0/24">192.168.1.0/24</Option>
-                      <Option value="10.0.0.0/8">10.0.0.0/8</Option>
-                    </Select>
-                  </Form.Item>
-                </Form>
-              </Panel>
-            </Collapse>
-          </TabPane>
-        </Tabs>
-      </Modal>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 } 

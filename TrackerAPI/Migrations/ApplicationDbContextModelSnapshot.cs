@@ -22,7 +22,7 @@ namespace TrackerAPI.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.ConsumptionRecord", b =>
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Admin.ApiKey", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -30,52 +30,429 @@ namespace TrackerAPI.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<decimal>("Consumption")
-                        .HasColumnType("numeric");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal>("CurrentReading")
+                    b.Property<decimal>("ErrorRate")
                         .HasColumnType("numeric");
 
-                    b.Property<int>("ElectricityMeterId")
-                        .HasColumnType("integer");
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
-                    b.Property<string>("Notes")
-                        .HasColumnType("text");
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
-                    b.Property<decimal>("PreviousReading")
-                        .HasColumnType("numeric");
-
-                    b.Property<DateTime>("ReadingDate")
+                    b.Property<DateTime?>("LastUsed")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("Source")
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Permissions")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("RateLimit")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RateLimitPeriod")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("integer");
 
-                    b.Property<decimal>("TotalCost")
+                    b.Property<int>("TotalCalls")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("WebhookStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WebhookUrl")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("ApiKeys");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Admin.ApiUsage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ApiKeyId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("AvgResponseTime")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Calls")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Errors")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PeakHour")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApiKeyId", "Date");
+
+                    b.ToTable("ApiUsages");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Admin.Webhook", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ApiKeyId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Events")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LastDelivery")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("SuccessRate")
                         .HasColumnType("numeric");
 
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("numeric");
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApiKeyId");
+
+                    b.ToTable("Webhooks");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Billing.Invoice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedById")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<string>("CustomerAddress")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CustomerEmail")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CustomerName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CustomerTaxNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("InvoiceDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal>("NetAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ElectricityMeterId");
+                    b.HasIndex("CreatedById");
 
-                    b.HasIndex("TenantId", "ElectricityMeterId", "ReadingDate");
+                    b.HasIndex("InvoiceNumber")
+                        .IsUnique();
 
-                    b.ToTable("ConsumptionRecords");
+                    b.HasIndex("TenantId", "InvoiceDate");
+
+                    b.ToTable("Invoices");
                 });
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.Department", b =>
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Billing.InvoiceItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ConsumptionEndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ConsumptionStartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("InvoiceId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("NetAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(10,3)");
+
+                    b.Property<int?>("ResourceTypeId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal>("TotalPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("ResourceTypeId");
+
+                    b.ToTable("InvoiceItems");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Billing.PaymentRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<int>("InvoiceId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ProcessedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("RecordedById")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReferenceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TransactionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecordedById");
+
+                    b.HasIndex("InvoiceId", "PaymentDate");
+
+                    b.ToTable("PaymentRecords");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Billing.SubscriptionPlan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BadgeColor")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BadgeText")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Features")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPopular")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Limits")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("MonthlyFee")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SubscriptionPlans");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.Department", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -118,92 +495,9 @@ namespace TrackerAPI.Migrations
                         .IsUnique();
 
                     b.ToTable("Departments");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Şirket genel yönetim departmanı",
-                            IsActive = true,
-                            ManagerEmail = "ahmet@demosirketi.com",
-                            ManagerName = "Ahmet Yılmaz",
-                            Name = "Genel Yönetim",
-                            TenantId = 1
-                        });
                 });
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.ElectricityMeter", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("CurrentReading")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<int>("FacilityId")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("LastReadingDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("MeterNumber")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<decimal>("PreviousReading")
-                        .HasColumnType("numeric");
-
-                    b.Property<int>("TenantId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FacilityId");
-
-                    b.HasIndex("TenantId", "MeterNumber")
-                        .IsUnique();
-
-                    b.ToTable("ElectricityMeters");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            CurrentReading = 1500.50m,
-                            Description = "Ana ofis elektrik sayacı",
-                            FacilityId = 1,
-                            IsActive = true,
-                            LastReadingDate = new DateTime(2023, 12, 31, 0, 0, 0, 0, DateTimeKind.Utc),
-                            MeterNumber = "MTR001",
-                            PreviousReading = 1400.00m,
-                            TenantId = 1,
-                            Type = 0
-                        });
-                });
-
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.Facility", b =>
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.Facility", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -250,23 +544,410 @@ namespace TrackerAPI.Migrations
                         .IsUnique();
 
                     b.ToTable("Facilities");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Address = "Kadıköy, İstanbul",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DepartmentId = 1,
-                            FacilityCode = "OFIS001",
-                            IsActive = true,
-                            Name = "Ana Ofis",
-                            TenantId = 1,
-                            Type = 0
-                        });
                 });
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.LogEntry", b =>
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.Tenant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("AdminEmail")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CompanyName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ContactPerson")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CustomDomain")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FacilityCode")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LastLogin")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastPayment")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Logo")
+                        .HasColumnType("text");
+
+                    b.Property<int>("MaxFacilities")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxUsers")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("MonthlyFee")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("PaymentStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Subdomain")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("Subscription")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("SubscriptionEndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("SubscriptionStartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("SuspendedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SuspensionReason")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TaxNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("TaxOffice")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("TotalConsumption")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdminEmail")
+                        .IsUnique();
+
+                    b.HasIndex("Domain")
+                        .IsUnique();
+
+                    b.HasIndex("FacilityCode")
+                        .IsUnique();
+
+                    b.HasIndex("TaxNumber")
+                        .IsUnique();
+
+                    b.ToTable("Tenants");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DepartmentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsLocked")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastFailedLogin")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastLoginIp")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastLoginUserAgent")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("LockReason")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LockedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("LoginAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("PasswordChangedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("RequirePasswordChange")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Energy.ConsumptionRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Consumption")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("CurrentReading")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("ElectricityMeterId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("PreviousReading")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime>("ReadingDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("ResourceTypeId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("TotalCost")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ElectricityMeterId");
+
+                    b.HasIndex("ResourceTypeId");
+
+                    b.HasIndex("TenantId", "ElectricityMeterId", "ReadingDate");
+
+                    b.ToTable("ConsumptionRecords");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Energy.ElectricityMeter", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("CurrentReading")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("FacilityId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("LastReadingDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MeterNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal>("PreviousReading")
+                        .HasColumnType("numeric");
+
+                    b.Property<int?>("ResourceTypeId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FacilityId");
+
+                    b.HasIndex("ResourceTypeId");
+
+                    b.HasIndex("TenantId", "MeterNumber")
+                        .IsUnique();
+
+                    b.ToTable("ElectricityMeters");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Energy.ResourceType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<decimal>("DefaultPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int?>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("ResourceTypes");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Logging.LogEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -331,7 +1012,7 @@ namespace TrackerAPI.Migrations
                     b.ToTable("LogEntries");
                 });
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.Tenant", b =>
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Logging.SystemLog", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -339,189 +1020,203 @@ namespace TrackerAPI.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Address")
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Exception")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IpAddress")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<string>("CompanyName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                    b.Property<string>("StackTrace")
+                        .HasColumnType("text");
 
-                    b.Property<string>("ContactPerson")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CustomDomain")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("MaxFacilities")
+                    b.Property<int?>("TenantId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("MaxUsers")
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserAgent")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("UserId")
                         .HasColumnType("integer");
-
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Subdomain")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime?>("SubscriptionEndDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("SubscriptionStartDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("TaxNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("TaxOffice")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Email")
-                        .IsUnique();
+                    b.HasIndex("Timestamp");
 
-                    b.HasIndex("TaxNumber")
-                        .IsUnique();
+                    b.HasIndex("TenantId", "Timestamp");
 
-                    b.ToTable("Tenants");
+                    b.HasIndex("UserId", "Timestamp");
 
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Address = "İstanbul, Türkiye",
-                            CompanyName = "Demo Şirketi A.Ş.",
-                            ContactPerson = "Ahmet Yılmaz",
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "info@demosirketi.com",
-                            IsActive = true,
-                            MaxFacilities = 5,
-                            MaxUsers = 10,
-                            Phone = "+90 212 555 0123",
-                            Status = 0,
-                            SubscriptionStartDate = new DateTime(2025, 7, 29, 20, 21, 24, 361, DateTimeKind.Utc).AddTicks(1587),
-                            TaxNumber = "1234567890",
-                            TaxOffice = "Kadıköy"
-                        });
+                    b.ToTable("SystemLogs");
                 });
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.User", b =>
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Admin.ApiKey", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
+                        .WithMany("ApiKeys")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("DepartmentId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("LastLoginAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("Phone")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<int>("Role")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TenantId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DepartmentId");
-
-                    b.HasIndex("Email")
-                        .IsUnique();
-
-                    b.HasIndex("TenantId");
-
-                    b.ToTable("Users");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            DepartmentId = 1,
-                            Email = "admin@example.com",
-                            FirstName = "Admin",
-                            IsActive = true,
-                            LastName = "User",
-                            PasswordHash = "$2a$11$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4J/HS.iK2O",
-                            Role = 0,
-                            TenantId = 1
-                        });
+                    b.Navigation("Tenant");
                 });
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.ConsumptionRecord", b =>
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Admin.ApiUsage", b =>
                 {
-                    b.HasOne("ElectricityTrackerAPI.Models.ElectricityMeter", "ElectricityMeter")
+                    b.HasOne("ElectricityTrackerAPI.Models.Admin.ApiKey", "ApiKey")
+                        .WithMany("ApiUsages")
+                        .HasForeignKey("ApiKeyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApiKey");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Admin.Webhook", b =>
+                {
+                    b.HasOne("ElectricityTrackerAPI.Models.Admin.ApiKey", "ApiKey")
+                        .WithMany("Webhooks")
+                        .HasForeignKey("ApiKeyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApiKey");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Billing.Invoice", b =>
+                {
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Billing.InvoiceItem", b =>
+                {
+                    b.HasOne("ElectricityTrackerAPI.Models.Billing.Invoice", "Invoice")
+                        .WithMany("Items")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ElectricityTrackerAPI.Models.Energy.ResourceType", "ResourceType")
+                        .WithMany("InvoiceItems")
+                        .HasForeignKey("ResourceTypeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("ResourceType");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Billing.PaymentRecord", b =>
+                {
+                    b.HasOne("ElectricityTrackerAPI.Models.Billing.Invoice", "Invoice")
+                        .WithMany("Payments")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.User", "RecordedBy")
+                        .WithMany()
+                        .HasForeignKey("RecordedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("RecordedBy");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.Department", b =>
+                {
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
+                        .WithMany("Departments")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.Facility", b =>
+                {
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Department", "Department")
+                        .WithMany("Facilities")
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
+                        .WithMany("Facilities")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Department");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.User", b =>
+                {
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Department", "Department")
+                        .WithMany("Users")
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
+                        .WithMany("Users")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Department");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Energy.ConsumptionRecord", b =>
+                {
+                    b.HasOne("ElectricityTrackerAPI.Models.Energy.ElectricityMeter", "ElectricityMeter")
                         .WithMany("ConsumptionRecords")
                         .HasForeignKey("ElectricityMeterId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("ElectricityTrackerAPI.Models.Tenant", "Tenant")
+                    b.HasOne("ElectricityTrackerAPI.Models.Energy.ResourceType", null)
+                        .WithMany("ConsumptionRecords")
+                        .HasForeignKey("ResourceTypeId");
+
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -532,26 +1227,19 @@ namespace TrackerAPI.Migrations
                     b.Navigation("Tenant");
                 });
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.Department", b =>
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Energy.ElectricityMeter", b =>
                 {
-                    b.HasOne("ElectricityTrackerAPI.Models.Tenant", "Tenant")
-                        .WithMany("Departments")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.ElectricityMeter", b =>
-                {
-                    b.HasOne("ElectricityTrackerAPI.Models.Facility", "Facility")
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Facility", "Facility")
                         .WithMany("ElectricityMeters")
                         .HasForeignKey("FacilityId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("ElectricityTrackerAPI.Models.Tenant", "Tenant")
+                    b.HasOne("ElectricityTrackerAPI.Models.Energy.ResourceType", null)
+                        .WithMany("ElectricityMeters")
+                        .HasForeignKey("ResourceTypeId");
+
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
                         .WithMany("ElectricityMeters")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -562,68 +1250,91 @@ namespace TrackerAPI.Migrations
                     b.Navigation("Tenant");
                 });
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.Facility", b =>
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Energy.ResourceType", b =>
                 {
-                    b.HasOne("ElectricityTrackerAPI.Models.Department", "Department")
-                        .WithMany("Facilities")
-                        .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("ElectricityTrackerAPI.Models.Tenant", "Tenant")
-                        .WithMany("Facilities")
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
+                        .WithMany()
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Department");
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Tenant");
                 });
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.User", b =>
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Logging.SystemLog", b =>
                 {
-                    b.HasOne("ElectricityTrackerAPI.Models.Department", "Department")
-                        .WithMany("Users")
-                        .HasForeignKey("DepartmentId")
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
+                        .WithMany("SystemLogs")
+                        .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("ElectricityTrackerAPI.Models.Tenant", "Tenant")
-                        .WithMany("Users")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Department");
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.User", "User")
+                        .WithMany("SystemLogs")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Tenant");
+
+                    b.Navigation("User");
                 });
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.Department", b =>
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Admin.ApiKey", b =>
+                {
+                    b.Navigation("ApiUsages");
+
+                    b.Navigation("Webhooks");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Billing.Invoice", b =>
+                {
+                    b.Navigation("Items");
+
+                    b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.Department", b =>
                 {
                     b.Navigation("Facilities");
 
                     b.Navigation("Users");
                 });
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.ElectricityMeter", b =>
-                {
-                    b.Navigation("ConsumptionRecords");
-                });
-
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.Facility", b =>
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.Facility", b =>
                 {
                     b.Navigation("ElectricityMeters");
                 });
 
-            modelBuilder.Entity("ElectricityTrackerAPI.Models.Tenant", b =>
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.Tenant", b =>
                 {
+                    b.Navigation("ApiKeys");
+
                     b.Navigation("Departments");
 
                     b.Navigation("ElectricityMeters");
 
                     b.Navigation("Facilities");
 
+                    b.Navigation("SystemLogs");
+
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.User", b =>
+                {
+                    b.Navigation("SystemLogs");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Energy.ElectricityMeter", b =>
+                {
+                    b.Navigation("ConsumptionRecords");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Energy.ResourceType", b =>
+                {
+                    b.Navigation("ConsumptionRecords");
+
+                    b.Navigation("ElectricityMeters");
+
+                    b.Navigation("InvoiceItems");
                 });
 #pragma warning restore 612, 618
         }
