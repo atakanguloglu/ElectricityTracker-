@@ -5,6 +5,7 @@ using ElectricityTrackerAPI.Models.Core;
 using ElectricityTrackerAPI.Models.Energy;
 using ElectricityTrackerAPI.Data;
 using ElectricityTrackerAPI.DTOs.Core;
+using ElectricityTrackerAPI.Models.Core;
 
 namespace ElectricityTrackerAPI.Controllers.Core
 {
@@ -23,6 +24,17 @@ namespace ElectricityTrackerAPI.Controllers.Core
         {
             try
             {
+                // SuperAdmin kullanıcıları için özel kontrol
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId.Value);
+                    if (user?.Role == UserRole.SuperAdmin)
+                    {
+                        return BadRequest(new { message = "SuperAdmin kullanıcıları tenant dashboard'ını kullanamaz. Admin paneline gidin." });
+                    }
+                }
+
                 var tenantId = GetCurrentTenantId();
                 if (!tenantId.HasValue)
                 {

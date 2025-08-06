@@ -9,10 +9,10 @@ namespace ElectricityTrackerAPI.DTOs.Billing
     public class CreateInvoiceDto
     {
         [Required]
-        public DateTime InvoiceDate { get; set; }
+        public string InvoiceDate { get; set; } = string.Empty;
 
         [Required]
-        public DateTime DueDate { get; set; }
+        public string DueDate { get; set; } = string.Empty;
 
         [Required]
         [Range(0, double.MaxValue)]
@@ -35,10 +35,10 @@ namespace ElectricityTrackerAPI.DTOs.Billing
         public decimal TaxRate { get; set; } = 18.0m;
 
         [Required]
-        public InvoiceStatus Status { get; set; } = InvoiceStatus.Draft;
+        public int Status { get; set; } = 0; // InvoiceStatus.Draft
 
         [Required]
-        public InvoiceType Type { get; set; } = InvoiceType.Utility;
+        public int Type { get; set; } = 0; // InvoiceType.Utility
 
         [StringLength(500)]
         public string? Description { get; set; }
@@ -59,16 +59,22 @@ namespace ElectricityTrackerAPI.DTOs.Billing
         [Required]
         public int TenantId { get; set; }
 
+        [Required]
+        public int SubscriptionPlanId { get; set; }
+
+        [StringLength(50)]
+        public string? BillingPeriod { get; set; }
+
         public List<CreateInvoiceItemDto>? Items { get; set; }
     }
 
     public class UpdateInvoiceDto
     {
         [Required]
-        public DateTime InvoiceDate { get; set; }
+        public string InvoiceDate { get; set; } = string.Empty;
 
         [Required]
-        public DateTime DueDate { get; set; }
+        public string DueDate { get; set; } = string.Empty;
 
         [Required]
         [Range(0, double.MaxValue)]
@@ -91,10 +97,10 @@ namespace ElectricityTrackerAPI.DTOs.Billing
         public decimal TaxRate { get; set; } = 18.0m;
 
         [Required]
-        public InvoiceStatus Status { get; set; }
+        public int Status { get; set; }
 
         [Required]
-        public InvoiceType Type { get; set; }
+        public int Type { get; set; }
 
         [StringLength(500)]
         public string? Description { get; set; }
@@ -111,6 +117,12 @@ namespace ElectricityTrackerAPI.DTOs.Billing
 
         [StringLength(50)]
         public string? CustomerTaxNumber { get; set; }
+
+        [Required]
+        public int SubscriptionPlanId { get; set; }
+
+        [StringLength(50)]
+        public string? BillingPeriod { get; set; }
     }
 
     public class CreateInvoiceItemDto

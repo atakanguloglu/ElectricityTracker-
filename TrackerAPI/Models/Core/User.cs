@@ -67,7 +67,8 @@ namespace ElectricityTrackerAPI.Models.Core
 
     public enum UserRole
     {
-        Admin,
+        SuperAdmin,  // Paket yazılımı sağlayan şirket adminleri
+        Admin,       // Tenant (müşteri) şirket adminleri
         Accountant,
         Analyst,
         ReportViewer,

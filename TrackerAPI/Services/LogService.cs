@@ -77,15 +77,15 @@ namespace ElectricityTrackerAPI.Services
                 var logEntry = new LogEntry
                 {
                     Level = level,
-                    Message = message,
-                    Source = source,
+                    Message = message != null && message.Length > 500 ? message.Substring(0, 497) + "..." : message,
+                    Source = source != null && source.Length > 500 ? source.Substring(0, 497) + "..." : source,
                     UserId = userId,
                     UserEmail = userEmail,
                     TenantId = tenantId,
                     RequestPath = requestPath,
                     RequestMethod = requestMethod,
                     IpAddress = ipAddress,
-                    Exception = exception?.ToString(),
+                    Exception = exception?.ToString() != null && exception.ToString().Length > 500 ? exception.ToString().Substring(0, 497) + "..." : exception?.ToString(),
                     AdditionalData = additionalData != null ? JsonSerializer.Serialize(additionalData) : null,
                     Timestamp = DateTime.UtcNow,
                     CreatedAt = DateTime.UtcNow

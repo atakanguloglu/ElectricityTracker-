@@ -261,7 +261,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
               <div className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
                 <Avatar 
                   size="small" 
-                  icon={getRoleIcon(user?.role || 'User')}
+                  icon={getRoleIcon((user as any)?.Role || user?.role || 'User')}
                   className="bg-gradient-to-r from-blue-500 to-indigo-600"
                 />
                 {!collapsed && (
@@ -271,10 +271,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
                         {getFullName()}
                       </div>
                       <Tag 
-                        color={getRoleColor(user?.role || 'User')} 
-                        icon={getRoleIcon(user?.role || 'User')}
+                        color={getRoleColor((user as any)?.Role || user?.role || 'User')} 
+                        icon={getRoleIcon((user as any)?.Role || user?.role || 'User')}
                       >
-                        {user?.role}
+                        {(user as any)?.Role || user?.role}
                       </Tag>
                     </div>
                     <div className="text-xs text-gray-500">

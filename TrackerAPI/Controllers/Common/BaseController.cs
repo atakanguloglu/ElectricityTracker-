@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using ElectricityTrackerAPI.Data;
 using Microsoft.EntityFrameworkCore;
 using ElectricityTrackerAPI.Models.Core;
+using ElectricityTrackerAPI.Models.Logging;
 
 namespace ElectricityTrackerAPI.Controllers.Common
 {
@@ -22,7 +23,7 @@ namespace ElectricityTrackerAPI.Controllers.Common
 
         protected int? GetCurrentTenantId()
         {
-            if (HttpContext.Items.TryGetValue("TenantId", out var tenantId))
+            if (HttpContext.Items.TryGetValue("TenantId", out var tenantId) && tenantId != null)
             {
                 return (int)tenantId;
             }
@@ -91,6 +92,21 @@ namespace ElectricityTrackerAPI.Controllers.Common
         protected IActionResult DepartmentAccessDenied()
         {
             return Forbid("Department access denied");
+        }
+
+        protected async Task LogSystemAction(string message, string details, string category)
+        {
+            var log = new SystemLog
+            {
+                Level = "Info",
+                Category = category,
+                Message = message,
+                Details = details,
+                Timestamp = DateTime.UtcNow
+            };
+
+            _context.SystemLogs.Add(log);
+            await _context.SaveChangesAsync();
         }
     }
 } 

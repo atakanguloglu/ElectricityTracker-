@@ -40,6 +40,12 @@ namespace ElectricityTrackerAPI.Data
         public DbSet<TenantSecurityScore> TenantSecurityScores { get; set; }
         public DbSet<TenantSecuritySettings> TenantSecuritySettings { get; set; }
         public DbSet<SecurityReport> SecurityReports { get; set; }
+        
+        // Chatbot
+        public DbSet<ChatbotConversation> ChatbotConversations { get; set; }
+        public DbSet<ChatbotMessage> ChatbotMessages { get; set; }
+        public DbSet<QuickAction> QuickActions { get; set; }
+        public DbSet<KnowledgeBaseArticle> KnowledgeBaseArticles { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

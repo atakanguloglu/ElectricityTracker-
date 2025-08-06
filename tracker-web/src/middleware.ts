@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 // Korumalı rotalar
-const protectedRoutes = ['/dashboard', '/consumption', '/reports', '/alerts', '/facilities', '/documents']
+const protectedRoutes = ['/tenant-dashboard', '/consumption', '/reports', '/alerts', '/facilities', '/documents', '/super-admin']
 
 // Public rotalar (login gibi)
 const publicRoutes = ['/login', '/register', '/forgot-password']
@@ -30,8 +30,9 @@ export function middleware(request: NextRequest) {
   // Public rotalar için token kontrolü
   if (publicRoutes.some(route => pathname.startsWith(route))) {
     if (token && pathname === '/login') {
-      // Zaten giriş yapmışsa dashboard'a yönlendir
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      // Zaten giriş yapmışsa login sayfasına yönlendirme yapma
+      // Client-side'da role kontrolü yapılacak
+      return NextResponse.next()
     }
   }
 

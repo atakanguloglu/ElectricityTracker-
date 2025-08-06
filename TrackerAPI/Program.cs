@@ -6,10 +6,16 @@ using System.Text;
 using ElectricityTrackerAPI.Data;
 using ElectricityTrackerAPI.Middleware;
 using ElectricityTrackerAPI.Services;
+using ElectricityTrackerAPI.Models.Core;
 using Serilog;
 using Serilog.Events;
 
-var builder = WebApplication.CreateBuilder(args);
+// Async Main method wrapper
+await MainAsync(args);
+
+static async Task MainAsync(string[] args)
+{
+    var builder = WebApplication.CreateBuilder(args);
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -26,10 +32,24 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = null; // PascalCase korunur
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true; // Case insensitive
+        options.JsonSerializerOptions.WriteIndented = true; // Debug için
+    });
 
-// Register logging service
+// Register services
 builder.Services.AddScoped<ILogService, LogService>();
+builder.Services.AddScoped<IBillingService, BillingService>();
+builder.Services.AddScoped<IAIService, AIService>();
+
+// Register HttpClient for AI service
+builder.Services.AddHttpClient<AIService>();
+
+// Register background services
+builder.Services.AddHostedService<BackgroundBillingService>();
 
 // Entity Framework - PostgreSQL
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -135,7 +155,19 @@ using (var scope = app.Services.CreateScope())
     context.Database.Migrate();
     
     // Test verilerini ekle
-    DbInitializer.Initialize(context);
+    await DbInitializer.Initialize(context);
+    
+    // Mevcut admin kullanıcısını SuperAdmin yap (migration sonrası)
+    var adminUser = context.Users.FirstOrDefault(u => u.Email == "admin@demo-elektrik.com");
+    if (adminUser != null && adminUser.Role != UserRole.SuperAdmin)
+    {
+        adminUser.Role = UserRole.SuperAdmin;
+        adminUser.FirstName = "Super Admin";
+        adminUser.LastName = "System";
+        context.SaveChanges();
+        Console.WriteLine("Admin kullanıcısı SuperAdmin olarak güncellendi.");
+    }
 }
 
-app.Run();
+    await app.RunAsync();
+}

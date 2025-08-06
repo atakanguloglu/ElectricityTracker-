@@ -11,7 +11,7 @@ namespace ElectricityTrackerAPI.Data
 {
     public static class DbInitializer
     {
-        public static void Initialize(ApplicationDbContext context)
+        public static async Task Initialize(ApplicationDbContext context)
         {
             // Veritabanının oluşturulduğundan emin ol
             context.Database.EnsureCreated();
@@ -20,6 +20,10 @@ namespace ElectricityTrackerAPI.Data
             Console.WriteLine("Demo veriler temizleniyor ve yeniden oluşturuluyor...");
             
             // Eski verileri temizle (foreign key sırasına göre)
+            context.PaymentRecords.RemoveRange(context.PaymentRecords);
+            context.InvoiceItems.RemoveRange(context.InvoiceItems);
+            context.Invoices.RemoveRange(context.Invoices);
+            context.ResourceTypes.RemoveRange(context.ResourceTypes);
             context.ConsumptionRecords.RemoveRange(context.ConsumptionRecords);
             context.ElectricityMeters.RemoveRange(context.ElectricityMeters);
             context.ApiKeys.RemoveRange(context.ApiKeys);
@@ -37,16 +41,43 @@ namespace ElectricityTrackerAPI.Data
             context.SaveChanges();
             
             // Yeni kapsamlı verileri oluştur
-            CreateDemoData(context);
+            await CreateDemoData(context);
         }
 
-        private static void CreateDemoData(ApplicationDbContext context)
+        private static async Task CreateDemoData(ApplicationDbContext context)
         {
             Console.WriteLine("Demo veriler oluşturuluyor...");
 
             // 1. Admin Paneli için Çoklu Tenant'lar oluştur
             var tenants = new List<Tenant>
             {
+                new Tenant
+                {
+                    CompanyName = "Sistem Yönetimi",
+                    FacilityCode = "SYS01",
+                    Domain = "system.com",
+                    AdminEmail = "superadmin@system.com",
+                    ContactPerson = "Sistem Yöneticisi",
+                    Phone = "+90 212 999 9999",
+                    Address = "Sistem Merkezi",
+                    TaxNumber = "0000000000",
+                    TaxOffice = "Sistem",
+                    Subdomain = "system",
+                    Status = TenantStatus.Active,
+                    Subscription = SubscriptionType.Premium,
+                    SubscriptionStartDate = DateTime.UtcNow.AddMonths(-12),
+                    SubscriptionEndDate = DateTime.UtcNow.AddYears(10),
+                    MaxUsers = 1000,
+                    MaxFacilities = 1000,
+                    IsActive = true,
+                    Currency = "TRY",
+                    Language = "tr",
+                    MonthlyFee = 0m,
+                    PaymentStatus = PaymentStatus.Paid,
+                    LastPayment = DateTime.UtcNow.AddDays(-1),
+                    TotalConsumption = "0 kWh",
+                    CreatedAt = DateTime.UtcNow.AddMonths(-12)
+                },
                 new Tenant
                 {
                     CompanyName = "Demo Elektrik A.Ş.",
@@ -232,14 +263,27 @@ namespace ElectricityTrackerAPI.Data
             {
                 new User
                 {
-                    FirstName = "Admin",
-                    LastName = "User",
+                    FirstName = "Super Admin",
+                    LastName = "System",
                     Email = "admin@demo-elektrik.com",
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("password"),
                     Phone = "+90 532 123 4567",
-                    Role = UserRole.Admin,
-                    TenantId = tenants[0].Id,
-                    DepartmentId = departments[0].Id, // Yönetim
+                    Role = UserRole.SuperAdmin,  // Paket yazılımı sağlayan şirket admin'i
+                    TenantId = tenants[0].Id, // Sistem tenant'ı
+                    DepartmentId = null, // SuperAdmin'in departmanı yok
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow.AddMonths(-6)
+                },
+                new User
+                {
+                    FirstName = "Super",
+                    LastName = "Admin",
+                    Email = "superadmin@demo-elektrik.com",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("password"),
+                    Phone = "+90 532 999 9999",
+                    Role = UserRole.SuperAdmin,  // Paket yazılımı sağlayan şirket admin'i
+                    TenantId = tenants[0].Id, // Sistem tenant'ı
+                    DepartmentId = null, // SuperAdmin'in departmanı yok
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow.AddMonths(-6)
                 },
@@ -548,6 +592,12 @@ namespace ElectricityTrackerAPI.Data
             
             // 12. Güvenlik Raporları oluştur
             CreateDemoSecurityReports(context, tenants);
+            
+            // 13. API Anahtarları oluştur
+            CreateDemoApiKeys(context, tenants);
+
+            // 14. Chatbot verilerini oluştur
+            await ChatbotDataSeeder.SeedChatbotData(context);
 
             Console.WriteLine("✅ Demo veriler başarıyla oluşturuldu!");
             Console.WriteLine($"📊 Tenant: {tenants.Count} adet");
@@ -558,10 +608,71 @@ namespace ElectricityTrackerAPI.Data
             Console.WriteLine($"🔑 API Anahtarları: {apiKeys.Count} adet");
             Console.WriteLine($"📦 Abonelik Planları: {subscriptionPlans.Count} adet");
             Console.WriteLine($"📝 Sistem Logları: Oluşturuldu");
+            Console.WriteLine($"🤖 Chatbot Verileri: Oluşturuldu");
+            
+            // Billing ve Consumption verilerini oluştur
+            CreateDemoBillingData(context, tenants, users);
+            CreateDemoConsumptionData(context, tenants, meters);
+            
             Console.WriteLine($"🔐 Login Bilgileri:");
             Console.WriteLine($"   Email: admin@demo-elektrik.com");
             Console.WriteLine($"   Şifre: password");
             Console.WriteLine($"   Diğer kullanıcılar: muhasebe@demo-elektrik.com, analist@demo-elektrik.com, operasyon@demo-elektrik.com, it@demo-elektrik.com");
+        }
+
+        private static void CreateDemoApiKeys(ApplicationDbContext context, List<Tenant> tenants)
+        {
+            var apiKeys = new List<ApiKey>();
+            var random = new Random();
+
+            foreach (var tenant in tenants)
+            {
+                // Her tenant için 2-4 API anahtarı oluştur
+                var keyCount = random.Next(2, 5);
+                
+                for (int i = 0; i < keyCount; i++)
+                {
+                    var apiKey = new ApiKey
+                    {
+                        Name = $"API Key {i + 1} - {tenant.CompanyName}",
+                        Key = GenerateApiKey(),
+                        TenantId = tenant.Id,
+                        Status = random.Next(100) < 80 ? ApiKeyStatus.Active : ApiKeyStatus.Inactive, // %80 aktif
+                        Permissions = GetRandomPermissions(),
+                        RateLimit = random.Next(100, 10001), // 100-10000 arası
+                        RateLimitPeriod = random.Next(100) < 50 ? "hour" : "day",
+                        CreatedAt = DateTime.UtcNow.AddDays(-random.Next(1, 91)), // Son 90 gün içinde
+                        LastUsed = random.Next(100) < 70 ? DateTime.UtcNow.AddHours(-random.Next(1, 168)) : null, // %70 kullanılmış
+                        TotalCalls = random.Next(0, 100001), // 0-100000 arası çağrı
+                        ErrorRate = (decimal)(random.NextDouble() * 0.1), // %0-10 arası hata oranı
+                        WebhookUrl = random.Next(100) < 30 ? $"https://webhook.{tenant.Domain}/api/events" : null, // %30 webhook var
+                        WebhookStatus = random.Next(100) < 30 ? (random.Next(100) < 80 ? WebhookStatus.Active : WebhookStatus.Error) : null
+                    };
+
+                    apiKeys.Add(apiKey);
+                }
+            }
+
+            context.ApiKeys.AddRange(apiKeys);
+            context.SaveChanges();
+            
+            Console.WriteLine($"🔑 API Anahtarları: {apiKeys.Count} adet oluşturuldu");
+        }
+
+        private static string GenerateApiKey()
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            var random = new Random();
+            return new string(Enumerable.Repeat(chars, 32).Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+        private static string GetRandomPermissions()
+        {
+            var allPermissions = new[] { "read", "write", "delete", "admin", "billing", "reports", "analytics" };
+            var random = new Random();
+            var count = random.Next(2, 5); // 2-4 izin
+            var selectedPermissions = allPermissions.OrderBy(x => random.Next()).Take(count);
+            return string.Join(",", selectedPermissions);
         }
 
         private static void CreateDemoLogs(ApplicationDbContext context, List<Tenant> tenants, List<User> users)
@@ -1075,6 +1186,183 @@ at System.Threading.Tasks.Task.Execute()";
 
             context.SecurityReports.AddRange(securityReports);
             context.SaveChanges();
+        }
+
+        private static void CreateDemoBillingData(ApplicationDbContext context, List<Tenant> tenants, List<User> users)
+        {
+            var resourceTypes = new List<ResourceType>
+            {
+                new ResourceType
+                {
+                    Name = "Elektrik",
+                    Unit = "kWh",
+                    Description = "Elektrik enerjisi tüketimi",
+                    Icon = "⚡",
+                    Category = ResourceCategory.Electricity,
+                    DefaultPrice = 1.25m,
+                    Currency = "TRY",
+                    IsActive = true,
+                    TenantId = null // Global
+                },
+                new ResourceType
+                {
+                    Name = "Su",
+                    Unit = "m³",
+                    Description = "Su tüketimi",
+                    Icon = "💧",
+                    Category = ResourceCategory.Water,
+                    DefaultPrice = 8.50m,
+                    Currency = "TRY",
+                    IsActive = true,
+                    TenantId = null // Global
+                },
+                new ResourceType
+                {
+                    Name = "Doğalgaz",
+                    Unit = "m³",
+                    Description = "Doğalgaz tüketimi",
+                    Icon = "🔥",
+                    Category = ResourceCategory.Gas,
+                    DefaultPrice = 2.80m,
+                    Currency = "TRY",
+                    IsActive = true,
+                    TenantId = null // Global
+                }
+            };
+
+            context.ResourceTypes.AddRange(resourceTypes);
+            context.SaveChanges();
+
+            var invoices = new List<Invoice>();
+            var random = new Random();
+
+            foreach (var tenant in tenants)
+            {
+                // Her tenant için 5-15 fatura oluştur
+                var invoiceCount = random.Next(5, 16);
+                var adminUser = users.FirstOrDefault(u => u.TenantId == tenant.Id && u.Role == UserRole.Admin);
+
+                for (int i = 0; i < invoiceCount; i++)
+                {
+                    var invoiceDate = DateTime.UtcNow.AddDays(-random.Next(1, 90));
+                    var dueDate = invoiceDate.AddDays(30);
+                    var totalAmount = random.Next(500, 5000);
+                    var taxRate = 18.0m;
+                    var taxAmount = totalAmount * (taxRate / 100);
+                    var netAmount = totalAmount - taxAmount;
+
+                    // Tenant'ın abonelik planını bul
+                    var subscriptionPlan = context.SubscriptionPlans.FirstOrDefault(sp => sp.Type == tenant.Subscription.ToString());
+                    
+                    var invoice = new Invoice
+                    {
+                        InvoiceNumber = $"INV-{tenant.CompanyName.Substring(0, 3).ToUpper()}-{DateTime.Now.Year}{DateTime.Now.Month:D2}-{i + 1:D4}",
+                        InvoiceDate = invoiceDate,
+                        DueDate = dueDate,
+                        TotalAmount = subscriptionPlan?.MonthlyFee ?? 199.99m,
+                        TaxAmount = (subscriptionPlan?.MonthlyFee ?? 199.99m) * 0.18m,
+                        NetAmount = (subscriptionPlan?.MonthlyFee ?? 199.99m) * 0.82m,
+                        Currency = "TRY",
+                        TaxRate = 18.0m,
+                        Status = (InvoiceStatus)random.Next(0, 4), // Draft, Sent, Paid, Overdue
+                        Type = InvoiceType.Subscription, // Artık sadece Subscription
+                        Description = $"Uygulama kullanım faturası - {invoiceDate:MMMM yyyy}",
+                        CustomerName = tenant.CompanyName,
+                        CustomerEmail = tenant.AdminEmail,
+                        CustomerAddress = tenant.Address,
+                        CustomerTaxNumber = tenant.TaxNumber,
+                        TenantId = tenant.Id,
+                        SubscriptionPlanId = subscriptionPlan?.Id,
+                        BillingPeriod = $"{invoiceDate:MMMM yyyy}",
+                        CreatedById = adminUser?.Id,
+                        CreatedAt = invoiceDate,
+                        PaidAt = random.Next(0, 3) == 0 ? invoiceDate.AddDays(random.Next(1, 15)) : null
+                    };
+
+                    invoices.Add(invoice);
+                }
+            }
+
+            context.Invoices.AddRange(invoices);
+            context.SaveChanges();
+
+            // Invoice items oluştur - Artık sadece uygulama kullanım bedeli
+            var invoiceItems = new List<InvoiceItem>();
+            foreach (var invoice in invoices)
+            {
+                // Her fatura için tek bir kalem - uygulama kullanım bedeli
+                var item = new InvoiceItem
+                {
+                    InvoiceId = invoice.Id,
+                    Description = "Uygulama Kullanım Bedeli",
+                    Quantity = 1,
+                    Unit = "Adet",
+                    UnitPrice = invoice.NetAmount,
+                    TotalPrice = invoice.NetAmount,
+                    TaxRate = invoice.TaxRate,
+                    TaxAmount = invoice.TaxAmount,
+                    NetAmount = invoice.NetAmount,
+                    ResourceTypeId = null, // Artık kaynak türü yok
+                    ConsumptionStartDate = null,
+                    ConsumptionEndDate = null,
+                    Notes = $"Aylık uygulama kullanım bedeli - {invoice.BillingPeriod}"
+                };
+
+                invoiceItems.Add(item);
+            }
+
+            context.InvoiceItems.AddRange(invoiceItems);
+            context.SaveChanges();
+
+            Console.WriteLine($"💰 Faturalar: {invoices.Count} adet");
+            Console.WriteLine($"📋 Fatura Kalemleri: {invoiceItems.Count} adet");
+            Console.WriteLine($"⚡ Kaynak Türleri: {resourceTypes.Count} adet");
+        }
+
+        private static void CreateDemoConsumptionData(ApplicationDbContext context, List<Tenant> tenants, List<ElectricityMeter> meters)
+        {
+            var consumptionRecords = new List<ConsumptionRecord>();
+            var random = new Random();
+
+            // Son 90 gün için tüketim kayıtları oluştur
+            for (int day = 0; day < 90; day++)
+            {
+                var readingDate = DateTime.UtcNow.AddDays(-day);
+                
+                foreach (var meter in meters)
+                {
+                    // Günlük tüketim değeri (100-500 kWh arası)
+                    var consumption = random.Next(100, 501);
+                    var unitPrice = 1.25m; // kWh başına 1.25 TL
+                    var totalCost = consumption * unitPrice;
+
+                    var record = new ConsumptionRecord
+                    {
+                        ReadingDate = readingDate,
+                        Timestamp = readingDate,
+                        CurrentReading = meter.CurrentReading + consumption,
+                        PreviousReading = meter.CurrentReading,
+                        Consumption = consumption,
+                        UnitPrice = unitPrice,
+                        TotalCost = totalCost,
+                        Source = (ReadingSource)random.Next(0, 3), // Manual, API, SmartMeter
+                        Notes = $"Günlük sayaç okuması - {readingDate:dd.MM.yyyy}",
+                        TenantId = meter.TenantId,
+                        ElectricityMeterId = meter.Id,
+                        CreatedAt = readingDate
+                    };
+
+                    consumptionRecords.Add(record);
+                    
+                    // Meter'ın son okumasını güncelle
+                    meter.CurrentReading += consumption;
+                }
+            }
+
+            context.ConsumptionRecords.AddRange(consumptionRecords);
+            context.SaveChanges();
+
+            Console.WriteLine($"📊 Tüketim Kayıtları: {consumptionRecords.Count} adet");
         }
     }
 } 

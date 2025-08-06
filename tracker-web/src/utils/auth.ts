@@ -5,11 +5,21 @@ export interface User {
   firstName: string
   lastName: string
   email: string
-  role: 'Admin' | 'Manager' | 'User' | 'Viewer'
+  role: 'SuperAdmin' | 'Admin' | 'Manager' | 'User' | 'Viewer'
   tenantName: string
   tenantId: number
   phone?: string
   lastLoginAt?: string
+  // Backend'den gelen property'ler
+  Id?: number
+  FirstName?: string
+  LastName?: string
+  Email?: string
+  Role?: 'SuperAdmin' | 'Admin' | 'Manager' | 'User' | 'Viewer'
+  TenantName?: string
+  TenantId?: number
+  Phone?: string
+  LastLoginAt?: string
 }
 
 export interface AuthResponse {
@@ -29,12 +39,18 @@ export const getToken = (): string | null => {
 export const setToken = (token: string): void => {
   if (typeof window === 'undefined') return
   localStorage.setItem('authToken', token)
+  
+  // Cookie'ye de kaydet (middleware için)
+  document.cookie = `authToken=${token}; path=/; max-age=86400; secure; samesite=strict`
 }
 
 // Token'ı localStorage'dan sil
 export const removeToken = (): void => {
   if (typeof window === 'undefined') return
   localStorage.removeItem('authToken')
+  
+  // Cookie'yi de temizle
+  document.cookie = 'authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
 }
 
 // Kullanıcı bilgilerini localStorage'dan al
@@ -130,10 +146,22 @@ export const hasRole = (requiredRoles: User['role'][]): boolean => {
   const user = getUser()
   if (!user) return false
   
-  return requiredRoles.includes(user.role)
+  // Backend'den gelen Role (büyük R) veya frontend'deki role (küçük r)
+  const userRole = (user as any).Role || user.role
+  return requiredRoles.includes(userRole as User['role'])
 }
 
-// Admin yetkisi kontrolü
+// SuperAdmin yetkisi kontrolü  
+export const isSuperAdmin = (): boolean => {
+  const user = getUser()
+  if (!user) return false
+  
+  // Backend'den gelen Role (büyük R) veya frontend'deki role (küçük r)
+  const userRole = (user as any).Role || user.role
+  return userRole === 'SuperAdmin'
+}
+
+// Admin yetkisi kontrolü (tenant admin)
 export const isAdmin = (): boolean => {
   return hasRole(['Admin'])
 }

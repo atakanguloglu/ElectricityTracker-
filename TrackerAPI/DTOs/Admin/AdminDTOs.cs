@@ -194,12 +194,13 @@ namespace ElectricityTrackerAPI.DTOs.Admin
 
     public class SubscriptionPlanDto
     {
+        public int Id { get; set; }  // Id alanını ekle
         public string Type { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal MonthlyFee { get; set; }
         public List<string> Features { get; set; } = new List<string>();
-        public Dictionary<string, int> Limits { get; set; } = new Dictionary<string, int>();
+        public string Limits { get; set; } = string.Empty;
     }
 
     public class UpdateSubscriptionPlanDto
@@ -208,8 +209,8 @@ namespace ElectricityTrackerAPI.DTOs.Admin
         public string Description { get; set; } = string.Empty;
         public decimal MonthlyFee { get; set; }
         public string Currency { get; set; } = "TRY";
-        public List<string> Features { get; set; } = new List<string>();
-        public Dictionary<string, int> Limits { get; set; } = new Dictionary<string, int>();
+        public string Features { get; set; } = string.Empty;
+        public string Limits { get; set; } = string.Empty;
     }
 
     public class CurrencyDto

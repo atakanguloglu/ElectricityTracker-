@@ -3,7 +3,7 @@
 import React from 'react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Form, Input, Button, Card, Checkbox, Typography, Space, Alert, Select, message } from 'antd'
+import { Form, Input, Button, Card, Checkbox, Typography, Space, Alert, Select, App } from 'antd'
 import { 
   UserOutlined, 
   LockOutlined, 
@@ -20,11 +20,18 @@ import { logger } from '@/utils/logger'
 const { Title, Text } = Typography
 const { Option } = Select
 
+interface LoginFormValues {
+  email: string
+  password: string
+  remember: boolean
+}
+
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [form] = Form.useForm()
   const router = useRouter()
+  const { message } = App.useApp()
 
   // Sayfa yüklendiğinde token kontrolü
   useEffect(() => {
@@ -33,7 +40,7 @@ export default function LoginPage() {
     }
   }, [router])
 
-  const onFinish = async (values: any) => {
+  const onFinish = async (values: LoginFormValues) => {
     setLoading(true)
     setError('')
 
@@ -54,30 +61,40 @@ export default function LoginPage() {
       })
 
       const data = await response.json()
+      
+      // Debug completed - login working with PascalCase handling
 
-      if (response.ok && data.token) {
+      if (response.ok && (data.token || data.Token)) {
+        const token = data.token || data.Token
+        const user = data.user || data.User
+        
         // Log successful login
         logger.info('Login successful', 'LoginPage', { 
           email: values.email, 
-          role: data.user.role,
-          userId: data.user.id 
+          role: user.role || user.Role,
+          userId: user.id || user.Id 
         })
         
         // Güvenli şekilde token ve kullanıcı bilgilerini sakla
-        setToken(data.token)
-        setUser(data.user)
+        setToken(token)
+        setUser(user)
         
         // Başarı mesajı göster
-        message.success(`Başarıyla giriş yapıldı! Rol: ${data.user.role}. Yönlendiriliyorsunuz...`)
+        message.success(`Başarıyla giriş yapıldı! Rol: ${user.Role || user.role}. Yönlendiriliyorsunuz...`)
         
         // Kısa bir gecikme sonrası rol bazlı yönlendirme yap
         setTimeout(() => {
-          if (data.user.role === 'Admin') {
-            logger.info('Redirecting to admin panel', 'LoginPage')
-            router.push('/admin')
+          console.log('DEBUG - User role:', user.Role || user.role)
+          console.log('DEBUG - User object:', user)
+          
+          if ((user.Role || user.role) === 'SuperAdmin') {
+            console.log('DEBUG - Redirecting to /super-admin')
+            logger.info('Redirecting to SuperAdmin panel', 'LoginPage')
+            router.push('/super-admin')
           } else {
-            logger.info('Redirecting to dashboard', 'LoginPage')
-            router.push('/dashboard')
+            console.log('DEBUG - Redirecting to /tenant-dashboard')
+            logger.info('Redirecting to tenant dashboard', 'LoginPage')
+            router.push('/tenant-dashboard')
           }
         }, 1000)
       } else {

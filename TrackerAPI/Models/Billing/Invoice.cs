@@ -59,6 +59,13 @@ namespace ElectricityTrackerAPI.Models.Billing
         [StringLength(50)]
         public string? CustomerTaxNumber { get; set; }
 
+        // Subscription plan relationship
+        public int? SubscriptionPlanId { get; set; }
+        public virtual SubscriptionPlan? SubscriptionPlan { get; set; }
+
+        [StringLength(50)]
+        public string? BillingPeriod { get; set; }
+
         // Tenant relationship
         [Required]
         public int TenantId { get; set; }

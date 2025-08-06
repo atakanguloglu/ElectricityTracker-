@@ -91,6 +91,8 @@ namespace ElectricityTrackerAPI.Models.Core
         public virtual ICollection<Department> Departments { get; set; } = new List<Department>();
         public virtual ICollection<Admin.ApiKey> ApiKeys { get; set; } = new List<Admin.ApiKey>();
         public virtual ICollection<Logging.SystemLog> SystemLogs { get; set; } = new List<Logging.SystemLog>();
+        public virtual ICollection<Energy.ConsumptionRecord> ConsumptionRecords { get; set; } = new List<Energy.ConsumptionRecord>();
+        public virtual ICollection<Billing.Invoice> Invoices { get; set; } = new List<Billing.Invoice>();
     }
 
     public enum TenantStatus
