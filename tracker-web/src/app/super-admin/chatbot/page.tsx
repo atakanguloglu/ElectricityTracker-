@@ -137,209 +137,7 @@ const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 const { Step } = Steps;
 
-// Mock data
-const mockTenants = [
-  { id: 1, name: 'ABC Şirketi', domain: 'abc.com' },
-  { id: 2, name: 'XYZ Ltd.', domain: 'xyz.com' },
-  { id: 3, name: 'Tech Solutions', domain: 'techsolutions.com' },
-  { id: 4, name: 'Global Corp', domain: 'globalcorp.com' },
-  { id: 5, name: 'Startup Inc', domain: 'startupinc.com' }
-];
-
-const mockUsers = [
-  { id: 1, name: 'Ahmet Yılmaz', email: 'ahmet@abc.com', tenantId: 1, avatar: 'AY' },
-  { id: 2, name: 'Fatma Demir', email: 'fatma@xyz.com', tenantId: 2, avatar: 'FD' },
-  { id: 3, name: 'Mehmet Kaya', email: 'mehmet@techsolutions.com', tenantId: 3, avatar: 'MK' },
-  { id: 4, name: 'Ayşe Özkan', email: 'ayse@globalcorp.com', tenantId: 4, avatar: 'AÖ' },
-  { id: 5, name: 'Ali Çelik', email: 'ali@startupinc.com', tenantId: 5, avatar: 'AÇ' }
-];
-
-const mockConversations = [
-  {
-    id: 1,
-    userId: 1,
-    userName: 'Ahmet Yılmaz',
-    userEmail: 'ahmet@abc.com',
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    status: 'active',
-    priority: 'medium',
-    category: 'technical',
-    lastMessage: 'Fatura sistemi ile ilgili sorun yaşıyorum',
-    lastMessageTime: '2024-01-15T10:30:00',
-    messageCount: 8,
-    satisfaction: 4,
-    agent: 'AI Bot',
-    tags: ['fatura', 'teknik', 'sorun']
-  },
-  {
-    id: 2,
-    userId: 2,
-    userName: 'Fatma Demir',
-    userEmail: 'fatma@xyz.com',
-    tenantId: 2,
-    tenantName: 'XYZ Ltd.',
-    status: 'resolved',
-    priority: 'high',
-    category: 'billing',
-    lastMessage: 'Ödeme işlemi tamamlandı, teşekkürler',
-    lastMessageTime: '2024-01-15T09:15:00',
-    messageCount: 12,
-    satisfaction: 5,
-    agent: 'AI Bot',
-    tags: ['ödeme', 'fatura', 'çözüldü']
-  },
-  {
-    id: 3,
-    userId: 3,
-    userName: 'Mehmet Kaya',
-    userEmail: 'mehmet@techsolutions.com',
-    tenantId: 3,
-    tenantName: 'Tech Solutions',
-    status: 'pending',
-    priority: 'low',
-    category: 'general',
-    lastMessage: 'Yeni özellik hakkında bilgi almak istiyorum',
-    lastMessageTime: '2024-01-15T11:45:00',
-    messageCount: 3,
-    satisfaction: null,
-    agent: 'AI Bot',
-    tags: ['özellik', 'bilgi', 'yeni']
-  }
-];
-
-const mockChatHistory = [
-  {
-    id: 1,
-    conversationId: 1,
-    sender: 'user',
-    message: 'Merhaba, fatura sistemi ile ilgili sorun yaşıyorum',
-    timestamp: '2024-01-15T10:25:00',
-    attachments: []
-  },
-  {
-    id: 2,
-    conversationId: 1,
-    sender: 'bot',
-    message: 'Merhaba! Fatura sistemi ile ilgili sorununuzu dinliyorum. Hangi konuda yardıma ihtiyacınız var?',
-    timestamp: '2024-01-15T10:25:30',
-    attachments: []
-  },
-  {
-    id: 3,
-    conversationId: 1,
-    sender: 'user',
-    message: 'Fatura oluştururken hata alıyorum. "Sistem hatası" mesajı çıkıyor',
-    timestamp: '2024-01-15T10:26:00',
-    attachments: []
-  },
-  {
-    id: 4,
-    conversationId: 1,
-    sender: 'bot',
-    message: 'Anlıyorum. Bu sorunu çözmek için birkaç adım atalım:\n\n1. Tarayıcınızı yenileyin\n2. Farklı bir tarayıcı deneyin\n3. Hala sorun devam ederse, lütfen ekran görüntüsü paylaşın',
-    timestamp: '2024-01-15T10:26:30',
-    attachments: []
-  },
-  {
-    id: 5,
-    conversationId: 1,
-    sender: 'user',
-    message: 'Tarayıcıyı yeniledim ama sorun devam ediyor',
-    timestamp: '2024-01-15T10:28:00',
-    attachments: []
-  },
-  {
-    id: 6,
-    conversationId: 1,
-    sender: 'bot',
-    message: 'Bu durumda teknik ekibimize yönlendirmem gerekiyor. Sorununuz kaydedildi ve en kısa sürede size dönüş yapılacak. Ticket numaranız: #TKT-2024-001',
-    timestamp: '2024-01-15T10:28:30',
-    attachments: []
-  }
-];
-
-const mockQuickActions = [
-  {
-    id: 1,
-    title: 'Fatura Oluşturma',
-    description: 'Yeni fatura oluşturma rehberi',
-    icon: <FileTextOutlined />,
-    category: 'billing',
-    usage: 45
-  },
-  {
-    id: 2,
-    title: 'Ödeme İşlemleri',
-    description: 'Ödeme yöntemleri ve süreçleri',
-    icon: <DollarOutlined />,
-    category: 'payment',
-    usage: 32
-  },
-  {
-    id: 3,
-    title: 'Rapor Oluşturma',
-    description: 'Enerji tüketim raporları',
-    icon: <BarChartOutlined />,
-    category: 'reports',
-    usage: 28
-  },
-  {
-    id: 4,
-    title: 'Kullanıcı Yönetimi',
-    description: 'Kullanıcı ekleme ve yetkilendirme',
-    icon: <TeamOutlined />,
-    category: 'users',
-    usage: 19
-  },
-  {
-    id: 5,
-    title: 'API Entegrasyonu',
-    description: 'API kullanımı ve entegrasyon',
-    icon: <ApiOutlined />,
-    category: 'technical',
-    usage: 15
-  },
-  {
-    id: 6,
-    title: 'Sistem Ayarları',
-    description: 'Genel sistem konfigürasyonu',
-    icon: <SettingOutlined />,
-    category: 'settings',
-    usage: 12
-  }
-];
-
-const mockKnowledgeBase = [
-  {
-    id: 1,
-    title: 'Fatura Sistemi Kullanım Kılavuzu',
-    category: 'billing',
-    content: 'Detaylı fatura oluşturma ve yönetim rehberi...',
-    views: 1250,
-    helpful: 89,
-    lastUpdated: '2024-01-10'
-  },
-  {
-    id: 2,
-    title: 'API Entegrasyon Dokümantasyonu',
-    category: 'technical',
-    content: 'API endpoint\'leri ve kullanım örnekleri...',
-    views: 890,
-    helpful: 67,
-    lastUpdated: '2024-01-08'
-  },
-  {
-    id: 3,
-    title: 'Raporlama Özellikleri',
-    category: 'reports',
-    content: 'Mevcut rapor türleri ve özelleştirme seçenekleri...',
-    views: 756,
-    helpful: 54,
-    lastUpdated: '2024-01-05'
-  }
-];
-
+// Static data for UI elements
 const conversationStatuses = [
   { value: 'active', label: 'Aktif', color: '#52c41a' },
   { value: 'pending', label: 'Beklemede', color: '#faad14' },
@@ -387,6 +185,8 @@ export default function ChatbotPage() {
     
     console.log('DEBUG - Authentication successful, SuperAdmin access granted');
   }, [router, message]);
+
+  // State management
   const [conversations, setConversations] = useState<ChatbotConversation[]>([]);
   const [chatHistory, setChatHistory] = useState<ChatbotMessage[]>([]);
   const [quickActions, setQuickActions] = useState<QuickAction[]>([]);
@@ -404,6 +204,11 @@ export default function ChatbotPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [aiConnectionStatus, setAiConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Statistics
@@ -447,11 +252,11 @@ export default function ChatbotPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Avatar size="small" style={{ backgroundColor: '#1890ff' }}>
-              {record.userName ? record.userName.split(' ').map((n: string) => n[0]).join('') : 'U'}
+              {record.UserName ? record.UserName.split(' ').map((n: string) => n[0]).join('') : 'U'}
             </Avatar>
             <div>
-              <div style={{ fontWeight: 500 }}>{record.userName}</div>
-              <div style={{ fontSize: '12px', color: '#666' }}>{record.userEmail}</div>
+              <div style={{ fontWeight: 500 }}>{record.UserName}</div>
+              <div style={{ fontSize: '12px', color: '#666' }}>{record.UserEmail}</div>
             </div>
           </div>
         </div>
@@ -459,7 +264,7 @@ export default function ChatbotPage() {
     },
     {
       title: 'Tenant',
-      dataIndex: 'tenantName',
+      dataIndex: 'TenantName',
       key: 'tenantName',
       width: 150,
       render: (tenantName) => (
@@ -468,7 +273,7 @@ export default function ChatbotPage() {
     },
     {
       title: 'Durum',
-      dataIndex: 'status',
+      dataIndex: 'Status',
       key: 'status',
       width: 120,
       render: (status) => {
@@ -482,7 +287,7 @@ export default function ChatbotPage() {
     },
     {
       title: 'Öncelik',
-      dataIndex: 'priority',
+      dataIndex: 'Priority',
       key: 'priority',
       width: 100,
       render: (priority) => {
@@ -496,7 +301,7 @@ export default function ChatbotPage() {
     },
     {
       title: 'Kategori',
-      dataIndex: 'category',
+      dataIndex: 'Category',
       key: 'category',
       width: 120,
       render: (category) => {
@@ -515,17 +320,17 @@ export default function ChatbotPage() {
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: 500, marginBottom: '4px' }}>
-            {record.lastMessage}
+            {record.LastMessage}
           </div>
           <div style={{ fontSize: '12px', color: '#666' }}>
-            {new Date(record.lastMessageTime).toLocaleString('tr-TR')}
+            {new Date(record.LastMessageTime).toLocaleString('tr-TR')}
           </div>
         </div>
       )
     },
     {
       title: 'Mesaj Sayısı',
-      dataIndex: 'messageCount',
+      dataIndex: 'MessageCount',
       key: 'messageCount',
       width: 100,
       render: (count) => (
@@ -538,8 +343,8 @@ export default function ChatbotPage() {
       width: 120,
       render: (_, record) => (
         <div>
-                     {record.satisfaction ? (
-             <Rate disabled defaultValue={record.satisfaction} />
+                     {record.Satisfaction ? (
+             <Rate disabled defaultValue={record.Satisfaction} />
            ) : (
             <Text type="secondary">Değerlendirilmedi</Text>
           )}
@@ -580,18 +385,18 @@ export default function ChatbotPage() {
       render: (_, record) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ fontSize: '18px', color: '#1890ff' }}>
-            {record.icon}
+            {record.Icon}
           </div>
           <div>
-            <div style={{ fontWeight: 500 }}>{record.title}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>{record.description}</div>
+            <div style={{ fontWeight: 500 }}>{record.Title}</div>
+            <div style={{ fontSize: '12px', color: '#666' }}>{record.Description}</div>
           </div>
         </div>
       )
     },
     {
       title: 'Kategori',
-      dataIndex: 'category',
+      dataIndex: 'Category',
       key: 'category',
       width: 120,
       render: (category) => {
@@ -610,8 +415,8 @@ export default function ChatbotPage() {
       render: (_, record) => (
         <div>
           <Progress
-            percent={record.usage}
-            strokeColor={record.usage > 30 ? '#52c41a' : record.usage > 15 ? '#faad14' : '#ff4d4f'}
+            percent={record.Usage}
+            strokeColor={record.Usage > 30 ? '#52c41a' : record.Usage > 15 ? '#faad14' : '#ff4d4f'}
             size="small"
             format={(percent) => `${percent} kez`}
           />
@@ -640,7 +445,7 @@ export default function ChatbotPage() {
   const knowledgeBaseColumns: ColumnsType<any> = [
     {
       title: 'Başlık',
-      dataIndex: 'title',
+      dataIndex: 'Title',
       key: 'title',
       width: 300,
       render: (title) => (
@@ -649,7 +454,7 @@ export default function ChatbotPage() {
     },
     {
       title: 'Kategori',
-      dataIndex: 'category',
+      dataIndex: 'Category',
       key: 'category',
       width: 120,
       render: (category) => {
@@ -663,7 +468,7 @@ export default function ChatbotPage() {
     },
     {
       title: 'Görüntülenme',
-      dataIndex: 'views',
+      dataIndex: 'Views',
       key: 'views',
       width: 120,
       render: (views) => (
@@ -674,7 +479,7 @@ export default function ChatbotPage() {
     },
     {
       title: 'Faydalı',
-      dataIndex: 'helpful',
+      dataIndex: 'Helpful',
       key: 'helpful',
       width: 100,
       render: (helpful) => (
@@ -685,7 +490,7 @@ export default function ChatbotPage() {
     },
     {
       title: 'Son Güncelleme',
-      dataIndex: 'lastUpdated',
+      dataIndex: 'LastUpdated',
       key: 'lastUpdated',
       width: 150,
       render: (date) => (
@@ -717,30 +522,42 @@ export default function ChatbotPage() {
     }
   ];
 
-  const handleOpenChat = (conversation: any) => {
-    setSelectedConversation(conversation);
-    setIsChatDrawerVisible(true);
+  const handleOpenChat = async (conversation: any) => {
+    try {
+      setSelectedConversation(conversation);
+      setIsChatDrawerVisible(true);
+      
+      // Load conversation messages
+      const messages = await chatbotService.getConversationMessages(conversation.Id);
+      setChatHistory(messages);
+    } catch (error) {
+      console.error('Error loading conversation messages:', error);
+      message.error('Konuşma mesajları yüklenirken hata oluştu');
+    }
   };
 
   const handleViewDetails = (conversation: any) => {
-    message.info(`${conversation.userName} konuşma detayları yakında eklenecek`);
+    message.info(`${conversation.UserName} konuşma detayları yakında eklenecek`);
   };
 
   const handleQuickAction = async (action: any) => {
     try {
-      message.loading(`${action.title} aksiyonu başlatılıyor...`);
+      message.loading(`${action.Title} aksiyonu başlatılıyor...`);
+      
+      // Mark quick action as used
+      await chatbotService.useQuickAction(action.Id);
       
       const aiResponse: AIResponse = await aiService.getQuickResponse(
-        action.category,
-        `${action.title} hakkında bilgi ver: ${action.description}`
+        action.Category,
+        `${action.Title} hakkında bilgi ver: ${action.Description}`
       );
 
       if (aiResponse.Success && aiResponse.Content) {
-        message.success(`${action.title} aksiyonu başarıyla çalıştırıldı`);
+        message.success(`${action.Title} aksiyonu başarıyla çalıştırıldı`);
         
         // Show AI response in a modal or notification
         Modal.info({
-          title: `${action.title} - AI Yanıtı`,
+          title: `${action.Title} - AI Yanıtı`,
           content: (
             <div>
               <p>{aiResponse.Content}</p>
@@ -748,6 +565,10 @@ export default function ChatbotPage() {
           ),
           width: 600,
         });
+        
+        // Refresh quick actions to update usage count
+        const updatedQuickActions = await chatbotService.getQuickActions();
+        setQuickActions(updatedQuickActions);
       } else {
         message.error('Aksiyon çalıştırılırken hata oluştu');
       }
@@ -757,12 +578,42 @@ export default function ChatbotPage() {
     }
   };
 
-  const handleViewArticle = (article: any) => {
-    message.info(`${article.title} makalesi görüntüleniyor...`);
+  const handleViewArticle = async (article: any) => {
+    try {
+      // Mark article as viewed
+      await chatbotService.viewKnowledgeBaseArticle(article.Id);
+      
+      // Show article content in modal
+      Modal.info({
+        title: article.Title,
+        content: (
+          <div>
+            <div style={{ marginBottom: '16px' }}>
+              <Tag color="blue">{article.Category}</Tag>
+              <Text type="secondary" style={{ marginLeft: '8px' }}>
+                Görüntülenme: {article.Views} | Faydalı: {article.HelpfulCount}
+              </Text>
+            </div>
+            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              {article.Content}
+            </div>
+          </div>
+        ),
+        width: 800,
+      });
+      
+      // Refresh knowledge base to update view count
+      const updatedKnowledgeBase = await chatbotService.getKnowledgeBaseArticles();
+      setKnowledgeBase(updatedKnowledgeBase);
+    } catch (error) {
+      console.error('Error viewing article:', error);
+      message.error('Makale görüntülenirken hata oluştu');
+    }
   };
 
   const handleEditArticle = (article: any) => {
-    message.info(`${article.title} makalesi düzenleniyor...`);
+    // TODO: Implement article editing functionality
+    message.info(`${article.Title} makalesi düzenleme özelliği yakında eklenecek...`);
   };
 
   const handleSendMessage = async () => {
@@ -792,7 +643,7 @@ export default function ChatbotPage() {
       });
 
       // Send message to AI backend
-      const aiResponse: AIResponse = await aiService.sendChatMessage(
+      const aiResponse: AIResponse = await aiService.sendSuperAdminChatMessage(
         currentMessage, 
         selectedConversation.Id.toString()
       );
@@ -809,6 +660,13 @@ export default function ChatbotPage() {
         };
 
         setChatHistory(prev => [...prev, botMessage]);
+        
+        // Save bot message to backend
+        await chatbotService.sendMessage(selectedConversation.Id, {
+          Sender: 'bot',
+          Content: aiResponse.Content,
+          MessageType: 'text'
+        });
       } else {
         // Fallback response if AI fails
         const botMessage: ChatbotMessage = {
@@ -847,13 +705,34 @@ export default function ChatbotPage() {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
-  const clearFilters = () => {
+  const clearFilters = async () => {
     setFilters({
       status: undefined,
       priority: undefined,
       category: undefined,
       tenantId: undefined
     });
+    
+    // Reload data without filters
+    try {
+      setLoading(true);
+      const conversationsData = await chatbotService.getConversations({
+        page: 1,
+        pageSize: pagination.pageSize
+      });
+      
+      setConversations(conversationsData.conversations);
+      setPagination(prev => ({
+        ...prev,
+        current: 1,
+        total: conversationsData.totalCount
+      }));
+    } catch (error) {
+      console.error('Error clearing filters:', error);
+      message.error('Filtreler temizlenirken hata oluştu');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const scrollToBottom = () => {
@@ -875,10 +754,17 @@ export default function ChatbotPage() {
         console.log('DEBUG - Statistics data:', statsData);
         setStatistics(statsData);
         
-        // Load conversations
-        const conversationsData = await chatbotService.getConversations();
+        // Load conversations with pagination
+        const conversationsData = await chatbotService.getConversations({
+          page: pagination.current,
+          pageSize: pagination.pageSize
+        });
         console.log('DEBUG - Conversations data:', conversationsData);
         setConversations(conversationsData.conversations);
+        setPagination(prev => ({
+          ...prev,
+          total: conversationsData.totalCount
+        }));
         
         // Load quick actions
         const quickActionsData = await chatbotService.getQuickActions();
@@ -899,7 +785,7 @@ export default function ChatbotPage() {
     };
 
     loadData();
-  }, []);
+  }, [pagination.current, pagination.pageSize]);
 
   // Test AI connection on component mount
   useEffect(() => {
@@ -992,16 +878,37 @@ export default function ChatbotPage() {
     }
   };
 
-  const filteredConversations = conversations.filter(conv => {
-    if (filters.status && conv.Status !== filters.status) return false;
-    if (filters.category && conv.Category !== filters.category) return false;
-    if (filters.tenantId && conv.TenantId !== filters.tenantId) return false;
-    return true;
-  });
+  // Note: Filtering is now handled by the backend API
+  const filteredConversations = conversations;
 
-  const currentConversationMessages = chatHistory.filter(
-    msg => msg.ConversationId === selectedConversation?.Id
-  );
+  // Apply filters and reload data
+  const applyFilters = async () => {
+    try {
+      setLoading(true);
+      const conversationsData = await chatbotService.getConversations({
+        status: filters.status,
+        category: filters.category,
+        tenantId: filters.tenantId,
+        page: 1, // Reset to first page when filtering
+        pageSize: pagination.pageSize
+      });
+      
+      setConversations(conversationsData.conversations);
+      setPagination(prev => ({
+        ...prev,
+        current: 1,
+        total: conversationsData.totalCount
+      }));
+    } catch (error) {
+      console.error('Error applying filters:', error);
+      message.error('Filtreler uygulanırken hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Note: chatHistory now contains messages for the selected conversation
+  const currentConversationMessages = chatHistory;
 
   if (loading) {
     return (
@@ -1134,6 +1041,7 @@ export default function ChatbotPage() {
               <Button
                 type="primary"
                 icon={<SearchOutlined />}
+                onClick={applyFilters}
               >
                 Filtrele
               </Button>
@@ -1162,7 +1070,25 @@ export default function ChatbotPage() {
                    <Space>
                      <Button
                        icon={<ReloadOutlined />}
-                       onClick={() => message.info('Konuşmalar yenileniyor...')}
+                       onClick={async () => {
+                         try {
+                           setLoading(true);
+                           const conversationsData = await chatbotService.getConversations({
+                             page: pagination.current,
+                             pageSize: pagination.pageSize
+                           });
+                           setConversations(conversationsData.conversations);
+                           setPagination(prev => ({
+                             ...prev,
+                             total: conversationsData.totalCount
+                           }));
+                           message.success('Konuşmalar yenilendi');
+                         } catch (error) {
+                           message.error('Konuşmalar yenilenirken hata oluştu');
+                         } finally {
+                           setLoading(false);
+                         }
+                       }}
                      >
                        Yenile
                      </Button>
@@ -1178,107 +1104,140 @@ export default function ChatbotPage() {
                  <Table
                    columns={conversationColumns}
                    dataSource={filteredConversations}
-                   rowKey="id"
+                   rowKey="Id"
                    pagination={{
-                     pageSize: 10,
+                     current: pagination.current,
+                     pageSize: pagination.pageSize,
+                     total: pagination.total,
                      showSizeChanger: true,
                      showQuickJumper: true,
                      showTotal: (total, range) =>
                        `${range[0]}-${range[1]} / ${total} konuşma`
                    }}
-                   scroll={{ x: 1400 }}
-                 />
-               </Card>
-             )
-           },
-           {
-             key: 'quick-actions',
-             label: (
-               <span>
-                 <BulbOutlined />
-                 Hızlı Aksiyonlar
-               </span>
-             ),
-             children: (
-               <Card
-                 title="Sık Kullanılan Aksiyonlar"
-                 extra={
-                   <Space>
-                     <Button
-                       icon={<PlusOutlined />}
-                       onClick={() => message.info('Yeni aksiyon ekleniyor...')}
-                     >
-                       Yeni Aksiyon
-                     </Button>
-                     <Button
-                       icon={<FileExcelOutlined />}
-                       onClick={() => message.info('Aksiyon raporu indiriliyor...')}
-                     >
-                       Rapor İndir
-                     </Button>
-                   </Space>
-                 }
-               >
-                 <Table
-                   columns={quickActionColumns}
-                   dataSource={quickActions}
-                   rowKey="id"
-                   pagination={{
-                     pageSize: 10,
-                     showSizeChanger: true,
-                     showQuickJumper: true,
-                     showTotal: (total, range) =>
-                       `${range[0]}-${range[1]} / ${total} aksiyon`
-                   }}
-                   scroll={{ x: 800 }}
-                 />
-               </Card>
-             )
-           },
-           {
-             key: 'knowledge-base',
-             label: (
-               <span>
-                 <BookOutlined />
-                 Bilgi Bankası
-               </span>
-             ),
-             children: (
-               <Card
-                 title="Bilgi Bankası Makaleleri"
-                 extra={
-                   <Space>
-                     <Button
-                       icon={<PlusOutlined />}
-                       onClick={() => message.info('Yeni makale ekleniyor...')}
-                     >
-                       Yeni Makale
-                     </Button>
-                     <Button
-                       icon={<FileExcelOutlined />}
-                       onClick={() => message.info('Makale raporu indiriliyor...')}
-                     >
-                       Rapor İndir
-                     </Button>
-                   </Space>
-                 }
-               >
-                 <Table
-                   columns={knowledgeBaseColumns}
-                   dataSource={knowledgeBase}
-                   rowKey="id"
-                   pagination={{
-                     pageSize: 10,
-                     showSizeChanger: true,
-                     showQuickJumper: true,
-                     showTotal: (total, range) =>
-                       `${range[0]}-${range[1]} / ${total} makale`
-                   }}
-                   scroll={{ x: 1000 }}
-                 />
-               </Card>
-             )
-           }
+                                        onChange={(paginationConfig) => {
+                       if (paginationConfig.current && paginationConfig.pageSize) {
+                         setPagination({
+                           current: paginationConfig.current,
+                           pageSize: paginationConfig.pageSize,
+                           total: pagination.total
+                         });
+                       }
+                     }}
+                     scroll={{ x: 1400 }}
+                   />
+                 </Card>
+               )
+             },
+             {
+               key: 'quick-actions',
+               label: (
+                 <span>
+                   <BulbOutlined />
+                   Hızlı Aksiyonlar
+                 </span>
+               ),
+               children: (
+                 <Card
+                   title="Sık Kullanılan Aksiyonlar"
+                   extra={
+                     <Space>
+                       <Button
+                         icon={<PlusOutlined />}
+                         onClick={() => message.info('Yeni aksiyon ekleniyor...')}
+                       >
+                         Yeni Aksiyon
+                       </Button>
+                       <Button
+                         icon={<FileExcelOutlined />}
+                         onClick={() => message.info('Aksiyon raporu indiriliyor...')}
+                       >
+                         Rapor İndir
+                       </Button>
+                     </Space>
+                   }
+                 >
+                   <Table
+                     columns={quickActionColumns}
+                     dataSource={quickActions}
+                     rowKey="Id"
+                     pagination={{
+                       current: pagination.current,
+                       pageSize: pagination.pageSize,
+                       total: pagination.total,
+                       showSizeChanger: true,
+                       showQuickJumper: true,
+                       showTotal: (total, range) =>
+                         `${range[0]}-${range[1]} / ${total} aksiyon`
+                     }}
+                     onChange={(paginationConfig) => {
+                       if (paginationConfig.current && paginationConfig.pageSize) {
+                         setPagination({
+                           current: paginationConfig.current,
+                           pageSize: paginationConfig.pageSize,
+                           total: pagination.total
+                         });
+                       }
+                     }}
+                     scroll={{ x: 800 }}
+                   />
+                 </Card>
+               )
+             },
+             {
+               key: 'knowledge-base',
+               label: (
+                 <span>
+                   <BookOutlined />
+                   Bilgi Bankası
+                 </span>
+               ),
+               children: (
+                 <Card
+                   title="Bilgi Bankası Makaleleri"
+                   extra={
+                     <Space>
+                       <Button
+                         icon={<PlusOutlined />}
+                         onClick={() => message.info('Yeni makale ekleniyor...')}
+                       >
+                         Yeni Makale
+                       </Button>
+                       <Button
+                         icon={<FileExcelOutlined />}
+                         onClick={() => message.info('Makale raporu indiriliyor...')}
+                       >
+                         Rapor İndir
+                       </Button>
+                     </Space>
+                   }
+                 >
+                   <Table
+                     columns={knowledgeBaseColumns}
+                     dataSource={knowledgeBase}
+                     rowKey="Id"
+                     pagination={{
+                       current: pagination.current,
+                       pageSize: pagination.pageSize,
+                       total: pagination.total,
+                       showSizeChanger: true,
+                       showQuickJumper: true,
+                       showTotal: (total, range) =>
+                         `${range[0]}-${range[1]} / ${total} makale`
+                     }}
+                     onChange={(paginationConfig) => {
+                       if (paginationConfig.current && paginationConfig.pageSize) {
+                         setPagination({
+                           current: paginationConfig.current,
+                           pageSize: paginationConfig.pageSize,
+                           total: pagination.total
+                         });
+                       }
+                     }}
+                     scroll={{ x: 1000 }}
+                   />
+                 </Card>
+               )
+             }
          ]}
        />
 

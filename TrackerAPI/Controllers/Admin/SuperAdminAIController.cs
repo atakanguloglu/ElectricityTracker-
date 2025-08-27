@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using ElectricityTrackerAPI.Services;
 using ElectricityTrackerAPI.Data;
 using ElectricityTrackerAPI.Models.Logging;
+using ElectricityTrackerAPI.DTOs.Admin;
 
 namespace ElectricityTrackerAPI.Controllers.Admin
 {
@@ -247,6 +248,230 @@ namespace ElectricityTrackerAPI.Controllers.Admin
                     Error = "AI bağlantı testi başarısız oldu.",
                     GeneratedAt = DateTime.UtcNow
                 });
+            }
+        }
+
+        // AI Analytics Endpoints
+        [HttpGet("analytics/consumption-predictions")]
+        public async Task<ActionResult<List<ConsumptionPredictionDto>>> GetConsumptionPredictions()
+        {
+            try
+            {
+                // Mock data for now - replace with real database queries later
+                var predictions = new List<ConsumptionPredictionDto>
+                {
+                    new ConsumptionPredictionDto
+                    {
+                        Id = 1,
+                        TenantId = 1,
+                        TenantName = "ABC Şirketi",
+                        ResourceType = "electricity",
+                        ResourceName = "Ana Elektrik",
+                        CurrentMonth = 4500,
+                        PredictedNextMonth = 4800,
+                        PredictedYearly = 52000,
+                        Confidence = 85,
+                        Trend = "increasing",
+                        Factors = new List<string> { "Yaz ayları", "Klima kullanımı", "Üretim artışı" },
+                        Recommendations = new List<string> { "Enerji tasarrufu", "Akıllı sayaç", "Zaman bazlı fiyatlandırma" }
+                    },
+                    new ConsumptionPredictionDto
+                    {
+                        Id = 2,
+                        TenantId = 2,
+                        TenantName = "XYZ Ltd.",
+                        ResourceType = "water",
+                        ResourceName = "Su Tüketimi",
+                        CurrentMonth = 1200,
+                        PredictedNextMonth = 1100,
+                        PredictedYearly = 13000,
+                        Confidence = 92,
+                        Trend = "decreasing",
+                        Factors = new List<string> { "Su tasarrufu", "Yeni ekipman", "Personel eğitimi" },
+                        Recommendations = new List<string> { "Su geri dönüşümü", "Sızıntı kontrolü", "Verimli armatürler" }
+                    }
+                };
+
+                return Ok(predictions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get consumption predictions");
+                return StatusCode(500, new { Error = "Tüketim tahminleri alınırken hata oluştu." });
+            }
+        }
+
+        [HttpGet("analytics/cost-savings")]
+        public async Task<ActionResult<List<CostSavingsDto>>> GetCostSavings()
+        {
+            try
+            {
+                // Mock data for now - replace with real database queries later
+                var savings = new List<CostSavingsDto>
+                {
+                    new CostSavingsDto
+                    {
+                        Id = 1,
+                        TenantId = 1,
+                        TenantName = "ABC Şirketi",
+                        DepartmentId = 1,
+                        DepartmentName = "IT Departmanı",
+                        CurrentCost = 4500,
+                        PotentialSavings = 1200,
+                        SavingsPercentage = 26.7,
+                        Recommendations = new List<string> { "Sunucu sanallaştırma: ₺800 tasarruf", "Enerji tasarruflu monitörler: ₺400 tasarruf" },
+                        ImplementationTime = "2-3 ay",
+                        ROI = 180,
+                        Priority = "high"
+                    },
+                    new CostSavingsDto
+                    {
+                        Id = 2,
+                        TenantId = 2,
+                        TenantName = "XYZ Ltd.",
+                        DepartmentId = 4,
+                        DepartmentName = "Üretim",
+                        CurrentCost = 8500,
+                        PotentialSavings = 2100,
+                        SavingsPercentage = 24.7,
+                        Recommendations = new List<string> { "Verimli motorlar: ₺1200 tasarruf", "Akıllı aydınlatma: ₺900 tasarruf" },
+                        ImplementationTime = "4-6 ay",
+                        ROI = 220,
+                        Priority = "medium"
+                    }
+                };
+
+                return Ok(savings);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get cost savings");
+                return StatusCode(500, new { Error = "Maliyet tasarrufları alınırken hata oluştu." });
+            }
+        }
+
+        [HttpGet("analytics/department-kpis")]
+        public async Task<ActionResult<List<DepartmentKPIDto>>> GetDepartmentKPIs()
+        {
+            try
+            {
+                // Mock data for now - replace with real database queries later
+                var kpis = new List<DepartmentKPIDto>
+                {
+                    new DepartmentKPIDto
+                    {
+                        Id = 1,
+                        TenantId = 1,
+                        TenantName = "ABC Şirketi",
+                        DepartmentId = 1,
+                        DepartmentName = "IT Departmanı",
+                        EnergyEfficiency = 85,
+                        CostPerEmployee = 180,
+                        SustainabilityScore = 78,
+                        ImprovementAreas = new List<string> { "Sunucu optimizasyonu", "Enerji izleme sistemi" }
+                    },
+                    new DepartmentKPIDto
+                    {
+                        Id = 2,
+                        TenantId = 2,
+                        TenantName = "XYZ Ltd.",
+                        DepartmentId = 4,
+                        DepartmentName = "Üretim",
+                        EnergyEfficiency = 72,
+                        CostPerEmployee = 320,
+                        SustainabilityScore = 65,
+                        ImprovementAreas = new List<string> { "Verimli ekipman", "Atık azaltma" }
+                    }
+                };
+
+                return Ok(kpis);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get department KPIs");
+                return StatusCode(500, new { Error = "Departman KPI'ları alınırken hata oluştu." });
+            }
+        }
+
+        [HttpGet("analytics/carbon-footprint")]
+        public async Task<ActionResult<List<CarbonFootprintDto>>> GetCarbonFootprint()
+        {
+            try
+            {
+                // Mock data for now - replace with real database queries later
+                var footprints = new List<CarbonFootprintDto>
+                {
+                    new CarbonFootprintDto
+                    {
+                        Id = 1,
+                        TenantId = 1,
+                        TenantName = "ABC Şirketi",
+                        CurrentMonth = 2.8,
+                        PreviousMonth = 3.1,
+                        Reduction = 12.5,
+                        Target = 2.5,
+                        Status = "on-track"
+                    },
+                    new CarbonFootprintDto
+                    {
+                        Id = 2,
+                        TenantId = 2,
+                        TenantName = "XYZ Ltd.",
+                        CurrentMonth = 4.2,
+                        PreviousMonth = 4.5,
+                        Reduction = 8.2,
+                        Target = 3.8,
+                        Status = "behind"
+                    }
+                };
+
+                return Ok(footprints);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get carbon footprint");
+                return StatusCode(500, new { Error = "Karbon ayak izi verileri alınırken hata oluştu." });
+            }
+        }
+
+        [HttpGet("analytics/executive-kpis")]
+        public async Task<ActionResult<List<ExecutiveKPIDto>>> GetExecutiveKPIs()
+        {
+            try
+            {
+                // Mock data for now - replace with real database queries later
+                var kpis = new List<ExecutiveKPIDto>
+                {
+                    new ExecutiveKPIDto
+                    {
+                        Id = 1,
+                        TenantId = 1,
+                        TenantName = "ABC Şirketi",
+                        TotalEnergyCost = 45200,
+                        EnergyEfficiency = 78,
+                        SustainabilityScore = 82,
+                        CostSavings = 12000,
+                        ComplianceScore = 95
+                    },
+                    new ExecutiveKPIDto
+                    {
+                        Id = 2,
+                        TenantId = 2,
+                        TenantName = "XYZ Ltd.",
+                        TotalEnergyCost = 68500,
+                        EnergyEfficiency = 72,
+                        SustainabilityScore = 68,
+                        CostSavings = 8500,
+                        ComplianceScore = 88
+                    }
+                };
+
+                return Ok(kpis);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get executive KPIs");
+                return StatusCode(500, new { Error = "Yönetici KPI'ları alınırken hata oluştu." });
             }
         }
     }

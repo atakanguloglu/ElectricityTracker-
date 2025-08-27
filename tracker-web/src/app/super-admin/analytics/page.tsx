@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { 
   Card, 
   Row, 
@@ -23,7 +23,7 @@ import {
   ProCard,
   StatisticCard
 } from '@ant-design/pro-components'
-import { 
+import {
   LineChartOutlined,
   BarChartOutlined,
   PieChartOutlined,
@@ -36,46 +36,54 @@ import {
   ThunderboltOutlined,
   UserOutlined,
   DollarOutlined,
-  ClockCircleOutlined
+  ClockCircleOutlined,
+  LoadingOutlined
 } from '@ant-design/icons'
+import { analyticsService, AnalyticsOverview, AnalyticsTrend, TopTenant, DeviceUsage } from '../../../services/analyticsService'
 
 const { Title, Text } = Typography
 const { RangePicker } = DatePicker
 const { Option } = Select
 
-// Mock data for analytics
-const mockAnalyticsData = {
-  overview: {
-    totalUsers: 1247,
-    activeUsers: 892,
-    totalRevenue: 45678,
-    avgSessionTime: 23.5
-  },
-  trends: [
-    { date: '2024-01', users: 1200, revenue: 42000, sessions: 850 },
-    { date: '2024-02', users: 1250, revenue: 43500, sessions: 880 },
-    { date: '2024-03', users: 1300, revenue: 45000, sessions: 920 },
-    { date: '2024-04', users: 1350, revenue: 46500, sessions: 950 },
-    { date: '2024-05', users: 1400, revenue: 48000, sessions: 980 },
-    { date: '2024-06', users: 1450, revenue: 49500, sessions: 1010 }
-  ],
-  topTenants: [
-    { id: 1, name: 'ABC Şirketi', consumption: 12500, growth: 12.5, status: 'active' },
-    { id: 2, name: 'XYZ Ltd.', consumption: 11800, growth: 8.3, status: 'active' },
-    { id: 3, name: 'DEF Holding', consumption: 11200, growth: -2.1, status: 'warning' },
-    { id: 4, name: 'GHI Group', consumption: 10800, growth: 15.7, status: 'active' },
-    { id: 5, name: 'JKL Corp', consumption: 10200, growth: 5.2, status: 'active' }
-  ],
-  deviceUsage: [
-    { device: 'Mobil Uygulama', usage: 45, color: '#6366f1' },
-    { device: 'Web Arayüzü', usage: 35, color: '#8b5cf6' },
-    { device: 'API Entegrasyonu', usage: 20, color: '#ec4899' }
-  ]
-}
-
 export default function AnalyticsPage() {
+  // State management
+  const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
+  const [trends, setTrends] = useState<AnalyticsTrend[]>([]);
+  const [topTenants, setTopTenants] = useState<TopTenant[]>([]);
+  const [deviceUsage, setDeviceUsage] = useState<DeviceUsage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<any>(null)
   const [selectedMetric, setSelectedMetric] = useState('users')
+
+  // Load analytics data
+  useEffect(() => {
+    const loadAnalyticsData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const [overviewData, trendsData, topTenantsData, deviceUsageData] = await Promise.all([
+          analyticsService.getOverview(),
+          analyticsService.getTrends(),
+          analyticsService.getTopTenants(),
+          analyticsService.getDeviceUsage()
+        ]);
+        
+        setOverview(overviewData);
+        setTrends(trendsData);
+        setTopTenants(topTenantsData);
+        setDeviceUsage(deviceUsageData);
+      } catch (error) {
+        console.error('Error loading analytics data:', error);
+        setError('Analytics verileri yüklenirken hata oluştu');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAnalyticsData();
+  }, []);
 
   const overviewColumns = [
     {
@@ -129,9 +137,9 @@ export default function AnalyticsPage() {
       title: 'Tüketim (kWh)',
       dataIndex: 'consumption',
       key: 'consumption',
-      render: (value: number) => (
+      render: (value?: number) => (
         <Text style={{ fontSize: '16px', fontWeight: 'bold' }}>
-          {value.toLocaleString()}
+          {value?.toLocaleString() ?? '0'}
         </Text>
       )
     },
@@ -179,51 +187,96 @@ export default function AnalyticsPage() {
     }
   ]
 
-  const overviewData = [
-    {
-      key: '1',
-      metric: 'Toplam Kullanıcı',
-      value: mockAnalyticsData.overview.totalUsers,
-      formattedValue: mockAnalyticsData.overview.totalUsers.toLocaleString(),
-      change: 12.5,
-      icon: <UserOutlined style={{ color: '#6366f1' }} />,
-      color: '#6366f1'
-    },
-    {
-      key: '2',
-      metric: 'Aktif Kullanıcı',
-      value: mockAnalyticsData.overview.activeUsers,
-      formattedValue: mockAnalyticsData.overview.activeUsers.toLocaleString(),
-      change: 8.3,
-      icon: <ThunderboltOutlined style={{ color: '#10b981' }} />,
-      color: '#10b981'
-    },
-    {
-      key: '3',
-      metric: 'Toplam Gelir',
-      value: mockAnalyticsData.overview.totalRevenue,
-      formattedValue: `₺${mockAnalyticsData.overview.totalRevenue.toLocaleString()}`,
-      change: 15.7,
-      icon: <DollarOutlined style={{ color: '#f59e0b' }} />,
-      color: '#f59e0b'
-    },
-    {
-      key: '4',
-      metric: 'Ortalama Oturum',
-      value: mockAnalyticsData.overview.avgSessionTime,
-      formattedValue: `${mockAnalyticsData.overview.avgSessionTime} dk`,
-      change: -2.1,
-      icon: <ClockCircleOutlined style={{ color: '#8b5cf6' }} />,
-      color: '#8b5cf6'
+  const overviewData = useMemo(() => {
+    if (!overview) {
+      return [];
     }
-  ]
+    
+    return [
+      {
+        key: '1',
+        metric: 'Toplam Kullanıcı',
+        value: overview.TotalUsers ?? 0,
+        formattedValue: overview.TotalUsers != null ? overview.TotalUsers.toLocaleString() : '0',
+        change: 12.5,
+        icon: <UserOutlined style={{ color: '#6366f1' }} />,
+        color: '#6366f1'
+      },
+      {
+        key: '2',
+        metric: 'Aktif Kullanıcı',
+        value: overview.ActiveUsers ?? 0,
+        formattedValue: overview.ActiveUsers != null ? overview.ActiveUsers.toLocaleString() : '0',
+        change: 8.3,
+        icon: <ThunderboltOutlined style={{ color: '#10b981' }} />,
+        color: '#10b981'
+      },
+      {
+        key: '3',
+        metric: 'Toplam Gelir',
+        value: overview.TotalRevenue ?? 0,
+        formattedValue: `₺${overview.TotalRevenue != null ? overview.TotalRevenue.toLocaleString() : '0'}`,
+        change: 15.7,
+        icon: <DollarOutlined style={{ color: '#f59e0b' }} />,
+        color: '#f59e0b'
+      },
+      {
+        key: '4',
+        metric: 'Ortalama Oturum',
+        value: overview.AvgSessionTime ?? 0,
+        formattedValue: `${overview.AvgSessionTime != null ? overview.AvgSessionTime.toFixed(1) : '0.0'} dk`,
+        change: -2.1,
+        icon: <ClockCircleOutlined style={{ color: '#8b5cf6' }} />,
+        color: '#8b5cf6'
+      }
+    ];
+  }, [overview])
+
+  // Loading state
+  if (loading) {
+    return (
+      <PageContainer
+        title="Analitik Dashboard"
+        subTitle="Sistem performansı ve kullanıcı davranışları hakkında detaylı analizler"
+      >
+        <div style={{ textAlign: 'center', padding: '100px 0' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <LoadingOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
+          </div>
+          <div style={{ fontSize: '16px' }}>Analytics verileri yükleniyor...</div>
+        </div>
+      </PageContainer>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <PageContainer
+        title="Analitik Dashboard"
+        subTitle="Sistem performansı ve kullanıcı davranışları hakkında detaylı analizler"
+      >
+        <Alert
+          message="Hata"
+          description={error}
+          type="error"
+          showIcon
+          action={
+            <Button size="small" onClick={() => window.location.reload()}>
+              Yeniden Dene
+            </Button>
+          }
+        />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer
       title="Analitik Dashboard"
       subTitle="Sistem performansı ve kullanıcı davranışları hakkında detaylı analizler"
       extra={[
-        <Button key="refresh" icon={<ReloadOutlined />}>
+        <Button key="refresh" icon={<ReloadOutlined />} onClick={() => window.location.reload()}>
           Yenile
         </Button>,
         <Button key="export" type="primary" icon={<DownloadOutlined />}>
@@ -257,19 +310,21 @@ export default function AnalyticsPage() {
         </Space>
       </ProCard>
 
-      {/* Overview Statistics */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col span={24}>
-          <ProCard title="Genel Bakış" extra={<FilterOutlined />}>
-            <Table 
-              columns={overviewColumns} 
-              dataSource={overviewData} 
-              pagination={false}
-              size="middle"
-            />
-          </ProCard>
-        </Col>
-      </Row>
+             {/* Overview Statistics */}
+       {overview && overviewData && overviewData.length > 0 && (
+         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+           <Col span={24}>
+             <ProCard title="Genel Bakış" extra={<FilterOutlined />}>
+               <Table 
+                 columns={overviewColumns} 
+                 dataSource={overviewData} 
+                 pagination={false}
+                 size="middle"
+               />
+             </ProCard>
+           </Col>
+         </Row>
+       )}
 
       {/* Charts and Analytics */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
@@ -330,7 +385,7 @@ export default function AnalyticsPage() {
           >
             <Table 
               columns={tenantColumns} 
-              dataSource={mockAnalyticsData.topTenants} 
+              dataSource={topTenants} 
               pagination={false}
               size="middle"
             />
@@ -343,21 +398,21 @@ export default function AnalyticsPage() {
         <Col span={24}>
           <ProCard title="Cihaz Kullanım Dağılımı">
             <Row gutter={[16, 16]}>
-              {mockAnalyticsData.deviceUsage.map((device, index) => (
+              {deviceUsage.map((device, index) => (
                 <Col xs={24} sm={8} key={index}>
                   <Card style={{ textAlign: 'center' }}>
                     <div style={{ marginBottom: 16 }}>
-                      <Text style={{ fontSize: 18, fontWeight: 'bold' }}>
-                        {device.device}
-                      </Text>
+                                             <Text style={{ fontSize: 18, fontWeight: 'bold' }}>
+                         {device.Device}
+                       </Text>
                     </div>
-                    <Progress 
-                      type="circle" 
-                      percent={device.usage} 
-                      strokeColor={device.color}
-                      format={(percent) => `${percent}%`}
-                      size={80}
-                    />
+                                         <Progress 
+                       type="circle" 
+                       percent={device.Usage} 
+                       strokeColor={device.Color}
+                       format={(percent) => `${percent}%`}
+                       size={80}
+                     />
                   </Card>
                 </Col>
               ))}

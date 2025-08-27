@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   Card,
@@ -96,8 +96,10 @@ import {
   CloudOutlined,
   SunOutlined,
   RiseOutlined,
-  FallOutlined
+  FallOutlined,
+  LoadingOutlined
 } from '@ant-design/icons';
+import { aiAnalyticsService, ConsumptionPrediction, CostSavings, DepartmentKPI, CarbonFootprint, ExecutiveKPI } from '../../../services/aiAnalyticsService';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Title, Text, Paragraph } = Typography;
@@ -108,266 +110,15 @@ const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 const { Step } = Steps;
 
-// Mock data
-const mockTenants = [
-  { id: 1, name: 'ABC Şirketi', domain: 'abc.com' },
-  { id: 2, name: 'XYZ Ltd.', domain: 'xyz.com' },
-  { id: 3, name: 'Tech Solutions', domain: 'techsolutions.com' },
-  { id: 4, name: 'Global Corp', domain: 'globalcorp.com' },
-  { id: 5, name: 'Startup Inc', domain: 'startupinc.com' }
-];
 
-const mockDepartments = [
-  { id: 1, name: 'IT Departmanı', tenantId: 1 },
-  { id: 2, name: 'Muhasebe', tenantId: 1 },
-  { id: 3, name: 'Satış', tenantId: 1 },
-  { id: 4, name: 'Üretim', tenantId: 2 },
-  { id: 5, name: 'Ar-Ge', tenantId: 2 },
-  { id: 6, name: 'İnsan Kaynakları', tenantId: 3 },
-  { id: 7, name: 'Pazarlama', tenantId: 3 },
-  { id: 8, name: 'Operasyon', tenantId: 4 },
-  { id: 9, name: 'Finans', tenantId: 4 },
-  { id: 10, name: 'Müşteri Hizmetleri', tenantId: 5 }
-];
 
-const mockConsumptionPredictions = [
-  {
-    id: 1,
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    resourceType: 'electricity',
-    resourceName: 'Elektrik',
-    currentMonth: 1250,
-    predictedNextMonth: 1320,
-    predictedYearly: 15800,
-    confidence: 85,
-    trend: 'increasing',
-    factors: ['Hava sıcaklığı artışı', 'Yeni ekipman kurulumu'],
-    recommendations: ['LED aydınlatma geçişi', 'Enerji tasarruflu cihazlar']
-  },
-  {
-    id: 2,
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    resourceType: 'water',
-    resourceName: 'Su',
-    currentMonth: 450,
-    predictedNextMonth: 420,
-    predictedYearly: 5100,
-    confidence: 92,
-    trend: 'decreasing',
-    factors: ['Su tasarruf önlemleri', 'Yağış artışı'],
-    recommendations: ['Su tasarruf cihazları', 'Yağmur suyu toplama']
-  },
-  {
-    id: 3,
-    tenantId: 2,
-    tenantName: 'XYZ Ltd.',
-    resourceType: 'gas',
-    resourceName: 'Doğalgaz',
-    currentMonth: 450,
-    predictedNextMonth: 520,
-    predictedYearly: 6200,
-    confidence: 78,
-    trend: 'increasing',
-    factors: ['Kış sezonu yaklaşması', 'Üretim artışı'],
-    recommendations: ['Isı yalıtımı', 'Verimli ısıtma sistemleri']
-  }
-];
 
-const mockCostSavings = [
-  {
-    id: 1,
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    departmentId: 1,
-    departmentName: 'IT Departmanı',
-    currentCost: 4500,
-    potentialSavings: 1200,
-    savingsPercentage: 26.7,
-    recommendations: [
-      'Sunucu sanallaştırma: ₺800 tasarruf',
-      'Enerji tasarruflu monitörler: ₺400 tasarruf'
-    ],
-    implementationTime: '2-3 ay',
-    roi: 180,
-    priority: 'high'
-  },
-  {
-    id: 2,
-    tenantId: 2,
-    tenantName: 'XYZ Ltd.',
-    departmentId: 4,
-    departmentName: 'Üretim',
-    currentCost: 8500,
-    potentialSavings: 2100,
-    savingsPercentage: 24.7,
-    recommendations: [
-      'Verimli motorlar: ₺1200 tasarruf',
-      'Akıllı aydınlatma: ₺900 tasarruf'
-    ],
-    implementationTime: '4-6 ay',
-    roi: 220,
-    priority: 'medium'
-  },
-  {
-    id: 3,
-    tenantId: 3,
-    tenantName: 'Tech Solutions',
-    departmentId: 6,
-    departmentName: 'İnsan Kaynakları',
-    currentCost: 2800,
-    potentialSavings: 650,
-    savingsPercentage: 23.2,
-    recommendations: [
-      'Uzaktan çalışma: ₺400 tasarruf',
-      'Enerji yönetim sistemi: ₺250 tasarruf'
-    ],
-    implementationTime: '1-2 ay',
-    roi: 150,
-    priority: 'low'
-  }
-];
 
-const mockDepartmentKPIs = [
-  {
-    id: 1,
-    departmentId: 1,
-    departmentName: 'IT Departmanı',
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    energyEfficiency: 85,
-    costPerEmployee: 180,
-    carbonFootprint: 2.5,
-    sustainabilityScore: 78,
-    trend: 'improving',
-    lastMonth: 82,
-    target: 90,
-    recommendations: ['Sunucu optimizasyonu', 'Enerji izleme sistemi']
-  },
-  {
-    id: 2,
-    departmentId: 4,
-    departmentName: 'Üretim',
-    tenantId: 2,
-    tenantName: 'XYZ Ltd.',
-    energyEfficiency: 72,
-    costPerEmployee: 320,
-    carbonFootprint: 4.8,
-    sustainabilityScore: 65,
-    trend: 'stable',
-    lastMonth: 70,
-    target: 80,
-    recommendations: ['Verimli ekipman', 'Atık azaltma']
-  },
-  {
-    id: 3,
-    departmentId: 6,
-    departmentName: 'İnsan Kaynakları',
-    tenantId: 3,
-    tenantName: 'Tech Solutions',
-    energyEfficiency: 91,
-    costPerEmployee: 95,
-    carbonFootprint: 1.2,
-    sustainabilityScore: 88,
-    trend: 'improving',
-    lastMonth: 89,
-    target: 95,
-    recommendations: ['Yeşil ofis sertifikası', 'Sürdürülebilirlik eğitimi']
-  }
-];
 
-const mockCarbonFootprint = [
-  {
-    id: 1,
-    tenantId: 1,
-    tenantName: 'ABC Şirketi',
-    month: '2024-01',
-    electricityEmissions: 2.8,
-    gasEmissions: 1.2,
-    waterEmissions: 0.3,
-    fuelEmissions: 0.8,
-    totalEmissions: 5.1,
-    targetEmissions: 4.5,
-    reduction: 12.5,
-    sustainabilityLevel: 'good'
-  },
-  {
-    id: 2,
-    tenantId: 2,
-    tenantName: 'XYZ Ltd.',
-    month: '2024-01',
-    electricityEmissions: 4.2,
-    gasEmissions: 2.1,
-    waterEmissions: 0.5,
-    fuelEmissions: 1.5,
-    totalEmissions: 8.3,
-    targetEmissions: 7.0,
-    reduction: 8.2,
-    sustainabilityLevel: 'moderate'
-  },
-  {
-    id: 3,
-    tenantId: 3,
-    tenantName: 'Tech Solutions',
-    month: '2024-01',
-    electricityEmissions: 1.8,
-    gasEmissions: 0.8,
-    waterEmissions: 0.2,
-    fuelEmissions: 0.4,
-    totalEmissions: 3.2,
-    targetEmissions: 3.0,
-    reduction: 18.7,
-    sustainabilityLevel: 'excellent'
-  }
-];
 
-const mockExecutiveKPIs = [
-  {
-    id: 1,
-    metric: 'Toplam Enerji Tasarrufu',
-    currentValue: '₺45,200',
-    previousValue: '₺38,500',
-    change: '+17.4%',
-    trend: 'up',
-    target: '₺50,000',
-    progress: 90.4,
-    status: 'on-track'
-  },
-  {
-    id: 2,
-    metric: 'Karbon Ayak İzi Azalması',
-    currentValue: '15.2 ton',
-    previousValue: '18.7 ton',
-    change: '-18.7%',
-    trend: 'down',
-    target: '12.0 ton',
-    progress: 73.3,
-    status: 'on-track'
-  },
-  {
-    id: 3,
-    metric: 'Enerji Verimliliği',
-    currentValue: '78.5%',
-    previousValue: '75.2%',
-    change: '+4.4%',
-    trend: 'up',
-    target: '85.0%',
-    progress: 92.4,
-    status: 'on-track'
-  },
-  {
-    id: 4,
-    metric: 'Sürdürülebilirlik Skoru',
-    currentValue: '82.3',
-    previousValue: '79.1',
-    change: '+4.1%',
-    trend: 'up',
-    target: '90.0',
-    progress: 91.4,
-    status: 'on-track'
-  }
-];
+
+
+
 
 const resourceTypes = [
   { value: 'electricity', label: 'Elektrik', icon: <LightningOutlined />, color: '#faad14' },
@@ -449,11 +200,13 @@ interface ExecutiveKPIRecord {
 }
 
 export default function AIAnalyticsPage() {
-  const [consumptionPredictions, setConsumptionPredictions] = useState<PredictionRecord[]>(mockConsumptionPredictions as PredictionRecord[]);
-  const [costSavings, setCostSavings] = useState<CostSavingsRecord[]>(mockCostSavings as CostSavingsRecord[]);
-  const [departmentKPIs, setDepartmentKPIs] = useState<DepartmentKPIRecord[]>(mockDepartmentKPIs as DepartmentKPIRecord[]);
-  const [carbonFootprint, setCarbonFootprint] = useState(mockCarbonFootprint);
-  const [executiveKPIs, setExecutiveKPIs] = useState<ExecutiveKPIRecord[]>(mockExecutiveKPIs as ExecutiveKPIRecord[]);
+  const [consumptionPredictions, setConsumptionPredictions] = useState<ConsumptionPrediction[]>([]);
+  const [costSavings, setCostSavings] = useState<CostSavings[]>([]);
+  const [departmentKPIs, setDepartmentKPIs] = useState<DepartmentKPI[]>([]);
+  const [carbonFootprint, setCarbonFootprint] = useState<CarbonFootprint[]>([]);
+  const [executiveKPIs, setExecutiveKPIs] = useState<ExecutiveKPI[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     tenantId: undefined,
     resourceType: undefined,
@@ -461,39 +214,70 @@ export default function AIAnalyticsPage() {
     priority: undefined
   });
 
+  // Load AI analytics data
+  useEffect(() => {
+    const loadAIAnalyticsData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const [predictionsData, savingsData, kpisData, carbonData, executiveData] = await Promise.all([
+          aiAnalyticsService.getConsumptionPredictions(),
+          aiAnalyticsService.getCostSavings(),
+          aiAnalyticsService.getDepartmentKPIs(),
+          aiAnalyticsService.getCarbonFootprint(),
+          aiAnalyticsService.getExecutiveKPIs()
+        ]);
+        
+        setConsumptionPredictions(predictionsData);
+        setCostSavings(savingsData);
+        setDepartmentKPIs(kpisData);
+        setCarbonFootprint(carbonData);
+        setExecutiveKPIs(executiveData);
+      } catch (error) {
+        console.error('Error loading AI analytics data:', error);
+        setError('AI Analytics verileri yüklenirken hata oluştu');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAIAnalyticsData();
+  }, []);
+
   // Statistics
   const stats = useMemo(() => [
     {
       title: 'Toplam Tasarruf Potansiyeli',
-      value: `₺${costSavings.reduce((sum, item) => sum + item.potentialSavings, 0).toLocaleString()}`,
+      value: `₺${costSavings.reduce((sum, item) => sum + item.PotentialSavings, 0).toLocaleString()}`,
       icon: <DollarOutlined />,
       color: '#52c41a',
       gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
     },
     {
       title: 'Ortalama Tahmin Güvenilirliği',
-      value: `${Math.round(consumptionPredictions.reduce((sum, item) => sum + item.confidence, 0) / consumptionPredictions.length)}%`,
+      value: `${Math.round(consumptionPredictions.reduce((sum, item) => sum + item.Confidence, 0) / consumptionPredictions.length)}%`,
       icon: <RobotOutlined />,
       color: '#1890ff',
       gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
     },
     {
       title: 'Karbon Azalması',
-      value: `${carbonFootprint.reduce((sum, item) => sum + item.reduction, 0) / carbonFootprint.length}%`,
+      value: `${carbonFootprint.reduce((sum, item) => sum + item.Reduction, 0) / carbonFootprint.length}%`,
       icon: <EnvironmentOutlined />,
       color: '#faad14',
       gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
     },
     {
       title: 'Sürdürülebilirlik Skoru',
-      value: `${Math.round(departmentKPIs.reduce((sum, item) => sum + item.sustainabilityScore, 0) / departmentKPIs.length)}`,
+      value: `${Math.round(departmentKPIs.reduce((sum, item) => sum + item.SustainabilityScore, 0) / departmentKPIs.length)}`,
       icon: <TrophyOutlined />,
       color: '#722ed1',
       gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
     }
   ], [costSavings, consumptionPredictions, carbonFootprint, departmentKPIs]);
 
-  const predictionColumns: ColumnsType<PredictionRecord> = [
+  const predictionColumns: ColumnsType<ConsumptionPrediction> = [
     {
       title: 'Tenant',
       dataIndex: 'tenantName',
@@ -511,7 +295,7 @@ export default function AIAnalyticsPage() {
       key: 'resourceName',
       width: 120,
       render: (name, record) => {
-        const resourceType = resourceTypes.find(t => t.value === record.resourceType);
+        const resourceType = resourceTypes.find(t => t.value === record.ResourceType);
         return (
           <Tag color={resourceType?.color} icon={resourceType?.icon}>
             {name}
@@ -525,7 +309,7 @@ export default function AIAnalyticsPage() {
       width: 100,
       render: (_, record) => (
         <div style={{ fontWeight: 'bold' }}>
-          {record.currentMonth.toLocaleString()}
+          {record.CurrentMonth.toLocaleString()}
         </div>
       )
     },
@@ -536,15 +320,15 @@ export default function AIAnalyticsPage() {
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: 'bold', color: '#1890ff' }}>
-            {record.predictedNextMonth.toLocaleString()}
+            {record.PredictedNextMonth.toLocaleString()}
           </div>
           <div style={{ fontSize: '12px', color: '#666' }}>
-            {record.trend === 'increasing' ? (
+            {record.Trend === 'increasing' ? (
               <RiseOutlined style={{ color: '#ff4d4f' }} />
             ) : (
               <FallOutlined style={{ color: '#52c41a' }} />
             )}
-            {record.trend === 'increasing' ? 'Artış' : 'Azalış'}
+            {record.Trend === 'increasing' ? 'Artış' : 'Azalış'}
           </div>
         </div>
       )
@@ -555,19 +339,19 @@ export default function AIAnalyticsPage() {
       width: 120,
       render: (_, record) => (
         <div style={{ fontWeight: 'bold', color: '#722ed1' }}>
-          {record.predictedYearly.toLocaleString()}
+                      {record.PredictedYearly.toLocaleString()}
         </div>
       )
     },
     {
       title: 'Güvenilirlik',
-      key: 'confidence',
+      key: 'Confidence',
       width: 120,
       render: (_, record) => (
         <div>
           <Progress
-            percent={record.confidence}
-            strokeColor={record.confidence > 80 ? '#52c41a' : record.confidence > 60 ? '#faad14' : '#ff4d4f'}
+            percent={record.Confidence}
+            strokeColor={record.Confidence > 80 ? '#52c41a' : record.Confidence > 60 ? '#faad14' : '#ff4d4f'}
             format={(percent) => `${percent}%`}
             size="small"
           />
@@ -576,11 +360,11 @@ export default function AIAnalyticsPage() {
     },
     {
       title: 'Faktörler',
-      key: 'factors',
+      key: 'Factors',
       width: 200,
       render: (_, record) => (
         <div>
-          {record.factors.map((factor: string, index: number) => (
+          {record.Factors.map((factor: string, index: number) => (
             <Tag key={index} style={{ marginBottom: '2px' }}>
               {factor}
             </Tag>
@@ -590,11 +374,11 @@ export default function AIAnalyticsPage() {
     },
     {
       title: 'Öneriler',
-      key: 'recommendations',
+      key: 'Recommendations',
       width: 200,
       render: (_, record) => (
         <div>
-          {record.recommendations.map((rec: string, index: number) => (
+          {record.Recommendations.map((rec: string, index: number) => (
             <Tag key={index} color="blue" style={{ marginBottom: '2px' }}>
               {rec}
             </Tag>
@@ -604,7 +388,7 @@ export default function AIAnalyticsPage() {
     }
   ];
 
-  const costSavingsColumns: ColumnsType<CostSavingsRecord> = [
+  const costSavingsColumns: ColumnsType<CostSavings> = [
     {
       title: 'Tenant',
       dataIndex: 'tenantName',
@@ -629,7 +413,7 @@ export default function AIAnalyticsPage() {
       width: 150,
       render: (_, record) => (
         <div style={{ fontWeight: 'bold', color: '#ff4d4f' }}>
-          ₺{record.currentCost.toLocaleString()}
+          ₺{record.CurrentCost.toLocaleString()}
         </div>
       )
     },
@@ -639,7 +423,7 @@ export default function AIAnalyticsPage() {
       width: 150,
       render: (_, record) => (
         <div style={{ fontWeight: 'bold', color: '#52c41a' }}>
-          ₺{record.potentialSavings.toLocaleString()}
+          ₺{record.PotentialSavings.toLocaleString()}
         </div>
       )
     },
@@ -648,7 +432,7 @@ export default function AIAnalyticsPage() {
       key: 'savingsPercentage',
       width: 120,
       render: (_, record) => (
-        <Tag color="green">{record.savingsPercentage}%</Tag>
+        <Tag color="green">{record.SavingsPercentage}%</Tag>
       )
     },
     {
@@ -656,7 +440,7 @@ export default function AIAnalyticsPage() {
       key: 'roi',
       width: 100,
       render: (_, record) => (
-        <Tag color="blue">{record.roi}%</Tag>
+        <Tag color="blue">{record.ROI}%</Tag>
       )
     },
     {
@@ -685,7 +469,7 @@ export default function AIAnalyticsPage() {
       width: 250,
       render: (_, record) => (
         <div>
-          {record.recommendations.map((rec: string, index: number) => (
+          {record.Recommendations.map((rec: string, index: number) => (
             <div key={index} style={{ fontSize: '12px', marginBottom: '2px' }}>
               • {rec}
             </div>
@@ -695,15 +479,15 @@ export default function AIAnalyticsPage() {
     }
   ];
 
-  const departmentKPIColumns: ColumnsType<DepartmentKPIRecord> = [
+  const departmentKPIColumns: ColumnsType<DepartmentKPI> = [
     {
       title: 'Departman',
       key: 'department',
       width: 200,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{record.departmentName}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>{record.tenantName}</div>
+          <div style={{ fontWeight: 500 }}>{record.DepartmentName}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>{record.TenantName}</div>
         </div>
       )
     },
@@ -714,8 +498,8 @@ export default function AIAnalyticsPage() {
       render: (_, record) => (
         <div>
           <Progress
-            percent={record.energyEfficiency}
-            strokeColor={record.energyEfficiency > 80 ? '#52c41a' : record.energyEfficiency > 60 ? '#faad14' : '#ff4d4f'}
+            percent={record.EnergyEfficiency}
+            strokeColor={record.EnergyEfficiency > 80 ? '#52c41a' : record.EnergyEfficiency > 60 ? '#faad14' : '#ff4d4f'}
             format={(percent) => `${percent}%`}
             size="small"
           />
@@ -728,30 +512,29 @@ export default function AIAnalyticsPage() {
       width: 150,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 'bold' }}>₺{record.costPerEmployee}</div>
+          <div style={{ fontWeight: 'bold' }}>₺{record.CostPerEmployee}</div>
           <div style={{ fontSize: '12px', color: '#666' }}>
-                         {record.trend === 'improving' ? (
+                         {record.ImprovementAreas.length > 0 ? (
                <FallOutlined style={{ color: '#52c41a' }} />
-             ) : record.trend === 'stable' ? (
-               <RiseOutlined style={{ color: '#faad14' }} />
              ) : (
-               <RiseOutlined style={{ color: '#ff4d4f' }} />
+               <RiseOutlined style={{ color: '#faad14' }} />
              )}
-            {record.trend === 'improving' ? 'İyileşiyor' : record.trend === 'stable' ? 'Stabil' : 'Kötüleşiyor'}
+            {record.ImprovementAreas.length > 0 ? 'İyileşme Alanları' : 'Stabil'}
           </div>
         </div>
       )
     },
     {
-      title: 'Karbon Ayak İzi',
-      key: 'carbonFootprint',
-      width: 150,
+      title: 'İyileşme Alanları',
+      key: 'improvementAreas',
+      width: 200,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 'bold' }}>{record.carbonFootprint} ton CO₂</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            Hedef: {record.target} ton
-          </div>
+          {record.ImprovementAreas.map((area: string, index: number) => (
+            <Tag key={index} color="orange" style={{ marginBottom: '2px' }}>
+              {area}
+            </Tag>
+          ))}
         </div>
       )
     },
@@ -762,8 +545,8 @@ export default function AIAnalyticsPage() {
       render: (_, record) => (
         <div>
           <Progress
-            percent={record.sustainabilityScore}
-            strokeColor={record.sustainabilityScore > 80 ? '#52c41a' : record.sustainabilityScore > 60 ? '#faad14' : '#ff4d4f'}
+            percent={record.SustainabilityScore}
+            strokeColor={record.SustainabilityScore > 80 ? '#52c41a' : record.SustainabilityScore > 60 ? '#faad14' : '#ff4d4f'}
             format={(percent) => `${percent}/100`}
             size="small"
           />
@@ -771,17 +554,13 @@ export default function AIAnalyticsPage() {
       )
     },
     {
-      title: 'Öneriler',
-      key: 'recommendations',
-      width: 200,
+      title: 'Durum',
+      key: 'status',
+      width: 100,
       render: (_, record) => (
-        <div>
-          {record.recommendations.map((rec: string, index: number) => (
-            <Tag key={index} color="blue" style={{ marginBottom: '2px' }}>
-              {rec}
-            </Tag>
-          ))}
-        </div>
+        <Tag color={record.EnergyEfficiency > 80 ? 'green' : record.EnergyEfficiency > 60 ? 'orange' : 'red'}>
+          {record.EnergyEfficiency > 80 ? 'İyi' : record.EnergyEfficiency > 60 ? 'Orta' : 'Kritik'}
+        </Tag>
       )
     }
   ];
@@ -909,6 +688,29 @@ export default function AIAnalyticsPage() {
     });
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <div style={{ fontSize: '24px', marginBottom: '20px' }}>AI Analytics verileri yükleniyor...</div>
+        <div style={{ fontSize: '16px', color: '#666' }}>Lütfen bekleyin...</div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <div style={{ fontSize: '24px', marginBottom: '20px', color: '#ff4d4f' }}>Hata!</div>
+        <div style={{ fontSize: '16px', color: '#666', marginBottom: '20px' }}>{error}</div>
+        <Button type="primary" onClick={() => window.location.reload()}>
+          Sayfayı Yenile
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: '24px' }}>
       <Title level={2}>
@@ -955,21 +757,21 @@ export default function AIAnalyticsPage() {
             <Col xs={24} sm={12} lg={6} key={index}>
               <Card size="small">
                 <Statistic
-                  title={kpi.metric}
-                  value={kpi.currentValue}
-                  prefix={kpi.trend === 'up' ? <RiseOutlined style={{ color: '#52c41a' }} /> : <FallOutlined style={{ color: '#ff4d4f' }} />}
+                  title="KPI"
+                  value={kpi.TotalEnergyCost}
+                  prefix={<DollarOutlined style={{ color: '#52c41a' }} />}
                   suffix={
-                    <div style={{ fontSize: '12px', color: kpi.trend === 'up' ? '#52c41a' : '#ff4d4f' }}>
-                      {kpi.change}
+                    <div style={{ fontSize: '12px', color: '#52c41a' }}>
+                      ₺
                     </div>
                   }
                 />
                 <div style={{ marginTop: '8px' }}>
                   <Progress
-                    percent={kpi.progress}
-                    strokeColor={kpi.progress > 90 ? '#52c41a' : kpi.progress > 70 ? '#faad14' : '#ff4d4f'}
+                    percent={kpi.EnergyEfficiency}
+                    strokeColor={kpi.EnergyEfficiency > 90 ? '#52c41a' : kpi.EnergyEfficiency > 70 ? '#faad14' : '#ff4d4f'}
                     size="small"
-                    format={(percent) => `Hedef: ${kpi.target}`}
+                    format={(percent) => `Verimlilik: ${percent}%`}
                   />
                 </div>
               </Card>
@@ -989,11 +791,13 @@ export default function AIAnalyticsPage() {
               onChange={(value) => handleFilterChange('tenantId', value)}
               allowClear
             >
-              {mockTenants.map(tenant => (
-                <Option key={tenant.id} value={tenant.id}>
-                  {tenant.name}
-                </Option>
-              ))}
+              {consumptionPredictions
+                .filter((item, index, self) => self.findIndex(t => t.TenantId === item.TenantId) === index)
+                .map(tenant => (
+                  <Option key={tenant.TenantId} value={tenant.TenantId}>
+                    {tenant.TenantName}
+                  </Option>
+                ))}
             </Select>
           </Col>
           <Col xs={24} sm={6}>

@@ -394,4 +394,108 @@ namespace ElectricityTrackerAPI.DTOs.Admin
         public int BlockedIPs { get; set; }
         public string? SecurityRecommendations { get; set; }
     }
+
+    // Analytics DTOs
+    public class AnalyticsOverviewDto
+    {
+        public int TotalUsers { get; set; }
+        public int ActiveUsers { get; set; }
+        public decimal TotalRevenue { get; set; }
+        public double AvgSessionTime { get; set; }
+    }
+
+    public class AnalyticsTrendDto
+    {
+        public string Date { get; set; } = string.Empty;
+        public int Users { get; set; }
+        public decimal Revenue { get; set; }
+        public int Sessions { get; set; }
+    }
+
+    public class TopTenantDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public double Consumption { get; set; }
+        public double Growth { get; set; }
+        public string Status { get; set; } = string.Empty;
+    }
+
+    public class DeviceUsageDto
+    {
+        public string Device { get; set; } = string.Empty;
+        public int Usage { get; set; }
+        public string Color { get; set; } = string.Empty;
+    }
+
+    // AI Analytics DTOs
+    public class ConsumptionPredictionDto
+    {
+        public int Id { get; set; }
+        public int TenantId { get; set; }
+        public string TenantName { get; set; } = string.Empty;
+        public string ResourceType { get; set; } = string.Empty;
+        public string ResourceName { get; set; } = string.Empty;
+        public double CurrentMonth { get; set; }
+        public double PredictedNextMonth { get; set; }
+        public double PredictedYearly { get; set; }
+        public int Confidence { get; set; }
+        public string Trend { get; set; } = string.Empty;
+        public List<string> Factors { get; set; } = new();
+        public List<string> Recommendations { get; set; } = new();
+    }
+
+    public class CostSavingsDto
+    {
+        public int Id { get; set; }
+        public int TenantId { get; set; }
+        public string TenantName { get; set; } = string.Empty;
+        public int DepartmentId { get; set; }
+        public string DepartmentName { get; set; } = string.Empty;
+        public double CurrentCost { get; set; }
+        public double PotentialSavings { get; set; }
+        public double SavingsPercentage { get; set; }
+        public List<string> Recommendations { get; set; } = new();
+        public string ImplementationTime { get; set; } = string.Empty;
+        public double ROI { get; set; }
+        public string Priority { get; set; } = string.Empty;
+    }
+
+    public class DepartmentKPIDto
+    {
+        public int Id { get; set; }
+        public int TenantId { get; set; }
+        public string TenantName { get; set; } = string.Empty;
+        public int DepartmentId { get; set; }
+        public string DepartmentName { get; set; } = string.Empty;
+        public double EnergyEfficiency { get; set; }
+        public double CostPerEmployee { get; set; }
+        public double SustainabilityScore { get; set; }
+        public List<string> ImprovementAreas { get; set; } = new();
+    }
+
+    public class CarbonFootprintDto
+    {
+        public int Id { get; set; }
+        public int TenantId { get; set; }
+        public string TenantName { get; set; } = string.Empty;
+        public double CurrentMonth { get; set; }
+        public double PreviousMonth { get; set; }
+        public double Reduction { get; set; }
+        public double Target { get; set; }
+        public string Status { get; set; } = string.Empty;
+    }
+
+    public class ExecutiveKPIDto
+    {
+        public int Id { get; set; }
+        public int TenantId { get; set; }
+        public string TenantName { get; set; } = string.Empty;
+        public double TotalEnergyCost { get; set; }
+        public double EnergyEfficiency { get; set; }
+        public double SustainabilityScore { get; set; }
+        public double CostSavings { get; set; }
+        public double ComplianceScore { get; set; }
+    }
+
 } 

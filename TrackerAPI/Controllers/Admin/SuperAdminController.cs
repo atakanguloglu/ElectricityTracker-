@@ -1786,6 +1786,159 @@ namespace ElectricityTrackerAPI.Controllers.Admin
 
         #endregion
 
+        #region Analytics
+
+        [HttpGet("analytics/overview")]
+        public async Task<ActionResult<AnalyticsOverviewDto>> GetAnalyticsOverview()
+        {
+            try
+            {
+                var totalUsers = await _context.Users.CountAsync();
+                var activeUsers = await _context.Users.CountAsync(u => u.IsActive);
+                
+                // Calculate total revenue from subscriptions
+                var totalRevenue = await _context.Tenants
+                    .Where(t => t.Status == TenantStatus.Active)
+                    .SumAsync(t => t.MonthlyFee);
+                
+                // Calculate average session time (mock data for now)
+                var avgSessionTime = 23.5;
+
+                var overview = new AnalyticsOverviewDto
+                {
+                    TotalUsers = totalUsers,
+                    ActiveUsers = activeUsers,
+                    TotalRevenue = totalRevenue,
+                    AvgSessionTime = avgSessionTime
+                };
+
+                return Ok(overview);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Analytics overview retrieval failed");
+                return StatusCode(500, new { message = "Analytics overview alınırken hata oluştu", error = ex.Message });
+            }
+        }
+
+        [HttpGet("analytics/trends")]
+        public async Task<ActionResult<List<AnalyticsTrendDto>>> GetAnalyticsTrends([FromQuery] int months = 6)
+        {
+            try
+            {
+                var trends = new List<AnalyticsTrendDto>();
+                var endDate = DateTime.UtcNow;
+                var startDate = endDate.AddMonths(-months);
+
+                for (int i = 0; i < months; i++)
+                {
+                    var date = startDate.AddMonths(i);
+                    var monthStart = new DateTime(date.Year, date.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                    var monthEnd = monthStart.AddMonths(1).AddDays(-1).AddHours(23).AddMinutes(59).AddSeconds(59);
+
+                    var users = await _context.Users
+                        .Where(u => u.CreatedAt >= monthStart && u.CreatedAt <= monthEnd)
+                        .CountAsync();
+
+                    var revenue = await _context.Tenants
+                        .Where(t => t.Status == TenantStatus.Active && 
+                                   t.CreatedAt >= monthStart && t.CreatedAt <= monthEnd)
+                        .SumAsync(t => t.MonthlyFee);
+
+                    var sessions = await _context.SystemLogs
+                        .Where(l => l.Timestamp >= monthStart && l.Timestamp <= monthEnd && 
+                                   l.Category == "Login")
+                        .CountAsync();
+
+                    trends.Add(new AnalyticsTrendDto
+                    {
+                        Date = $"{date.Year}-{date.Month:D2}",
+                        Users = users,
+                        Revenue = revenue,
+                        Sessions = sessions
+                    });
+                }
+
+                return Ok(trends);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Analytics trends retrieval failed");
+                return StatusCode(500, new { message = "Analytics trends alınırken hata oluştu", error = ex.Message });
+            }
+        }
+
+        [HttpGet("analytics/top-tenants")]
+        public async Task<ActionResult<List<TopTenantDto>>> GetTopTenants()
+        {
+            try
+            {
+                var topTenants = await _context.Tenants
+                    .Include(t => t.Facilities)
+                    .ThenInclude(f => f.ElectricityMeters)
+                    .ThenInclude(m => m.ConsumptionRecords)
+                    .Select(t => new TopTenantDto
+                    {
+                        Id = t.Id,
+                        Name = t.CompanyName,
+                        Consumption = (double)t.Facilities
+                            .SelectMany(f => f.ElectricityMeters)
+                            .SelectMany(m => m.ConsumptionRecords)
+                            .Where(c => c.Timestamp.Month == DateTime.UtcNow.Month)
+                            .Sum(c => c.Consumption),
+                        Growth = 0, // Temporary fix - will calculate after query
+                        Status = t.Status.ToString()
+                    })
+                    .OrderByDescending(t => t.Consumption)
+                    .Take(10)
+                    .ToListAsync();
+
+                // Calculate growth after query to avoid EF issues
+                foreach (var tenant in topTenants)
+                {
+                    tenant.Growth = CalculateTenantGrowth(tenant.Id);
+                }
+
+                return Ok(topTenants);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Top tenants retrieval failed");
+                return StatusCode(500, new { message = "Top tenants alınırken hata oluştu", error = ex.Message });
+            }
+        }
+
+        [HttpGet("analytics/device-usage")]
+        public ActionResult<List<DeviceUsageDto>> GetDeviceUsage()
+        {
+            try
+            {
+                // Mock data for device usage (can be enhanced with real tracking)
+                var deviceUsage = new List<DeviceUsageDto>
+                {
+                    new DeviceUsageDto { Device = "Mobil Uygulama", Usage = 45, Color = "#6366f1" },
+                    new DeviceUsageDto { Device = "Web Arayüzü", Usage = 35, Color = "#8b5cf6" },
+                    new DeviceUsageDto { Device = "API Entegrasyonu", Usage = 20, Color = "#ec4899" }
+                };
+
+                return Ok(deviceUsage);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Device usage retrieval failed");
+                return StatusCode(500, new { message = "Device usage alınırken hata oluştu", error = ex.Message });
+            }
+        }
+
+        private double CalculateTenantGrowth(int tenantId)
+        {
+            // Mock calculation - can be enhanced with real data
+            var random = new Random(tenantId);
+            return Math.Round((random.NextDouble() - 0.5) * 30, 1);
+        }
+
+        #endregion
+
 
 
 
