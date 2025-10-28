@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   Card, 
   Row, 
@@ -19,7 +19,8 @@ import {
   Modal,
   Form,
   message,
-  Select
+  Select,
+  Spin
 } from 'antd'
 import { 
   PageContainer,
@@ -41,6 +42,7 @@ import {
   ClockCircleOutlined,
   UserOutlined
 } from '@ant-design/icons'
+import { helpService, HelpCategory, HelpArticle, FAQ, ContactRequest } from '../../../services/helpService'
 
 const { Title, Text, Paragraph } = Typography
 const { Search } = Input
@@ -57,95 +59,96 @@ interface ContactFormValues {
   message: string
 }
 
-// Mock data for help content
-const mockHelpData = {
-  faqs: [
-    {
-      question: 'Admin panelinde nasıl yeni kullanıcı ekleyebilirim?',
-      answer: 'Kullanıcı Yönetimi sayfasına gidin ve "Yeni Kullanıcı Ekle" butonuna tıklayın. Gerekli bilgileri doldurduktan sonra kaydedin.',
-      category: 'Kullanıcı Yönetimi',
-      helpful: 15
-    },
-    {
-      question: 'Sistem loglarını nasıl görüntüleyebilirim?',
-      answer: 'Sistem Logları sayfasından tüm log kayıtlarını görüntüleyebilir, filtreleyebilir ve dışa aktarabilirsiniz.',
-      category: 'Sistem',
-      helpful: 23
-    },
-    {
-      question: 'API anahtarlarını nasıl yönetebilirim?',
-      answer: 'API Yönetimi sayfasından mevcut API anahtarlarını görüntüleyebilir, yeni anahtar oluşturabilir veya mevcut anahtarları silebilirsiniz.',
-      category: 'API',
-      helpful: 18
-    },
-    {
-      question: 'Raporları nasıl dışa aktarabilirim?',
-      answer: 'Raporlama sayfasında istediğiniz raporu seçin ve "Dışa Aktar" butonuna tıklayın. PDF, Excel veya CSV formatında indirebilirsiniz.',
-      category: 'Raporlama',
-      helpful: 31
-    },
-    {
-      question: 'Sistem performansını nasıl izleyebilirim?',
-      answer: 'Sistem İzleme sayfasından CPU, bellek, disk kullanımı ve ağ trafiğini gerçek zamanlı olarak takip edebilirsiniz.',
-      category: 'Sistem',
-      helpful: 27
-    }
-  ],
-  categories: [
-    { name: 'Kullanıcı Yönetimi', icon: <UserOutlined />, count: 8 },
-    { name: 'Sistem', icon: <QuestionCircleOutlined />, count: 12 },
-    { name: 'API', icon: <FileTextOutlined />, count: 6 },
-    { name: 'Raporlama', icon: <BookOutlined />, count: 10 },
-    { name: 'Güvenlik', icon: <CheckCircleOutlined />, count: 5 }
-  ],
-  contactMethods: [
-    {
-      title: 'E-posta Desteği',
-      description: '24 saat içinde yanıt alın',
-      icon: <MailOutlined />,
-      contact: 'support@electricitytracker.com',
-      responseTime: '24 saat'
-    },
-    {
-      title: 'Telefon Desteği',
-      description: 'Acil durumlar için',
-      icon: <PhoneOutlined />,
-      contact: '+90 212 555 0123',
-      responseTime: 'Hemen'
-    },
-    {
-      title: 'Canlı Sohbet',
-      description: 'Anında yardım alın',
-      icon: <MessageOutlined />,
-      contact: 'Çevrimiçi',
-      responseTime: 'Anında'
-    }
-  ]
-}
-
 export default function HelpPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [contactModalVisible, setContactModalVisible] = useState(false)
   const [form] = Form.useForm<ContactFormValues>()
+  
+  // State for data from API
+  const [categories, setCategories] = useState<HelpCategory[]>([])
+  const [articles, setArticles] = useState<HelpArticle[]>([])
+  const [faqs, setFaqs] = useState<FAQ[]>([])
+  const [contactRequests, setContactRequests] = useState<ContactRequest[]>([])
+  const [dataLoading, setDataLoading] = useState(true)
 
-  const filteredFaqs = mockHelpData.faqs.filter(faq => {
-    const matchesSearch = faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = selectedCategory === 'all' || faq.category === selectedCategory
+  // Load data on component mount
+  useEffect(() => {
+    loadAllData()
+  }, [])
+
+  const loadAllData = async () => {
+    setDataLoading(true)
+    try {
+      const [cats, arts, faqList, contacts] = await Promise.all([
+        helpService.getCategories(),
+        helpService.getArticles(),
+        helpService.getFAQs(),
+        helpService.getContactRequests()
+      ])
+
+      setCategories(cats)
+      setArticles(arts)
+      setFaqs(faqList)
+      setContactRequests(contacts)
+    } catch (error) {
+      message.error('Veriler yüklenirken hata oluştu!')
+      console.error('Error loading help data:', error)
+    } finally {
+      setDataLoading(false)
+    }
+  }
+
+  const filteredFaqs = faqs.filter(faq => {
+    const matchesSearch = faq.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         faq.content.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesCategory = selectedCategory === 'all' || faq.category?.name === selectedCategory
     return matchesSearch && matchesCategory
   })
 
   const handleContactSubmit = async (values: ContactFormValues) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await helpService.createContactRequest({
+        name: values.name,
+        email: values.email,
+        subject: values.subject,
+        category: values.category,
+        priority: values.priority as any,
+        message: values.message
+      })
+      
       message.success('Mesajınız başarıyla gönderildi. En kısa sürede size dönüş yapacağız.')
       setContactModalVisible(false)
       form.resetFields()
+      await loadAllData() // Reload data
     } catch (error) {
       message.error('Mesaj gönderilirken hata oluştu')
     }
+  }
+
+  const handleArticleInteraction = async (articleId: number, type: 'view' | 'helpful' | 'not_helpful') => {
+    try {
+      await helpService.recordArticleInteraction(articleId, type)
+      if (type === 'helpful') {
+        message.success('Teşekkürler! Geri bildiriminiz kaydedildi.')
+      }
+    } catch (error) {
+      console.error('Error recording interaction:', error)
+    }
+  }
+
+  if (dataLoading) {
+    return (
+      <PageContainer
+        title="Yardım & Destek"
+        subTitle="Sorularınızın cevaplarını bulun ve destek ekibimizle iletişime geçin"
+      >
+        <div style={{ textAlign: 'center', padding: '100px 0' }}>
+          <Spin size="large" />
+          <div style={{ marginTop: '16px' }}>Yardım içeriği yükleniyor...</div>
+        </div>
+      </PageContainer>
+    )
   }
 
   return (
@@ -189,23 +192,23 @@ export default function HelpPage() {
                   </div>
                   <Text strong>Tümü</Text>
                   <br />
-                  <Text type="secondary">{mockHelpData.faqs.length} soru</Text>
+                  <Text type="secondary">{faqs.length} makale</Text>
                 </Card>
               </Col>
-              {mockHelpData.categories.map((category, index) => (
-                <Col xs={12} sm={6} md={4} key={index}>
+              {categories.map((category) => (
+                <Col xs={12} sm={6} md={4} key={category.id}>
                   <Card 
                     hoverable 
                     style={{ textAlign: 'center', cursor: 'pointer' }}
                     onClick={() => setSelectedCategory(category.name)}
                     className={selectedCategory === category.name ? 'selected-category' : ''}
                   >
-                    <div style={{ fontSize: 24, marginBottom: 8 }}>
+                    <div style={{ fontSize: 24, marginBottom: 8, color: category.color }}>
                       {category.icon}
                     </div>
                     <Text strong>{category.name}</Text>
                     <br />
-                    <Text type="secondary">{category.count} soru</Text>
+                    <Text type="secondary">{category.articleCount || 0} makale</Text>
                   </Card>
                 </Col>
               ))}
@@ -219,25 +222,32 @@ export default function HelpPage() {
         <Col span={24}>
           <ProCard title="Sık Sorulan Sorular" extra={<FileTextOutlined />}>
             <Collapse defaultActiveKey={['0']} ghost>
-              {filteredFaqs.map((faq, index) => (
+              {filteredFaqs.map((faq) => (
                 <Panel 
                   header={
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>{faq.question}</span>
-                      <Tag color="blue">{faq.category}</Tag>
+                      <span>{faq.title}</span>
+                      <Tag color="blue">{faq.category?.name}</Tag>
                     </div>
                   } 
-                  key={index}
+                  key={faq.id}
                 >
-                  <Paragraph>{faq.answer}</Paragraph>
+                  <Paragraph>{faq.content}</Paragraph>
                   <div style={{ marginTop: 16 }}>
                     <Space>
                       <Text type="secondary">Bu cevap yardımcı oldu mu?</Text>
-                      <Button size="small" icon={<StarOutlined />}>
-                        Evet ({faq.helpful})
+                      <Button 
+                        size="small" 
+                        icon={<StarOutlined />}
+                        onClick={() => handleArticleInteraction(faq.id, 'helpful')}
+                      >
+                        Evet ({faq.helpfulCount})
                       </Button>
-                      <Button size="small">
-                        Hayır
+                      <Button 
+                        size="small"
+                        onClick={() => handleArticleInteraction(faq.id, 'not_helpful')}
+                      >
+                        Hayır ({faq.notHelpfulCount})
                       </Button>
                     </Space>
                   </div>
@@ -259,21 +269,45 @@ export default function HelpPage() {
         <Col span={24}>
           <ProCard title="Destek Ekibiyle İletişim" extra={<MessageOutlined />}>
             <Row gutter={[16, 16]}>
-              {mockHelpData.contactMethods.map((method, index) => (
-                <Col xs={24} md={8} key={index}>
-                  <Card style={{ textAlign: 'center', height: '100%' }}>
-                    <div style={{ fontSize: 32, marginBottom: 16, color: '#6366f1' }}>
-                      {method.icon}
-                    </div>
-                    <Title level={5}>{method.title}</Title>
-                    <Text type="secondary">{method.description}</Text>
-                    <br />
-                    <Text strong style={{ fontSize: 16 }}>{method.contact}</Text>
-                    <br />
-                    <Text type="secondary">Yanıt süresi: {method.responseTime}</Text>
-                  </Card>
-                </Col>
-              ))}
+              <Col xs={24} md={8}>
+                <Card style={{ textAlign: 'center', height: '100%' }}>
+                  <div style={{ fontSize: 32, marginBottom: 16, color: '#6366f1' }}>
+                    <MailOutlined />
+                  </div>
+                  <Title level={5}>E-posta Desteği</Title>
+                  <Text type="secondary">24 saat içinde yanıt alın</Text>
+                  <br />
+                  <Text strong style={{ fontSize: 16 }}>support@electricitytracker.com</Text>
+                  <br />
+                  <Text type="secondary">Yanıt süresi: 24 saat</Text>
+                </Card>
+              </Col>
+              <Col xs={24} md={8}>
+                <Card style={{ textAlign: 'center', height: '100%' }}>
+                  <div style={{ fontSize: 32, marginBottom: 16, color: '#6366f1' }}>
+                    <PhoneOutlined />
+                  </div>
+                  <Title level={5}>Telefon Desteği</Title>
+                  <Text type="secondary">Acil durumlar için</Text>
+                  <br />
+                  <Text strong style={{ fontSize: 16 }}>+90 212 555 0123</Text>
+                  <br />
+                  <Text type="secondary">Yanıt süresi: Hemen</Text>
+                </Card>
+              </Col>
+              <Col xs={24} md={8}>
+                <Card style={{ textAlign: 'center', height: '100%' }}>
+                  <div style={{ fontSize: 32, marginBottom: 16, color: '#6366f1' }}>
+                    <MessageOutlined />
+                  </div>
+                  <Title level={5}>Canlı Sohbet</Title>
+                  <Text type="secondary">Anında yardım alın</Text>
+                  <br />
+                  <Text strong style={{ fontSize: 16 }}>Çevrimiçi</Text>
+                  <br />
+                  <Text type="secondary">Yanıt süresi: Anında</Text>
+                </Card>
+              </Col>
             </Row>
             <div style={{ textAlign: 'center', marginTop: 24 }}>
               <Button 
@@ -355,6 +389,23 @@ export default function HelpPage() {
           onFinish={handleContactSubmit}
         >
           <Form.Item
+            name="name"
+            label="Ad Soyad"
+            rules={[{ required: true, message: 'Ad soyad alanı zorunludur' }]}
+          >
+            <Input placeholder="Adınızı ve soyadınızı yazın" />
+          </Form.Item>
+          <Form.Item
+            name="email"
+            label="E-posta"
+            rules={[
+              { required: true, message: 'E-posta alanı zorunludur' },
+              { type: 'email', message: 'Geçerli bir e-posta adresi girin' }
+            ]}
+          >
+            <Input placeholder="E-posta adresinizi yazın" />
+          </Form.Item>
+          <Form.Item
             name="subject"
             label="Konu"
             rules={[{ required: true, message: 'Konu alanı zorunludur' }]}
@@ -367,10 +418,10 @@ export default function HelpPage() {
             rules={[{ required: true, message: 'Kategori seçin' }]}
           >
             <Select placeholder="Kategori seçin">
-              <Select.Option value="technical">Teknik Sorun</Select.Option>
-              <Select.Option value="billing">Faturalama</Select.Option>
-              <Select.Option value="feature">Özellik Talebi</Select.Option>
-              <Select.Option value="other">Diğer</Select.Option>
+              <Option value="technical">Teknik Sorun</Option>
+              <Option value="billing">Faturalama</Option>
+              <Option value="feature">Özellik Talebi</Option>
+              <Option value="other">Diğer</Option>
             </Select>
           </Form.Item>
           <Form.Item
@@ -379,10 +430,10 @@ export default function HelpPage() {
             rules={[{ required: true, message: 'Öncelik seçin' }]}
           >
             <Select placeholder="Öncelik seçin">
-              <Select.Option value="low">Düşük</Select.Option>
-              <Select.Option value="medium">Orta</Select.Option>
-              <Select.Option value="high">Yüksek</Select.Option>
-              <Select.Option value="urgent">Acil</Select.Option>
+              <Option value="low">Düşük</Option>
+              <Option value="medium">Orta</Option>
+              <Option value="high">Yüksek</Option>
+              <Option value="urgent">Acil</Option>
             </Select>
           </Form.Item>
           <Form.Item

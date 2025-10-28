@@ -76,7 +76,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { apiRequest } from '@/utils/auth';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api/superadmin';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -127,7 +127,7 @@ export default function SecurityCenterPage() {
   const fetchSecurityAlerts = async () => {
     try {
       console.log('Fetching security alerts...');
-      const response = await apiRequest(`${API_BASE_URL}/admin/security/alerts`);
+      const response = await apiRequest(`${API_BASE_URL}/security/alerts`);
       console.log('Security alerts response:', response);
       
       if (!response.ok) {
@@ -147,7 +147,7 @@ export default function SecurityCenterPage() {
 
   const fetchTenantSecurityScores = async () => {
     try {
-      const response = await apiRequest(`${API_BASE_URL}/admin/security/tenant-scores`);
+      const response = await apiRequest(`${API_BASE_URL}/security/tenant-scores`);
       if (!response.ok) throw new Error('Tenant güvenlik skorları alınamadı');
       
       const data = await response.json();
@@ -161,7 +161,7 @@ export default function SecurityCenterPage() {
 
   const fetchBlockedIPs = async () => {
     try {
-      const response = await apiRequest(`${API_BASE_URL}/admin/security/blocked-ips`);
+      const response = await apiRequest(`${API_BASE_URL}/security/blocked-ips`);
       if (!response.ok) throw new Error('Engellenen IP\'ler alınamadı');
       
       const data = await response.json();
@@ -176,7 +176,7 @@ export default function SecurityCenterPage() {
 
   const fetchLockedAccounts = async () => {
     try {
-      const response = await apiRequest(`${API_BASE_URL}/admin/users`);
+      const response = await apiRequest(`${API_BASE_URL}/users`);
       if (!response.ok) throw new Error('Kullanıcı listesi alınamadı');
       
       const data = await response.json();
@@ -195,7 +195,7 @@ export default function SecurityCenterPage() {
 
   const fetchAvailableTenants = async () => {
     try {
-      const response = await apiRequest(`${API_BASE_URL}/admin/tenants?page=1&pageSize=100`);
+      const response = await apiRequest(`${API_BASE_URL}/tenants?page=1&pageSize=100`);
       if (!response.ok) throw new Error('Tenant listesi alınamadı');
       
       const data = await response.json();
@@ -761,7 +761,7 @@ export default function SecurityCenterPage() {
     try {
       console.log('Fetching security alert details for alert:', alert);
       
-      const response = await apiRequest(`${API_BASE_URL}/admin/security/alerts/${alert.id || alert.Id}`);
+      const response = await apiRequest(`${API_BASE_URL}/security/alerts/${alert.id || alert.Id}`);
       console.log('Security alert details response:', response);
       
       if (!response.ok) {
@@ -877,7 +877,7 @@ export default function SecurityCenterPage() {
 
   const handleResolveAlert = async (alertId: number) => {
     try {
-              const response = await apiRequest(`${API_BASE_URL}/admin/security/alerts/${alertId}/resolve`, {
+              const response = await apiRequest(`${API_BASE_URL}/security/alerts/${alertId}/resolve`, {
         method: 'POST'
       });
       
@@ -893,7 +893,7 @@ export default function SecurityCenterPage() {
 
   const handleDeleteAlert = async (alertId: number) => {
     try {
-              const response = await apiRequest(`${API_BASE_URL}/admin/security/alerts/${alertId}`, {
+              const response = await apiRequest(`${API_BASE_URL}/security/alerts/${alertId}`, {
         method: 'DELETE'
       });
       
@@ -932,7 +932,7 @@ export default function SecurityCenterPage() {
         return;
       }
       
-      const response = await apiRequest(`${API_BASE_URL}/admin/security/tenants/${tenantId}/report`);
+      const response = await apiRequest(`${API_BASE_URL}/security/tenants/${tenantId}/report`);
       if (!response.ok) {
         if (response.status === 404) {
           const tenantName = tenant.tenantName || tenant.TenantName || tenant.CompanyName || tenantId;
@@ -1040,7 +1040,7 @@ export default function SecurityCenterPage() {
       const validTenantId = availableTenants.length > 0 ? availableTenants[0].id : 1;
       
       // Generate a new security report for the last 7 days
-              const generateResponse = await apiRequest(`${API_BASE_URL}/admin/security/reports/generate`, {
+              const generateResponse = await apiRequest(`${API_BASE_URL}/security/reports/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1060,7 +1060,7 @@ export default function SecurityCenterPage() {
       const report = await generateResponse.json();
       
       // Download the report
-              const downloadResponse = await apiRequest(`${API_BASE_URL}/admin/security/reports/${report.id}/download?format=pdf`);
+              const downloadResponse = await apiRequest(`${API_BASE_URL}/security/reports/${report.id}/download?format=pdf`);
       
       if (!downloadResponse.ok) throw new Error('Rapor indirilemedi');
       
@@ -1092,7 +1092,7 @@ export default function SecurityCenterPage() {
         return;
       }
       
-      const response = await apiRequest(`${API_BASE_URL}/admin/security/tenants/${tenantId}/settings`);
+      const response = await apiRequest(`${API_BASE_URL}/security/tenants/${tenantId}/settings`);
       if (!response.ok) {
         if (response.status === 404) {
           const tenantName = tenant.tenantName || tenant.TenantName || tenant.CompanyName || tenantId;
@@ -1221,7 +1221,7 @@ export default function SecurityCenterPage() {
 
   const handleUnblockIP = async (ipId: number) => {
     try {
-              const response = await apiRequest(`${API_BASE_URL}/admin/security/blocked-ips/${ipId}/unblock`, {
+              const response = await apiRequest(`${API_BASE_URL}/security/blocked-ips/${ipId}/unblock`, {
         method: 'POST'
       });
       
@@ -1262,7 +1262,7 @@ export default function SecurityCenterPage() {
 
   const handleUnlockAccount = async (accountId: number) => {
     try {
-      const response = await apiRequest(`${API_BASE_URL}/admin/users/${accountId}`, {
+      const response = await apiRequest(`${API_BASE_URL}/users/${accountId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1292,7 +1292,7 @@ export default function SecurityCenterPage() {
         return;
       }
       
-      const response = await apiRequest(`${API_BASE_URL}/admin/security/users/${accountId}/history`);
+      const response = await apiRequest(`${API_BASE_URL}/security/users/${accountId}/history`);
       if (!response.ok) throw new Error('Güvenlik geçmişi alınamadı');
       
       const history = await response.json();
@@ -1418,7 +1418,7 @@ export default function SecurityCenterPage() {
           style={{ marginLeft: '16px' }}
           onClick={async () => {
             try {
-              const response = await apiRequest(`${API_BASE_URL}/admin/security/test`);
+              const response = await apiRequest(`${API_BASE_URL}/security/test`);
               if (response.ok) {
                 const data = await response.json();
                 messageApi.success(`Security API çalışıyor: ${data.message}`);
@@ -1437,7 +1437,7 @@ export default function SecurityCenterPage() {
           style={{ marginLeft: '8px' }}
           onClick={async () => {
             try {
-              const response = await apiRequest(`${API_BASE_URL}/admin/security/debug-alerts`);
+              const response = await apiRequest(`${API_BASE_URL}/security/debug-alerts`);
               if (response.ok) {
                 const data = await response.json();
                 console.log('Debug data:', data);
@@ -1457,7 +1457,7 @@ export default function SecurityCenterPage() {
           style={{ marginLeft: '8px' }}
           onClick={async () => {
             try {
-              const response = await apiRequest(`${API_BASE_URL}/admin/security/create-test-alerts`);
+              const response = await apiRequest(`${API_BASE_URL}/security/create-test-alerts`);
               if (response.ok) {
                 const data = await response.json();
                 messageApi.success(`${data.count} adet test alarmı oluşturuldu`);

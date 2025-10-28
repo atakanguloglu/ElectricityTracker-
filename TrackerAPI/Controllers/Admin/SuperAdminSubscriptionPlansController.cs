@@ -8,7 +8,7 @@ using ElectricityTrackerAPI.Services;
 namespace ElectricityTrackerAPI.Controllers.Admin
 {
     [ApiController]
-    [Route("api/admin/subscription-plans")]
+    [Route("api/superadmin/subscription-plans")]
     [Authorize(Roles = "SuperAdmin")]
     public class SuperAdminSubscriptionPlansController : Common.BaseController
     {

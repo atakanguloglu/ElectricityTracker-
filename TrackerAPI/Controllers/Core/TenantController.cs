@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using ElectricityTrackerAPI.Models.Core;
+using ElectricityTrackerAPI.Models.Billing;
 using ElectricityTrackerAPI.DTOs.Core;
 using ElectricityTrackerAPI.Data;
 using System.Security.Claims;
@@ -237,6 +238,247 @@ namespace ElectricityTrackerAPI.Controllers.Core
                 .ToListAsync();
 
             return Ok(departments);
+        }
+
+        // Subscription endpoints
+        [HttpGet("subscription")]
+        public async Task<IActionResult> GetTenantSubscription()
+        {
+            var tenantId = GetCurrentTenantId();
+            
+            if (!tenantId.HasValue)
+            {
+                return TenantNotFound();
+            }
+
+            var tenant = await _context.Tenants
+                .Include(t => t.Users)
+                .Include(t => t.Facilities)
+                .FirstOrDefaultAsync(t => t.Id == tenantId.Value);
+
+            if (tenant == null)
+            {
+                return TenantNotFound();
+            }
+
+            // Get subscription plan
+            var subscriptionPlan = await _context.SubscriptionPlans
+                .FirstOrDefaultAsync(sp => sp.Type == tenant.Subscription.ToString());
+
+            if (subscriptionPlan == null)
+            {
+                return NotFound(new { message = "Subscription plan not found" });
+            }
+
+            // Parse limits
+            var limits = new
+            {
+                users = subscriptionPlan.Limits.Contains("\"users\"") ? 
+                    int.Parse(System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(subscriptionPlan.Limits)["users"].ToString()) : -1,
+                facilities = subscriptionPlan.Limits.Contains("\"facilities\"") ? 
+                    int.Parse(System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(subscriptionPlan.Limits)["facilities"].ToString()) : -1,
+                api_calls = subscriptionPlan.Limits.Contains("\"api_calls\"") ? 
+                    int.Parse(System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(subscriptionPlan.Limits)["api_calls"].ToString()) : -1,
+                storage_gb = subscriptionPlan.Limits.Contains("\"storage_gb\"") ? 
+                    int.Parse(System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(subscriptionPlan.Limits)["storage_gb"].ToString()) : -1
+            };
+
+            // Parse features
+            var features = !string.IsNullOrEmpty(subscriptionPlan.Features) ? 
+                System.Text.Json.JsonSerializer.Deserialize<string[]>(subscriptionPlan.Features) : new string[0];
+
+            var subscriptionInfo = new
+            {
+                tenantId = tenant.Id,
+                subscriptionType = tenant.Subscription.ToString(),
+                subscriptionStartDate = tenant.SubscriptionStartDate.ToString("yyyy-MM-dd"),
+                subscriptionEndDate = tenant.SubscriptionEndDate?.ToString("yyyy-MM-dd"),
+                maxUsers = tenant.MaxUsers,
+                maxFacilities = tenant.MaxFacilities,
+                monthlyFee = subscriptionPlan.MonthlyFee,
+                currency = subscriptionPlan.Currency,
+                paymentStatus = tenant.PaymentStatus.ToString(),
+                lastPayment = tenant.LastPayment?.ToString("yyyy-MM-dd"),
+                currentUsage = new
+                {
+                    users = tenant.Users.Count,
+                    facilities = tenant.Facilities.Count,
+                    apiCalls = 0, // TODO: Implement API call tracking
+                    storageUsed = 0 // TODO: Implement storage tracking
+                },
+                subscriptionPlan = new
+                {
+                    id = subscriptionPlan.Id,
+                    type = subscriptionPlan.Type,
+                    name = subscriptionPlan.Name,
+                    description = subscriptionPlan.Description,
+                    monthlyFee = subscriptionPlan.MonthlyFee,
+                    features = features,
+                    limits = limits,
+                    currency = subscriptionPlan.Currency,
+                    isActive = subscriptionPlan.IsActive
+                }
+            };
+
+            return Ok(subscriptionInfo);
+        }
+
+        [HttpPost("change-plan")]
+        public async Task<IActionResult> ChangeTenantPlan([FromBody] ChangePlanDto changePlanDto)
+        {
+            var tenantId = GetCurrentTenantId();
+            
+            if (!tenantId.HasValue)
+            {
+                return TenantNotFound();
+            }
+
+            var tenant = await _context.Tenants
+                .FirstOrDefaultAsync(t => t.Id == tenantId.Value);
+
+            if (tenant == null)
+            {
+                return TenantNotFound();
+            }
+
+            // Check if new plan exists
+            var newPlan = await _context.SubscriptionPlans
+                .FirstOrDefaultAsync(sp => sp.Type == changePlanDto.NewPlanType);
+
+            if (newPlan == null)
+            {
+                return BadRequest(new { message = "Invalid plan type" });
+            }
+
+            // Update tenant subscription
+            tenant.Subscription = Enum.Parse<SubscriptionType>(changePlanDto.NewPlanType);
+            tenant.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message = "Plan changed successfully",
+                newPlan = new
+                {
+                    id = newPlan.Id,
+                    type = newPlan.Type,
+                    name = newPlan.Name,
+                    description = newPlan.Description,
+                    monthlyFee = newPlan.MonthlyFee,
+                    currency = newPlan.Currency
+                },
+                effectiveDate = DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd")
+            });
+        }
+
+        [HttpGet("usage-stats")]
+        public async Task<IActionResult> GetTenantUsageStats()
+        {
+            var tenantId = GetCurrentTenantId();
+            
+            if (!tenantId.HasValue)
+            {
+                return TenantNotFound();
+            }
+
+            var tenant = await _context.Tenants
+                .Include(t => t.Users)
+                .Include(t => t.Facilities)
+                .FirstOrDefaultAsync(t => t.Id == tenantId.Value);
+
+            if (tenant == null)
+            {
+                return TenantNotFound();
+            }
+
+            var usageStats = new
+            {
+                users = tenant.Users.Count,
+                facilities = tenant.Facilities.Count,
+                apiCalls = 0, // TODO: Implement API call tracking
+                storageUsed = 0, // TODO: Implement storage tracking
+                lastUpdated = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss")
+            };
+
+            return Ok(usageStats);
+        }
+
+        [HttpGet("usage-limits")]
+        public async Task<IActionResult> GetTenantUsageLimits()
+        {
+            var tenantId = GetCurrentTenantId();
+            
+            if (!tenantId.HasValue)
+            {
+                return TenantNotFound();
+            }
+
+            var tenant = await _context.Tenants
+                .Include(t => t.Users)
+                .Include(t => t.Facilities)
+                .FirstOrDefaultAsync(t => t.Id == tenantId.Value);
+
+            if (tenant == null)
+            {
+                return TenantNotFound();
+            }
+
+            var subscriptionPlan = await _context.SubscriptionPlans
+                .FirstOrDefaultAsync(sp => sp.Type == tenant.Subscription.ToString());
+
+            if (subscriptionPlan == null)
+            {
+                return NotFound(new { message = "Subscription plan not found" });
+            }
+
+            // Parse limits
+            var limits = new
+            {
+                users = subscriptionPlan.Limits.Contains("\"users\"") ? 
+                    int.Parse(System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(subscriptionPlan.Limits)["users"].ToString()) : -1,
+                facilities = subscriptionPlan.Limits.Contains("\"facilities\"") ? 
+                    int.Parse(System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(subscriptionPlan.Limits)["facilities"].ToString()) : -1,
+                api_calls = subscriptionPlan.Limits.Contains("\"api_calls\"") ? 
+                    int.Parse(System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(subscriptionPlan.Limits)["api_calls"].ToString()) : -1,
+                storage_gb = subscriptionPlan.Limits.Contains("\"storage_gb\"") ? 
+                    int.Parse(System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(subscriptionPlan.Limits)["storage_gb"].ToString()) : -1
+            };
+
+            var usageLimits = new
+            {
+                users = new
+                {
+                    current = tenant.Users.Count,
+                    limit = limits.users,
+                    remaining = limits.users == -1 ? -1 : Math.Max(0, limits.users - tenant.Users.Count),
+                    percentage = limits.users == -1 ? 0 : Math.Min(100, (tenant.Users.Count * 100) / limits.users)
+                },
+                facilities = new
+                {
+                    current = tenant.Facilities.Count,
+                    limit = limits.facilities,
+                    remaining = limits.facilities == -1 ? -1 : Math.Max(0, limits.facilities - tenant.Facilities.Count),
+                    percentage = limits.facilities == -1 ? 0 : Math.Min(100, (tenant.Facilities.Count * 100) / limits.facilities)
+                },
+                apiCalls = new
+                {
+                    current = 0, // TODO: Implement API call tracking
+                    limit = limits.api_calls,
+                    remaining = limits.api_calls == -1 ? -1 : Math.Max(0, limits.api_calls - 0),
+                    percentage = limits.api_calls == -1 ? 0 : 0
+                },
+                storage = new
+                {
+                    current = 0, // TODO: Implement storage tracking
+                    limit = limits.storage_gb,
+                    remaining = limits.storage_gb == -1 ? -1 : Math.Max(0, limits.storage_gb - 0),
+                    percentage = limits.storage_gb == -1 ? 0 : 0
+                }
+            };
+
+            return Ok(usageLimits);
         }
     }
 } 

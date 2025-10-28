@@ -4,6 +4,7 @@ import "./globals.css";
 import 'antd/dist/reset.css';
 import { ConfigProvider, App } from 'antd';
 import tr_TR from 'antd/locale/tr_TR';
+import { QueryProvider } from '@/providers/QueryProvider';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,21 +31,23 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ConfigProvider 
-          locale={tr_TR}
-          theme={{
-            token: {
-              // React 19 uyumluluğu için
-              motion: false, // Animasyonları devre dışı bırak
-            },
-          }}
-        >
-          <App>
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-              {children}
-            </div>
-          </App>
-        </ConfigProvider>
+        <QueryProvider>
+          <ConfigProvider 
+            locale={tr_TR}
+            theme={{
+              token: {
+                // React 19 uyumluluğu için
+                motion: false, // Animasyonları devre dışı bırak
+              },
+            }}
+          >
+            <App>
+              <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+                {children}
+              </div>
+            </App>
+          </ConfigProvider>
+        </QueryProvider>
       </body>
     </html>
   );

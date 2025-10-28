@@ -1,0 +1,32 @@
+   ADMIN PANELİ ÖNCELİKLENDİRME
+✅ TAMAMLANAN SAYFALAR (Backend API'leri var)
+Dashboard (admin) - ✅ Tamamlandı
+Tenants (admintenants) - ✅ Tamamlandı
+Users (adminusers) - ✅ Tamamlandı
+   YÜKSEK ÖNCELİK (Ana Özellikler)
+API Management (adminapi) - API anahtarları yönetimi
+Monitoring (adminmonitoring) - Sistem izleme
+Logs (adminlogs) - Sistem logları
+📊 ORTA ÖNCELİK (Analitik & Raporlama)
+Analytics (adminanalytics) - Analitik dashboard
+Reports (adminreports) - Raporlama
+AI Analytics (adminai-analytics) - AI analiz
+   DÜŞÜK ÖNCELİK (İş Süreçleri)
+Billing (adminbilling) - Fatura & kaynak yönetimi
+Settings (adminsettings) - Sistem ayarları
+Security (adminsecurity) - Güvenlik merkezi
+   DÜŞÜK ÖNCELİK (Kullanıcı Deneyimi)
+Profile (adminprofile) - Profil ayarları
+Account Settings (adminaccount-settings) - Hesap ayarları
+Help (adminhelp) - Yardım & destek
+Chatbot (adminchatbot) - Chat bot
+   ÖNERİM
+İlk 3 sayfayı backend'e bağlayalım
+API Management - API anahtarları yönetimi
+Monitoring - Sistem izleme
+Logs - Sistem logları
+Bu sayfalar admin panelinin temel yönetim özellikleri ve backend'de zaten API Key ve Log modelleri mevcut.
+
+
+
+Desbort Kulanıcı ,tenat log monitörng sayfaları paketler sayfaları tamamm

@@ -74,7 +74,7 @@ const { Title, Text } = Typography
 const { Option } = Select
 
 // API base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api/superadmin';
 
 // Types
 interface Invoice {
@@ -339,7 +339,7 @@ export default function AdminBillingPage() {
       if (filters.endDate) params.append('endDate', filters.endDate);
       if (filters.searchText) params.append('searchText', filters.searchText);
 
-      const response = await apiRequest(`${API_BASE_URL}/admin/billing/invoices?${params}`);
+      const response = await apiRequest(`${API_BASE_URL}/billing/invoices?${params}`);
       if (!response.ok) throw new Error('Faturalar alınamadı');
       
       const data: PagedResult<Invoice> = await response.json();
@@ -371,7 +371,7 @@ export default function AdminBillingPage() {
 
   const fetchSubscriptionPlans = async () => {
     try {
-      const response = await apiRequest(`${API_BASE_URL}/admin/subscription-plans`);
+      const response = await apiRequest(`${API_BASE_URL}/subscription-plans`);
       if (!response.ok) throw new Error('Abonelik planları alınamadı');
       
       const data: SubscriptionPlan[] = await response.json();
@@ -389,16 +389,23 @@ export default function AdminBillingPage() {
 
   const fetchTenants = async () => {
     try {
-      const response = await apiRequest(`${API_BASE_URL}/admin/tenants?pageSize=100`);
+      const response = await apiRequest(`${API_BASE_URL}/tenants?pageSize=100`);
       if (!response.ok) throw new Error('Tenant listesi alınamadı');
       
-      const data: PagedResult<Tenant> = await response.json();
-      const items = data.Items || data.items
-      if (!data || !items) {
-        console.error('Tenants API response is missing items:', data)
-        setTenants([])
-        return
-      }
+      const data: any = await response.json();
+      
+      // Transform PascalCase to camelCase
+      const items = (data.Items || data.items || []).map((tenant: any) => ({
+        id: tenant.Id || tenant.id,
+        companyName: tenant.CompanyName || tenant.companyName,
+        tenantName: tenant.TenantName || tenant.tenantName,
+        contactEmail: tenant.ContactEmail || tenant.contactEmail,
+        contactPhone: tenant.ContactPhone || tenant.contactPhone,
+        isActive: tenant.IsActive ?? tenant.isActive,
+        subscriptionPlan: tenant.SubscriptionPlan || tenant.subscriptionPlan,
+        createdAt: tenant.CreatedAt || tenant.createdAt
+      }))
+      
       setTenants(items);
     } catch (err) {
       console.error('Tenants fetch error:', err);
@@ -408,7 +415,7 @@ export default function AdminBillingPage() {
 
   const fetchStatistics = async () => {
     try {
-      const response = await apiRequest(`${API_BASE_URL}/admin/billing/statistics`);
+      const response = await apiRequest(`${API_BASE_URL}/billing/statistics`);
       if (!response.ok) throw new Error('İstatistikler alınamadı');
       
       const data: BillingStatistics = await response.json();
@@ -504,7 +511,7 @@ export default function AdminBillingPage() {
 
   const handleDeleteInvoice = async (invoiceId: number) => {
     try {
-              const response = await apiRequest(`${API_BASE_URL}/admin/billing/invoices/${invoiceId}`, {
+              const response = await apiRequest(`${API_BASE_URL}/billing/invoices/${invoiceId}`, {
         method: 'DELETE'
       });
 
@@ -520,7 +527,7 @@ export default function AdminBillingPage() {
 
   const handleSendInvoice = async (invoiceId: number) => {
     try {
-              const response = await apiRequest(`${API_BASE_URL}/admin/billing/invoices/${invoiceId}/send`, {
+              const response = await apiRequest(`${API_BASE_URL}/billing/invoices/${invoiceId}/send`, {
         method: 'POST'
       });
 
@@ -699,7 +706,7 @@ export default function AdminBillingPage() {
           }]
         };
 
-        const response = await apiRequest(`${API_BASE_URL}/admin/billing/invoices`, {
+        const response = await apiRequest(`${API_BASE_URL}/billing/invoices`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -741,7 +748,7 @@ export default function AdminBillingPage() {
           description: values.description
         };
 
-        const response = await apiRequest(`${API_BASE_URL}/admin/billing/invoices/${selectedInvoice.id}`, {
+        const response = await apiRequest(`${API_BASE_URL}/billing/invoices/${selectedInvoice.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -788,7 +795,7 @@ export default function AdminBillingPage() {
     try {
       setProcessingAutomaticBilling(true);
       
-      const response = await apiRequest(`${API_BASE_URL}/admin/billing/process-automatic-billing`, {
+      const response = await apiRequest(`${API_BASE_URL}/billing/process-automatic-billing`, {
         method: 'POST'
       });
 
@@ -997,7 +1004,7 @@ export default function AdminBillingPage() {
           >
             <Table
               dataSource={invoices}
-              rowKey="id"
+              rowKey={(record) => record.id?.toString() || record.Id?.toString() || `invoice-${Math.random()}`}
               pagination={{
                 current: pagination.current,
                 pageSize: pagination.pageSize,
@@ -1150,10 +1157,16 @@ export default function AdminBillingPage() {
                 label="Şirket"
                 rules={[{ required: true, message: 'Şirket seçimi gerekli' }]}
               >
-                <Select placeholder="Şirket seçin">
-                  {tenants.filter(tenant => tenant && tenant.id).map(tenant => (
-                    <Option key={tenant.id} value={tenant.id}>
-                      {tenant.companyName}
+                <Select 
+                  placeholder="Şirket seçin"
+                  showSearch
+                  filterOption={(input, option) =>
+                    String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+                  }
+                >
+                  {tenants.filter(tenant => tenant && (tenant.id || tenant.Id)).map(tenant => (
+                    <Option key={tenant.id || tenant.Id} value={tenant.id || tenant.Id}>
+                      {tenant.companyName || tenant.CompanyName || '-'}
                     </Option>
                   ))}
                 </Select>
@@ -1304,6 +1317,7 @@ export default function AdminBillingPage() {
             <Card size="small" title="Fatura Kalemleri">
               <Table
                 dataSource={selectedInvoice.items || selectedInvoice.Items || []}
+                rowKey={(record, index) => record.id?.toString() || `item-${index}`}
                 pagination={false}
                 columns={[
                   {

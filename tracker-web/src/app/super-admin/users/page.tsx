@@ -14,7 +14,6 @@ import {
   Input,
   Select,
   Switch,
-  message,
   Popconfirm,
   Space,
   Typography,
@@ -28,7 +27,8 @@ import {
   DatePicker,
   InputNumber,
   Spin,
-  Alert
+  Alert,
+  App
 } from 'antd';
 import {
   UserOutlined,
@@ -54,86 +54,18 @@ import {
   CalculatorOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useResetPassword } from '@/hooks/useUsers';
+import type { User, CreateUserDto, UpdateUserDto, UserFilters, Tenant, PagedResult } from '@/types/api.types';
 import { apiRequest } from '@/utils/auth';
-import { App } from 'antd';
+import { useQueryClient } from '@tanstack/react-query';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 // API base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api/superadmin'
 
-// Types
-interface User {
-  id?: number
-  Id?: number
-  username?: string
-  Username?: string
-  fullName?: string
-  FullName?: string
-  email?: string
-  Email?: string
-  tenantId?: number
-  TenantId?: number
-  tenantName?: string
-  TenantName?: string
-  role?: string
-  Role?: string
-  roleName?: string
-  RoleName?: string
-  isActive?: boolean
-  IsActive?: boolean
-  isLocked?: boolean
-  IsLocked?: boolean
-  lastLogin?: string
-  LastLogin?: string
-  lastLoginIp?: string
-  LastLoginIp?: string
-  loginCount?: number
-  LoginCount?: number
-  createdAt?: string
-  CreatedAt?: string
-  phone?: string
-  Phone?: string
-  department?: string
-  Department?: string
-  passwordHash?: string
-  PasswordHash?: string
-  lockedAt?: string
-  LockedAt?: string
-  lockReason?: string
-  LockReason?: string
-}
-
-interface Tenant {
-  id: number
-  companyName: string
-  domain: string
-}
-
-interface CreateUserDto {
-  firstName: string
-  lastName: string
-  email: string
-  password: string
-  phone?: string
-  role: string
-  isActive: boolean
-  tenantId: number
-  departmentId?: number
-}
-
-interface UpdateUserDto {
-  firstName: string
-  lastName: string
-  email: string
-  phone?: string
-  role: string
-  isActive: boolean
-  isLocked?: boolean
-  departmentId?: number
-}
-
+// Local types
 interface LoginHistory {
   id: number
   timestamp: string
@@ -143,24 +75,28 @@ interface LoginHistory {
   details?: string
 }
 
-interface PagedResult<T> {
-  items?: T[]
-  Items?: T[] // C# JSON serialization için
-  totalCount?: number
-  TotalCount?: number // C# JSON serialization için
-  page?: number
-  Page?: number // C# JSON serialization için
-  pageSize?: number
-  PageSize?: number // C# JSON serialization için
-  totalPages?: number
-  TotalPages?: number // C# JSON serialization için
-}
-
 export default function UsersPage() {
   const { message, modal } = App.useApp()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [users, setUsers] = useState<User[]>([])
+  const queryClient = useQueryClient()
+  
+  // Filters state
+  const [filters, setFilters] = useState<UserFilters>({
+    page: 1,
+    pageSize: 10,
+    search: '',
+    tenantId: undefined,
+    role: undefined,
+    isActive: undefined,
+  })
+
+  // React Query hooks for data fetching
+  const { data: usersData, isLoading, error, refetch } = useUsers(filters)
+  const createMutation = useCreateUser()
+  const updateMutation = useUpdateUser()
+  const deleteMutation = useDeleteUser()
+  const resetPasswordMutation = useResetPassword()
+
+  // UI state
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [modalVisible, setModalVisible] = useState(false)
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add')
@@ -172,113 +108,39 @@ export default function UsersPage() {
   const [passwordLoading, setPasswordLoading] = useState(false)
   const [form] = Form.useForm()
 
-  // Pagination state
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0
-  })
-
-  // Filters state
-  const [filters, setFilters] = useState({
-    search: '',
-    tenantId: undefined as number | undefined,
-    role: undefined as string | undefined,
-    isActive: undefined as boolean | undefined,
-    isLocked: undefined as boolean | undefined
-  })
-
-  // Fetch data on component mount
+  // Fetch tenants on mount
   useEffect(() => {
-    fetchUsers()
     fetchTenants()
-  }, [pagination.current, pagination.pageSize, filters])
+  }, [])
 
-  const fetchUsers = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      const params = new URLSearchParams({
-        page: pagination.current.toString(),
-        pageSize: pagination.pageSize.toString()
-      })
-
-      if (filters.search) params.append('search', filters.search)
-      if (filters.tenantId) params.append('tenantId', filters.tenantId.toString())
-      if (filters.role) params.append('role', filters.role)
-      if (filters.isActive !== undefined) params.append('isActive', filters.isActive.toString())
-
-      console.log('Fetching users from:', `${API_BASE_URL}/admin/users?${params}`)
-
-      const response = await apiRequest(`${API_BASE_URL}/admin/users?${params}`)
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('API Error Response:', errorText)
-        throw new Error(`Kullanıcı listesi alınamadı (${response.status}): ${errorText}`)
-      }
-      
-      const data: PagedResult<User> = await response.json()
-      
-      // Debug için response'u logla
-      console.log('API Response:', data)
-      
-      // data.Items veya data.items'ın undefined olup olmadığını kontrol et (C# JSON serialization)
-      const items = data.Items || data.items
-      if (!data || !items) {
-        console.error('API response is missing items:', data)
-        setUsers([])
-        setPagination(prev => ({
-          ...prev,
-          total: 0
-        }))
-        return
-      }
-      
-      setUsers(items)
-      setPagination(prev => ({
-        ...prev,
-        total: data.TotalCount || data.totalCount || 0
-      }))
-    } catch (err) {
-      console.error('Users fetch error:', err)
-      
-      // Network hatası kontrolü
-      if (err instanceof TypeError && err.message.includes('fetch')) {
-        setError('API sunucusuna bağlanılamıyor. Lütfen API\'nin çalıştığından emin olun.')
-      } else {
-        setError(err instanceof Error ? err.message : 'Bilinmeyen hata oluştu')
-      }
-      
-      // Hata durumunda users'ı boş array yap
-      setUsers([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  // ✅ fetchUsers removed - useUsers hook handles this automatically
 
   const fetchTenants = async () => {
     try {
-      const response = await apiRequest(`${API_BASE_URL}/admin/tenants?pageSize=100`)
+      const response = await apiRequest(`${API_BASE_URL}/tenants?pageSize=100`)
       if (!response.ok) {
         const errorText = await response.text()
         console.error('Tenants API Error Response:', errorText)
         throw new Error(`Tenant listesi alınamadı (${response.status}): ${errorText}`)
       }
       
-      const data: PagedResult<Tenant> = await response.json()
+      const data: any = await response.json()
       
-      if (!data || !data.items) {
-        console.error('Tenants API response is missing items:', data)
-        setTenants([])
-        return
-      }
+      // Transform PascalCase to camelCase
+      const items = (data.Items || data.items || []).map((tenant: any) => ({
+        id: tenant.Id || tenant.id,
+        companyName: tenant.CompanyName || tenant.companyName,
+        tenantName: tenant.TenantName || tenant.tenantName,
+        contactEmail: tenant.ContactEmail || tenant.contactEmail,
+        contactPhone: tenant.ContactPhone || tenant.contactPhone,
+        isActive: tenant.IsActive ?? tenant.isActive,
+        subscriptionPlan: tenant.SubscriptionPlan || tenant.subscriptionPlan,
+        createdAt: tenant.CreatedAt || tenant.createdAt
+      }))
       
-      setTenants(data.items)
+      setTenants(items)
     } catch (err) {
       console.error('Tenants fetch error:', err)
-      // Hata durumunda tenants'ı boş array yap
       setTenants([])
     }
   }
@@ -286,7 +148,7 @@ export default function UsersPage() {
   const fetchLoginHistory = async (userId: number) => {
     try {
       setLoginHistoryLoading(true)
-      const response = await apiRequest(`${API_BASE_URL}/admin/users/${userId}/login-history`)
+      const response = await apiRequest(`${API_BASE_URL}/users/${userId}/login-history`)
       if (!response.ok) throw new Error('Giriş geçmişi alınamadı')
       
       const history: LoginHistory[] = await response.json()
@@ -302,7 +164,7 @@ export default function UsersPage() {
   const fetchCurrentPassword = async (userId: number) => {
     try {
       setPasswordLoading(true)
-      const response = await apiRequest(`${API_BASE_URL}/admin/users/${userId}/current-password`)
+      const response = await apiRequest(`${API_BASE_URL}/users/${userId}/current-password`)
       if (!response.ok) throw new Error('Şifre bilgisi alınamadı')
       
       const passwordInfo = await response.json()
@@ -324,7 +186,12 @@ export default function UsersPage() {
 
   const handleEdit = async (user: User) => {
     setModalType('edit')
-    setSelectedUser(user)
+    // Normalize user object to ensure id is set
+    const normalizedUser = {
+      ...user,
+      id: user.id || (user as any).Id
+    }
+    setSelectedUser(normalizedUser)
     const fullName = user.fullName || user.FullName || ''
     form.setFieldsValue({
       firstName: fullName.split(' ')[0],
@@ -350,7 +217,8 @@ export default function UsersPage() {
 
   const handleToggleLock = async (user: User) => {
     try {
-      const response = await apiRequest(`${API_BASE_URL}/admin/users/${user.id || user.Id || 0}/toggle-lock`, {
+      const userId = user.id || (user as any).Id
+      const response = await apiRequest(`${API_BASE_URL}/users/${userId}/toggle-lock`, {
         method: 'POST'
       })
 
@@ -362,22 +230,22 @@ export default function UsersPage() {
       const result = await response.json()
       message.success(result.message)
       
-      // Optimistic update - immediately update the UI
-      setUsers(prevUsers => 
-        prevUsers.map(u => {
-          if (u.id === user.id || u.Id === user.Id) {
-            return {
-              ...u,
-              isLocked: result.isLocked,
-              IsLocked: result.isLocked
-            }
+      // ✨ Optimistic Update: Instantly update the cache
+      queryClient.setQueryData<PagedResult<User>>(
+        ['users', 'list', filters],
+        (oldData) => {
+          if (!oldData) return oldData
+          
+          return {
+            ...oldData,
+            items: oldData.items.map((u) =>
+              u.id === userId
+                ? { ...u, isLocked: result.isLocked, IsLocked: result.isLocked }
+                : u
+            ),
           }
-          return u
-        })
+        }
       )
-      
-      // Also refresh from server to get latest data
-      fetchUsers()
     } catch (err) {
       message.error(err instanceof Error ? err.message : 'Kullanıcı kilidi değiştirilirken hata oluştu')
       console.error('Toggle lock error:', err)
@@ -386,7 +254,7 @@ export default function UsersPage() {
 
   const handleResetPassword = async (user: User) => {
     try {
-              const response = await apiRequest(`${API_BASE_URL}/admin/users/${user.id || user.Id || 0}/reset-password`, {
+              const response = await apiRequest(`${API_BASE_URL}/users/${user.id || user.Id || 0}/reset-password`, {
         method: 'POST'
       })
 
@@ -461,7 +329,6 @@ export default function UsersPage() {
         okText: 'Tamam',
         width: 600,
         centered: true,
-                       destroyOnClose: true,
         getContainer: () => document.body,
         style: { 
           top: '50%',
@@ -483,19 +350,9 @@ export default function UsersPage() {
 
   const handleDelete = async (userId: number) => {
     try {
-              const response = await apiRequest(`${API_BASE_URL}/admin/users/${userId}`, {
-        method: 'DELETE'
-      })
-
-              if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.message || 'Kullanıcı silinemedi')
-        }
-
-        message.success('Kullanıcı başarıyla silindi')
-        fetchUsers() // Refresh list
+      await deleteMutation.mutateAsync(userId)
     } catch (err) {
-      message.error(err instanceof Error ? err.message : 'Kullanıcı silinirken hata oluştu')
+      // Error already handled by mutation's onError
       console.error('Delete user error:', err)
     }
   }
@@ -517,20 +374,15 @@ export default function UsersPage() {
           departmentId: values.departmentId
         }
 
-        const response = await apiRequest(`${API_BASE_URL}/admin/users`, {
-          method: 'POST',
-          body: JSON.stringify(createDto)
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.message || 'Kullanıcı oluşturulamadı')
-        }
-
-        message.success('Kullanıcı başarıyla oluşturuldu')
+        await createMutation.mutateAsync(createDto)
         setModalVisible(false)
-        fetchUsers() // Refresh list
       } else if (modalType === 'edit' && selectedUser) {
+        const userId = selectedUser.id || (selectedUser as any).Id
+        if (!userId) {
+          message.error('Kullanıcı ID bulunamadı')
+          return
+        }
+        
         const updateDto: UpdateUserDto = {
           firstName: values.firstName,
           lastName: values.lastName,
@@ -542,56 +394,42 @@ export default function UsersPage() {
           departmentId: values.departmentId
         }
 
-        const response = await apiRequest(`${API_BASE_URL}/admin/users/${selectedUser.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(updateDto)
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.message || 'Kullanıcı güncellenemedi')
-        }
-
-        message.success('Kullanıcı başarıyla güncellendi')
+        await updateMutation.mutateAsync({ id: userId, data: updateDto })
         setModalVisible(false)
-        fetchUsers() // Refresh list
       }
     } catch (err) {
       if (err instanceof Error && err.message.includes('validation')) {
         // Form validation error - don't show message
         return
       }
-      message.error(err instanceof Error ? err.message : 'İşlem sırasında hata oluştu')
+      // Error already handled by mutation's onError
       console.error('Modal operation error:', err)
     }
   }
 
   const handleFilterChange = (key: string, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }))
-    setPagination(prev => ({ ...prev, current: 1 })) // Reset to first page
+    setFilters(prev => ({ ...prev, page: 1 })) // Reset to first page
   }
 
   const clearFilters = () => {
     setFilters({
+      page: 1,
+      pageSize: 10,
       search: '',
       tenantId: undefined,
       role: undefined,
       isActive: undefined,
-      isLocked: undefined
     })
-    setPagination(prev => ({ ...prev, current: 1 }))
   }
 
   // User statistics
   const userStats = useMemo(() => ({
-    total: users?.length || 0,
-    active: users?.filter(u => (u.isActive || u.IsActive) && !(u.isLocked || u.IsLocked)).length || 0,
-    locked: users?.filter(u => u.isLocked || u.IsLocked).length || 0,
-    admins: users?.filter(u => (u.role || u.Role) === 'admin').length || 0
-  }), [users])
+    total: usersData?.totalCount || 0,
+    active: usersData?.items?.filter(u => u.isActive && !u.isLocked).length || 0,
+    locked: usersData?.items?.filter(u => u.isLocked).length || 0,
+    admins: usersData?.items?.filter(u => u.role?.toLowerCase() === 'admin').length || 0
+  }), [usersData])
 
   const getRoleIcon = (role: string) => {
     if (!role) return <UserOutlined />
@@ -804,7 +642,8 @@ export default function UsersPage() {
   ]
 
   // Loading state
-  if (loading && (!users || users.length === 0)) {
+  const hasNoData = !usersData?.items || usersData.items.length === 0
+  if (isLoading && hasNoData) {
     return (
       <div style={{ textAlign: 'center', padding: '50px' }}>
         <Spin size="large" />
@@ -813,16 +652,16 @@ export default function UsersPage() {
     )
   }
 
-  // Error state
-  if (error && (!users || users.length === 0)) {
+  // Error state  
+  if (error && (!usersData?.items || usersData.items.length === 0)) {
     return (
       <Alert
         message="Hata"
-        description={error}
+        description={error instanceof Error ? error.message : 'Kullanıcılar yüklenirken hata oluştu'}
         type="error"
         showIcon
         action={
-          <Button size="small" onClick={fetchUsers}>
+          <Button size="small" onClick={() => setFilters({...filters})}>
             Tekrar Dene
           </Button>
         }
@@ -1014,18 +853,25 @@ export default function UsersPage() {
       <Card>
         <Table
           columns={columns}
-          dataSource={users || []}
-          rowKey="id"
+          dataSource={usersData?.items || []}
+          rowKey={(record) => record.id?.toString() || record.Id?.toString() || `user-${Math.random()}`}
+          loading={isLoading}
           pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
+            current: filters.page,
+            pageSize: filters.pageSize,
+            total: usersData?.totalCount || 0,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} / ${total} kullanıcı`
           }}
-          loading={loading}
+          onChange={(pagination) => {
+            setFilters(prev => ({
+              ...prev,
+              page: pagination.current || 1,
+              pageSize: pagination.pageSize || 10
+            }))
+          }}
           scroll={{ x: 1200 }}
         />
       </Card>
@@ -1039,7 +885,7 @@ export default function UsersPage() {
         width={600}
         okText={selectedUser ? 'Güncelle' : 'Oluştur'}
         cancelText="İptal"
-        confirmLoading={loading}
+        confirmLoading={createMutation.isPending || updateMutation.isPending}
         centered={true}
         destroyOnHidden={true}
         getContainer={() => document.body}
@@ -1280,7 +1126,7 @@ export default function UsersPage() {
         <Table
           columns={loginHistoryColumns}
           dataSource={loginHistory}
-          rowKey="id"
+          rowKey={(record) => record.id?.toString() || `history-${Math.random()}`}
           pagination={false}
           size="small"
           loading={loginHistoryLoading}

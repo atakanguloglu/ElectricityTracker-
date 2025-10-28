@@ -90,6 +90,51 @@ body.ant-scrolling-effect {
   transition: none !important;
 }
 
+/* Custom Dropdown Styling */
+.ant-dropdown {
+  position: fixed !important;
+  z-index: 1001 !important;
+}
+
+.ant-dropdown-menu {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  overflow: hidden !important;
+  margin-top: 8px !important;
+}
+
+.ant-dropdown-menu-item {
+  padding: 8px 16px !important;
+  font-size: 14px !important;
+  transition: all 0.2s ease !important;
+  line-height: 1.4 !important;
+}
+
+.ant-dropdown-menu-item:hover {
+  background-color: rgba(24, 144, 255, 0.1) !important;
+  transform: translateX(2px) !important;
+}
+
+.ant-dropdown-menu-item-divider {
+  margin: 4px 0 !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Dropdown arrow styling */
+.ant-dropdown-arrow {
+  background: white !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-bottom: none !important;
+  border-right: none !important;
+}
+
+/* Prevent dropdown overflow */
+.ant-dropdown {
+  max-height: 80vh !important;
+  overflow: auto !important;
+}
+
 .ant-popover-inner {
   border-radius: 8px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;

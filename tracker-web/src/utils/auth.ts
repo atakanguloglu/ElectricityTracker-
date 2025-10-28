@@ -41,7 +41,10 @@ export const setToken = (token: string): void => {
   localStorage.setItem('authToken', token)
   
   // Cookie'ye de kaydet (middleware için)
-  document.cookie = `authToken=${token}; path=/; max-age=86400; secure; samesite=strict`
+  // Development'ta secure flag kullanma (http için)
+  const isProduction = window.location.protocol === 'https:'
+  const secureFlag = isProduction ? 'secure;' : ''
+  document.cookie = `authToken=${token}; path=/; max-age=86400; ${secureFlag} samesite=lax`
 }
 
 // Token'ı localStorage'dan sil

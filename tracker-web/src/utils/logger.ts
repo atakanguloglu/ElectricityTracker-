@@ -1,146 +1,176 @@
-export enum LogLevel {
-  DEBUG = 'debug',
-  INFO = 'info',
-  WARN = 'warn',
-  ERROR = 'error'
-}
+/**
+ * 🐛 Frontend Debug Logger
+ * Tüm API çağrılarını, hataları ve sistem olaylarını loglar
+ */
 
-export interface LogEntry {
-  timestamp: Date;
-  level: LogLevel;
-  message: string;
-  source?: string;
-  additionalData?: any;
-  userId?: string;
-  userEmail?: string;
-  tenantId?: string;
+const isDevelopment = process.env.NODE_ENV === 'development'
+const isDebugEnabled = process.env.NEXT_PUBLIC_DEBUG === 'true' || isDevelopment
+
+// Renkli console log'ları için
+const styles = {
+  success: 'background: #10b981; color: white; padding: 2px 6px; border-radius: 3px;',
+  error: 'background: #ef4444; color: white; padding: 2px 6px; border-radius: 3px;',
+  warning: 'background: #f59e0b; color: white; padding: 2px 6px; border-radius: 3px;',
+  info: 'background: #3b82f6; color: white; padding: 2px 6px; border-radius: 3px;',
+  api: 'background: #8b5cf6; color: white; padding: 2px 6px; border-radius: 3px;',
+  debug: 'background: #6366f1; color: white; padding: 2px 6px; border-radius: 3px;',
 }
 
 class Logger {
-  private isDevelopment = process.env.NODE_ENV === 'development';
-  private logs: LogEntry[] = [];
-  private maxLogs = 1000;
+  private prefix = '🔍 [ElectricityTracker]'
 
-  private addLog(level: LogLevel, message: string, source?: string, additionalData?: any) {
-    const logEntry: LogEntry = {
-      timestamp: new Date(),
-      level,
-      message,
-      source,
-      additionalData
-    };
+  /**
+   * ✅ Success log
+   */
+  success(message: string, ...args: any[]) {
+    if (!isDebugEnabled) return
+    console.log(`%c${this.prefix} SUCCESS`, styles.success, message, ...args)
+  }
 
-    // Add to memory
-    this.logs.push(logEntry);
-    if (this.logs.length > this.maxLogs) {
-      this.logs.shift();
-    }
-
-    // Console logging
-    if (this.isDevelopment) {
-      const timestamp = logEntry.timestamp.toISOString();
-      const prefix = `[${timestamp}] [${level.toUpperCase()}]`;
+  /**
+   * ❌ Error log
+   */
+  error(message: string, error?: any, ...args: any[]) {
+    console.error(`%c${this.prefix} ERROR`, styles.error, message, error, ...args)
+    
+    // Error detaylarını göster
+    if (error) {
+      if (error.response) {
+        console.error('📦 Response Data:', error.response.data)
+        console.error('📊 Response Status:', error.response.status)
+        console.error('📋 Response Headers:', error.response.headers)
+      } else if (error.request) {
+        console.error('📤 Request:', error.request)
+      } else {
+        console.error('💥 Error Message:', error.message)
+      }
       
-      switch (level) {
-        case LogLevel.DEBUG:
-          console.debug(`${prefix} ${message}`, additionalData || '');
-          break;
-        case LogLevel.INFO:
-          console.info(`${prefix} ${message}`, additionalData || '');
-          break;
-        case LogLevel.WARN:
-          console.warn(`${prefix} ${message}`, additionalData || '');
-          break;
-        case LogLevel.ERROR:
-          console.error(`${prefix} ${message}`, additionalData || '');
-          break;
+      if (error.stack) {
+        console.error('📚 Stack Trace:', error.stack)
       }
     }
+  }
 
-    // Send to server in production
-    if (!this.isDevelopment && level !== LogLevel.DEBUG) {
-      this.sendToServer(logEntry);
+  /**
+   * ⚠️ Warning log
+   */
+  warning(message: string, ...args: any[]) {
+    if (!isDebugEnabled) return
+    console.warn(`%c${this.prefix} WARNING`, styles.warning, message, ...args)
+  }
+
+  /**
+   * ℹ️ Info log
+   */
+  info(message: string, ...args: any[]) {
+    if (!isDebugEnabled) return
+    console.info(`%c${this.prefix} INFO`, styles.info, message, ...args)
+  }
+
+  /**
+   * 🌐 API Request log
+   */
+  apiRequest(method: string, url: string, data?: any) {
+    if (!isDebugEnabled) return
+    console.group(`%c${this.prefix} API REQUEST`, styles.api)
+    console.log('📍 Method:', method)
+    console.log('🔗 URL:', url)
+    if (data) {
+      console.log('📦 Data:', data)
     }
+    console.log('⏰ Time:', new Date().toLocaleTimeString())
+    console.groupEnd()
   }
 
-  private async sendToServer(logEntry: LogEntry) {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      await fetch('http://localhost:5143/api/log/client', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(logEntry)
-      });
-    } catch (error) {
-      // Fallback to console if server is not available
-      console.error('Failed to send log to server:', error);
+  /**
+   * 📥 API Response log
+   */
+  apiResponse(method: string, url: string, status: number, data?: any, duration?: number) {
+    if (!isDebugEnabled) return
+    const isSuccess = status >= 200 && status < 300
+    const style = isSuccess ? styles.success : styles.error
+    const icon = isSuccess ? '✅' : '❌'
+    
+    console.group(`%c${this.prefix} API RESPONSE ${icon}`, style)
+    console.log('📍 Method:', method)
+    console.log('🔗 URL:', url)
+    console.log('📊 Status:', status)
+    if (data) {
+      console.log('📦 Data:', data)
     }
+    if (duration) {
+      console.log('⏱️ Duration:', `${duration}ms`)
+    }
+    console.log('⏰ Time:', new Date().toLocaleTimeString())
+    console.groupEnd()
   }
 
-  debug(message: string, source?: string, additionalData?: any) {
-    this.addLog(LogLevel.DEBUG, message, source, additionalData);
+  /**
+   * 🐛 Debug log
+   */
+  debug(message: string, ...args: any[]) {
+    if (!isDebugEnabled) return
+    console.log(`%c${this.prefix} DEBUG`, styles.debug, message, ...args)
   }
 
-  info(message: string, source?: string, additionalData?: any) {
-    this.addLog(LogLevel.INFO, message, source, additionalData);
+  /**
+   * 📊 Table log (güzel formatlı data gösterimi)
+   */
+  table(data: any) {
+    if (!isDebugEnabled) return
+    console.table(data)
   }
 
-  warn(message: string, source?: string, additionalData?: any) {
-    this.addLog(LogLevel.WARN, message, source, additionalData);
+  /**
+   * 👤 User Action log
+   */
+  userAction(action: string, details?: any) {
+    if (!isDebugEnabled) return
+    console.log(`%c${this.prefix} USER ACTION`, 'background: #ec4899; color: white; padding: 2px 6px; border-radius: 3px;', action, details)
   }
 
-  error(message: string, source?: string, additionalData?: any) {
-    this.addLog(LogLevel.ERROR, message, source, additionalData);
+  /**
+   * 🚀 Navigation log
+   */
+  navigation(from: string, to: string) {
+    if (!isDebugEnabled) return
+    console.log(`%c${this.prefix} NAVIGATION`, 'background: #14b8a6; color: white; padding: 2px 6px; border-radius: 3px;', `${from} → ${to}`)
   }
 
-  logUserActivity(activity: string, userId?: string, userEmail?: string, tenantId?: string) {
-    this.info(`User Activity: ${activity}`, 'UserActivity', { userId, userEmail, tenantId });
-  }
-
-  logApiRequest(method: string, url: string, userId?: string, userEmail?: string, tenantId?: string) {
-    this.info(`API Request: ${method} ${url}`, 'ApiRequest', { userId, userEmail, tenantId });
-  }
-
-  logApiResponse(method: string, url: string, statusCode: number, userId?: string, userEmail?: string, tenantId?: string) {
-    const level = statusCode >= 400 ? LogLevel.WARN : LogLevel.INFO;
-    this.addLog(level, `API Response: ${method} ${url} - Status: ${statusCode}`, 'ApiResponse', { userId, userEmail, tenantId });
-  }
-
-  getLogs(): LogEntry[] {
-    return [...this.logs];
-  }
-
-  clearLogs() {
-    this.logs = [];
-  }
-
-  exportLogs(): string {
-    return JSON.stringify(this.logs, null, 2);
+  /**
+   * 🔄 State Change log
+   */
+  stateChange(stateName: string, oldValue: any, newValue: any) {
+    if (!isDebugEnabled) return
+    console.group(`%c${this.prefix} STATE CHANGE`, 'background: #f97316; color: white; padding: 2px 6px; border-radius: 3px;')
+    console.log('📝 State:', stateName)
+    console.log('🔴 Old:', oldValue)
+    console.log('🟢 New:', newValue)
+    console.groupEnd()
   }
 }
 
-export const logger = new Logger();
+// Singleton instance
+export const logger = new Logger()
 
 // Global error handler
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && isDebugEnabled) {
   window.addEventListener('error', (event) => {
-    logger.error('Unhandled error', 'GlobalErrorHandler', {
+    logger.error('💥 Global Error Caught', {
       message: event.message,
       filename: event.filename,
       lineno: event.lineno,
       colno: event.colno,
-      error: event.error?.toString()
-    });
-  });
+      error: event.error,
+    })
+  })
 
   window.addEventListener('unhandledrejection', (event) => {
-    logger.error('Unhandled promise rejection', 'GlobalErrorHandler', {
-      reason: event.reason?.toString()
-    });
-  });
-} 
+    logger.error('🚫 Unhandled Promise Rejection', {
+      reason: event.reason,
+      promise: event.promise,
+    })
+  })
+}
+
+export default logger

@@ -12,7 +12,7 @@ using System.Text.Json;
 namespace ElectricityTrackerAPI.Controllers.Admin
 {
     [ApiController]
-    [Route("api/admin/security")]
+    [Route("api/superadmin/security")]
     [Authorize(Roles = "SuperAdmin")]
     public class SuperAdminSecurityController : Common.BaseController
     {

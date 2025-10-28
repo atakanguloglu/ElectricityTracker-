@@ -16,7 +16,7 @@ using System.Text.RegularExpressions;
 namespace ElectricityTrackerAPI.Controllers.Admin
 {
     [ApiController]
-    [Route("api/admin/monitoring")]
+    [Route("api/superadmin/monitoring")]
     [Authorize(Roles = "SuperAdmin")]
     public class SuperAdminMonitoringController : Common.BaseController
     {
@@ -1611,6 +1611,61 @@ namespace ElectricityTrackerAPI.Controllers.Admin
             catch
             {
                 return "Unknown";
+            }
+        }
+
+        [HttpGet("resources")]
+        public IActionResult GetSystemResources()
+        {
+            try
+            {
+                var process = Process.GetCurrentProcess();
+                var resources = new
+                {
+                    cpu = GetCpuUsage(),
+                    memory = GetMemoryUsagePercentage(),
+                    disk = GetDiskUsage(),
+                    network = GetNetworkUsage(),
+                    timestamp = DateTime.UtcNow
+                };
+
+                return Ok(resources);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting system resources");
+                return StatusCode(500, new { message = "Sistem kaynaklarını alırken hata oluştu" });
+            }
+        }
+
+        [HttpGet("sessions")]
+        public async Task<IActionResult> GetActiveSessions()
+        {
+            try
+            {
+                // Son 24 saat içinde aktif olan kullanıcıları bul
+                var yesterday = DateTime.UtcNow.AddDays(-1);
+                var activeSessions = await _context.SystemLogs
+                    .Where(l => l.Level == "Information" && 
+                               l.Timestamp >= yesterday &&
+                               (l.Message.Contains("login") || l.Message.Contains("Login")))
+                    .GroupBy(l => l.UserId)
+                    .Select(g => new
+                    {
+                        userId = g.Key,
+                        lastActivity = g.Max(l => l.Timestamp),
+                        activityCount = g.Count()
+                    })
+                    .OrderByDescending(s => s.lastActivity)
+                    .Take(50)
+                    .ToListAsync();
+
+                return Ok(activeSessions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting active sessions");
+                return StatusCode(500, new { message = "Aktif oturumları alırken hata oluştu" });
             }
         }
     }

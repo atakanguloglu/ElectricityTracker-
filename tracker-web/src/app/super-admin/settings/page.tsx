@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Card,
   Row,
@@ -22,7 +22,8 @@ import {
   Descriptions,
   Modal,
   message,
-  App
+  App,
+  Spin
 } from 'antd';
 import {
   SettingOutlined,
@@ -63,67 +64,14 @@ import {
   HddOutlined,
   DesktopOutlined
 } from '@ant-design/icons';
+import { settingsService, SystemInfo, BackupLog, EmailProvider, SmsProvider, SystemSettings } from '../../../services/settingsService';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
-// Mock data
-const mockSystemInfo = {
-  version: '2.1.0',
-  buildDate: '2024-01-15',
-  uptime: '15 gün 8 saat 32 dakika',
-  lastBackup: '2024-01-14 23:00:00',
-  databaseSize: '2.4 GB',
-  totalUsers: 1250,
-  activeTenants: 45,
-  systemHealth: 98
-};
-
-const mockBackups = [
-  {
-    id: 1,
-    name: 'backup_2024_01_14_230000.zip',
-    size: '2.4 GB',
-    type: 'full',
-    status: 'completed',
-    createdAt: '2024-01-14 23:00:00',
-    duration: '15 dakika'
-  },
-  {
-    id: 2,
-    name: 'backup_2024_01_13_230000.zip',
-    size: '2.3 GB',
-    type: 'full',
-    status: 'completed',
-    createdAt: '2024-01-13 23:00:00',
-    duration: '14 dakika'
-  },
-  {
-    id: 3,
-    name: 'backup_2024_01_12_230000.zip',
-    size: '2.2 GB',
-    type: 'incremental',
-    status: 'completed',
-    createdAt: '2024-01-12 23:00:00',
-    duration: '8 dakika'
-  }
-];
-
-const mockEmailProviders = [
-  { value: 'smtp', label: 'SMTP', icon: <MailOutlined /> },
-  { value: 'sendgrid', label: 'SendGrid', icon: <MailOutlined /> },
-  { value: 'mailgun', label: 'Mailgun', icon: <MailOutlined /> },
-  { value: 'aws-ses', label: 'AWS SES', icon: <MailOutlined /> }
-];
-
-const mockSmsProviders = [
-  { value: 'twilio', label: 'Twilio', icon: <MessageOutlined /> },
-  { value: 'nexmo', label: 'Nexmo', icon: <MessageOutlined /> },
-  { value: 'aws-sns', label: 'AWS SNS', icon: <MessageOutlined /> }
-];
-
-const mockLanguages = [
+// Static data for select options
+const languages = [
   { value: 'tr', label: 'Türkçe', flag: '🇹🇷' },
   { value: 'en', label: 'English', flag: '🇺🇸' },
   { value: 'de', label: 'Deutsch', flag: '🇩🇪' },
@@ -131,7 +79,7 @@ const mockLanguages = [
   { value: 'es', label: 'Español', flag: '🇪🇸' }
 ];
 
-const mockCurrencies = [
+const currencies = [
   { value: 'TRY', label: 'Türk Lirası (₺)', symbol: '₺' },
   { value: 'USD', label: 'US Dollar ($)', symbol: '$' },
   { value: 'EUR', label: 'Euro (€)', symbol: '€' },
@@ -139,97 +87,190 @@ const mockCurrencies = [
 ];
 
 interface SettingsFormValues {
-  systemName: string
-  adminEmail: string
-  maxUsers: number
-  backupFrequency: string
-  maintenanceMode: boolean
-  emailNotifications: boolean
-  smsNotifications: boolean
+  systemName: string;
+  adminEmail: string;
+  maxUsers: number;
+  backupFrequency: string;
+  maintenanceMode: boolean;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
 }
 
 export default function SettingsPage() {
-  const { message } = App.useApp();
+  const { message: messageApi } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [backupProgress, setBackupProgress] = useState(0);
   const [isBackupRunning, setIsBackupRunning] = useState(false);
+  
+  // State for data from API
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [backups, setBackups] = useState<BackupLog[]>([]);
+  const [emailProviders, setEmailProviders] = useState<EmailProvider[]>([]);
+  const [smsProviders, setSmsProviders] = useState<SmsProvider[]>([]);
+  const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  // Load data on component mount
+  useEffect(() => {
+    loadAllData();
+  }, []);
+
+  const loadAllData = async () => {
+    setDataLoading(true);
+    try {
+      const [
+        info,
+        backupLogs,
+        emailProvs,
+        smsProvs,
+        settings
+      ] = await Promise.all([
+        settingsService.getSystemInfo(),
+        settingsService.getBackupLogs(),
+        settingsService.getEmailProviders(),
+        settingsService.getSmsProviders(),
+        settingsService.getSystemSettings()
+      ]);
+
+      setSystemInfo(info);
+      setBackups(backupLogs);
+      setEmailProviders(emailProvs);
+      setSmsProviders(smsProvs);
+      setSystemSettings(settings);
+      setMaintenanceMode(settings.maintenanceMode);
+    } catch (error) {
+      messageApi.error('Veriler yüklenirken hata oluştu!');
+      console.error('Error loading data:', error);
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   // Statistics
   const stats = useMemo(() => [
     {
       title: 'Sistem Sağlığı',
-      value: `${mockSystemInfo.systemHealth}%`,
+      value: systemInfo ? `${systemInfo.systemHealth}%` : '--',
       icon: <CheckCircleOutlined />,
       color: '#52c41a',
       gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
     },
     {
       title: 'Aktif Kullanıcı',
-      value: mockSystemInfo.totalUsers,
+      value: systemInfo?.totalUsers || 0,
       icon: <UserOutlined />,
       color: '#1890ff',
       gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
     },
     {
       title: 'Aktif Tenant',
-      value: mockSystemInfo.activeTenants,
+      value: systemInfo?.activeTenants || 0,
       icon: <TeamOutlined />,
       color: '#722ed1',
       gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
     },
     {
       title: 'Veritabanı Boyutu',
-      value: mockSystemInfo.databaseSize,
+      value: systemInfo?.databaseSize || '--',
       icon: <DatabaseOutlined />,
       color: '#faad14',
       gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)'
     }
-  ], []);
+  ], [systemInfo]);
 
   const handleSaveSettings = async (values: SettingsFormValues) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      message.success('Ayarlar başarıyla kaydedildi!');
+      await settingsService.updateSystemSettings(values);
+      messageApi.success('Ayarlar başarıyla kaydedildi!');
+      await loadAllData(); // Reload data
     } catch (error) {
-      message.error('Ayarlar kaydedilirken hata oluştu!');
+      messageApi.error('Ayarlar kaydedilirken hata oluştu!');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStartBackup = () => {
+  const handleStartBackup = async () => {
     setIsBackupRunning(true);
     setBackupProgress(0);
     
-    const interval = setInterval(() => {
-      setBackupProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsBackupRunning(false);
-          message.success('Yedekleme başarıyla tamamlandı!');
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 500);
+    try {
+      const result = await settingsService.startBackup();
+      if (result.success) {
+        // Simulate progress for better UX
+        const interval = setInterval(() => {
+          setBackupProgress(prev => {
+            if (prev >= 100) {
+              clearInterval(interval);
+              setIsBackupRunning(false);
+              messageApi.success('Yedekleme başarıyla tamamlandı!');
+              loadAllData(); // Reload backup logs
+              return 100;
+            }
+            return prev + 10;
+          });
+        }, 500);
+      } else {
+        messageApi.error(result.message || 'Yedekleme başlatılamadı!');
+        setIsBackupRunning(false);
+      }
+    } catch (error) {
+      messageApi.error('Yedekleme başlatılırken hata oluştu!');
+      setIsBackupRunning(false);
+    }
   };
 
-  const handleToggleMaintenanceMode = (checked: boolean) => {
-    setMaintenanceMode(checked);
-    message.info(`Bakım modu ${checked ? 'açıldı' : 'kapatıldı'}`);
+  const handleToggleMaintenanceMode = async (checked: boolean) => {
+    try {
+      const result = await settingsService.toggleMaintenanceMode(checked);
+      if (result.success) {
+        setMaintenanceMode(checked);
+        messageApi.info(`Bakım modu ${checked ? 'açıldı' : 'kapatıldı'}`);
+      } else {
+        messageApi.error(result.message || 'Bakım modu değiştirilemedi!');
+      }
+    } catch (error) {
+      messageApi.error('Bakım modu değiştirilirken hata oluştu!');
+    }
   };
 
-  const handleTestEmail = () => {
-    message.info('Test e-postası gönderiliyor...');
+  const handleTestEmail = async () => {
+    try {
+      const result = await settingsService.testEmail();
+      if (result.success) {
+        messageApi.success('Test e-postası başarıyla gönderildi!');
+      } else {
+        messageApi.error(result.message || 'Test e-postası gönderilemedi!');
+      }
+    } catch (error) {
+      messageApi.error('Test e-postası gönderilirken hata oluştu!');
+    }
   };
 
-  const handleTestSms = () => {
-    message.info('Test SMS gönderiliyor...');
+  const handleTestSms = async () => {
+    try {
+      const result = await settingsService.testSms();
+      if (result.success) {
+        messageApi.success('Test SMS başarıyla gönderildi!');
+      } else {
+        messageApi.error(result.message || 'Test SMS gönderilemedi!');
+      }
+    } catch (error) {
+      messageApi.error('Test SMS gönderilirken hata oluştu!');
+    }
   };
+
+  if (dataLoading) {
+    return (
+      <div style={{ padding: '24px', textAlign: 'center' }}>
+        <Spin size="large" />
+        <div style={{ marginTop: '16px' }}>Ayarlar yükleniyor...</div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: '24px' }}>
@@ -274,16 +315,16 @@ export default function SettingsPage() {
       >
         <Descriptions bordered column={{ xxl: 4, xl: 3, lg: 2, md: 2, sm: 1, xs: 1 }}>
           <Descriptions.Item label="Versiyon" span={1}>
-            <Tag color="blue">{mockSystemInfo.version}</Tag>
+            <Tag color="blue">{systemInfo?.version || '--'}</Tag>
           </Descriptions.Item>
           <Descriptions.Item label="Build Tarihi" span={1}>
-            {mockSystemInfo.buildDate}
+            {systemInfo?.buildDate || '--'}
           </Descriptions.Item>
           <Descriptions.Item label="Çalışma Süresi" span={1}>
-            {mockSystemInfo.uptime}
+            {systemInfo?.uptime || '--'}
           </Descriptions.Item>
           <Descriptions.Item label="Son Yedekleme" span={1}>
-            {mockSystemInfo.lastBackup}
+            {systemInfo?.lastBackup || '--'}
           </Descriptions.Item>
         </Descriptions>
       </Card>
@@ -308,12 +349,12 @@ export default function SettingsPage() {
                   layout="vertical"
                   onFinish={handleSaveSettings}
                   initialValues={{
-                    language: 'tr',
-                    currency: 'TRY',
-                    timezone: 'Europe/Istanbul',
-                    dateFormat: 'DD/MM/YYYY',
-                    timeFormat: '24',
-                    maintenanceMode: false
+                    language: systemSettings?.defaultLanguage || 'tr',
+                    currency: systemSettings?.defaultCurrency || 'TRY',
+                    timezone: systemSettings?.timezone || 'Europe/Istanbul',
+                    dateFormat: systemSettings?.dateFormat || 'DD/MM/YYYY',
+                    timeFormat: systemSettings?.timeFormat || '24',
+                    maintenanceMode: systemSettings?.maintenanceMode || false
                   }}
                 >
                   <Row gutter={[24, 16]}>
@@ -324,7 +365,7 @@ export default function SettingsPage() {
                         rules={[{ required: true, message: 'Lütfen dil seçin!' }]}
                       >
                         <Select placeholder="Dil seçin">
-                          {mockLanguages.map(lang => (
+                          {languages.map(lang => (
                             <Option key={lang.value} value={lang.value}>
                               <span style={{ marginRight: '8px' }}>{lang.flag}</span>
                               {lang.label}
@@ -340,7 +381,7 @@ export default function SettingsPage() {
                         rules={[{ required: true, message: 'Lütfen para birimi seçin!' }]}
                       >
                         <Select placeholder="Para birimi seçin">
-                          {mockCurrencies.map(currency => (
+                          {currencies.map(currency => (
                             <Option key={currency.value} value={currency.value}>
                               {currency.symbol} {currency.label}
                             </Option>
@@ -428,9 +469,9 @@ export default function SettingsPage() {
                                 rules={[{ required: true, message: 'Lütfen sağlayıcı seçin!' }]}
                               >
                                 <Select placeholder="Sağlayıcı seçin">
-                                  {mockEmailProviders.map(provider => (
-                                    <Option key={provider.value} value={provider.value}>
-                                      {provider.icon} {provider.label}
+                                  {emailProviders.map(provider => (
+                                    <Option key={provider.id} value={provider.id}>
+                                      <MailOutlined /> {provider.name}
                                     </Option>
                                   ))}
                                 </Select>
@@ -516,9 +557,9 @@ export default function SettingsPage() {
                                 rules={[{ required: true, message: 'Lütfen sağlayıcı seçin!' }]}
                               >
                                 <Select placeholder="Sağlayıcı seçin">
-                                  {mockSmsProviders.map(provider => (
-                                    <Option key={provider.value} value={provider.value}>
-                                      {provider.icon} {provider.label}
+                                  {smsProviders.map(provider => (
+                                    <Option key={provider.id} value={provider.id}>
+                                      <MessageOutlined /> {provider.name}
                                     </Option>
                                   ))}
                                 </Select>
@@ -672,7 +713,7 @@ export default function SettingsPage() {
                       size="small"
                     >
                       <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                        {mockBackups.map(backup => (
+                        {backups.map(backup => (
                           <Card
                             key={backup.id}
                             size="small"
@@ -838,9 +879,9 @@ export default function SettingsPage() {
           <Button
             size="large"
             icon={<ReloadOutlined />}
-            onClick={() => form.resetFields()}
+            onClick={loadAllData}
           >
-            Sıfırla
+            Yenile
           </Button>
         </Space>
       </Card>

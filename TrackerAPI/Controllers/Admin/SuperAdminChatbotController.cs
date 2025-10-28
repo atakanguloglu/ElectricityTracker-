@@ -9,7 +9,7 @@ using System.Text.Json;
 namespace ElectricityTrackerAPI.Controllers.Admin
 {
     [ApiController]
-    [Route("api/admin/chatbot")]
+    [Route("api/superadmin/chatbot")]
     public class SuperAdminChatbotController : BaseController
     {
         public SuperAdminChatbotController(ApplicationDbContext context, ILogger<SuperAdminChatbotController> logger)

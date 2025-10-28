@@ -10,7 +10,7 @@ using ElectricityTrackerAPI.DTOs.Billing;
 namespace ElectricityTrackerAPI.Controllers.Admin
 {
     [ApiController]
-    [Route("api/admin/billing")]
+    [Route("api/superadmin/billing")]
     [Authorize(Roles = "SuperAdmin")]
     public class SuperAdminBillingController : Common.BaseController
     {

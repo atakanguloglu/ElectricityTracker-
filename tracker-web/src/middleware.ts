@@ -10,20 +10,22 @@ const publicRoutes = ['/login', '/register', '/forgot-password']
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // JWT token'ı kontrol et
+  // JWT token'ı kontrol et (cookie veya header'dan)
   const token = request.cookies.get('authToken')?.value || 
                 request.headers.get('authorization')?.replace('Bearer ', '')
 
   // Korumalı rotaya erişim kontrolü
   if (protectedRoutes.some(route => pathname.startsWith(route))) {
+    // Token yoksa login sayfasına yönlendir
     if (!token) {
-      // Token yoksa login sayfasına yönlendir
+      console.log('[Middleware] No token found, redirecting to login:', pathname)
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(loginUrl)
     }
     
-    // Token varsa devam et
+    console.log('[Middleware] Token found, allowing access to:', pathname)
+    // Token varsa devam et (detaylı kontrol layout'larda yapılacak)
     return NextResponse.next()
   }
 

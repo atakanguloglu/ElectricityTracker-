@@ -46,7 +46,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const getMenuItems = () => {
     const baseItems = [
       {
-        key: '/dashboard',
+        key: '/tenant-dashboard',
         icon: <DashboardOutlined />,
         label: 'Dashboard',
       },

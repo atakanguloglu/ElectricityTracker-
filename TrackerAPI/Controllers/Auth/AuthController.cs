@@ -3,11 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.ComponentModel.DataAnnotations;
 using ElectricityTrackerAPI.Data;
 using ElectricityTrackerAPI.DTOs.Auth;
 using ElectricityTrackerAPI.Models.Core;
+using ElectricityTrackerAPI.Models.Common;
 using ElectricityTrackerAPI.Services;
 using BCrypt.Net;
 
@@ -66,10 +68,27 @@ namespace ElectricityTrackerAPI.Controllers.Auth
                 // JWT token oluştur
                 var token = GenerateJwtToken(user);
 
+                // Refresh token oluştur
+                var refreshToken = GenerateRefreshToken();
+                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+                // Refresh token'ı veritabanına kaydet
+                var refreshTokenEntity = new RefreshToken
+                {
+                    UserId = user.Id,
+                    Token = refreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddDays(7), // 7 gün geçerli
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedByIp = ipAddress
+                };
+
+                _context.RefreshTokens.Add(refreshTokenEntity);
+                await _context.SaveChangesAsync();
+
                 var response = new LoginResponseDto
                 {
                     Token = token,
-                    RefreshToken = Guid.NewGuid().ToString(), // Basit refresh token
+                    RefreshToken = refreshToken,
                     ExpiresAt = DateTime.UtcNow.AddHours(24),
                     User = new UserDto
                     {
@@ -163,6 +182,128 @@ namespace ElectricityTrackerAPI.Controllers.Auth
             }
         }
 
+        [HttpPost("refresh-token")]
+        public async Task<ActionResult<LoginResponseDto>> RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+            try
+            {
+                // Refresh token'ı veritabanında bul
+                var refreshToken = await _context.RefreshTokens
+                    .Include(rt => rt.User)
+                        .ThenInclude(u => u!.Tenant)
+                    .FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken);
+
+                if (refreshToken == null || !refreshToken.IsActive)
+                {
+                    return Unauthorized(ApiResponse<LoginResponseDto>.ErrorResponse(
+                        "Geçersiz veya süresi dolmuş refresh token",
+                        "Lütfen tekrar giriş yapın",
+                        401
+                    ));
+                }
+
+                var user = refreshToken.User!;
+
+                // Yeni JWT token oluştur
+                var newJwtToken = GenerateJwtToken(user);
+
+                // Yeni refresh token oluştur
+                var newRefreshToken = GenerateRefreshToken();
+                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+                // Eski token'ı revoke et
+                refreshToken.RevokedAt = DateTime.UtcNow;
+                refreshToken.RevokedByIp = ipAddress;
+                refreshToken.ReplacedByToken = newRefreshToken;
+                refreshToken.ReasonRevoked = "Replaced by new token";
+
+                // Yeni token'ı kaydet
+                var newRefreshTokenEntity = new RefreshToken
+                {
+                    UserId = user.Id,
+                    Token = newRefreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddDays(7),
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedByIp = ipAddress
+                };
+
+                _context.RefreshTokens.Add(newRefreshTokenEntity);
+                await _context.SaveChangesAsync();
+
+                var response = new LoginResponseDto
+                {
+                    Token = newJwtToken,
+                    RefreshToken = newRefreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddHours(24),
+                    User = new UserDto
+                    {
+                        Id = user.Id,
+                        FirstName = user.FirstName,
+                        LastName = user.LastName,
+                        Email = user.Email,
+                        Role = user.Role.ToString(),
+                        TenantId = user.TenantId,
+                        TenantName = user.Tenant.CompanyName
+                    }
+                };
+
+                return Ok(ApiResponse<LoginResponseDto>.SuccessResponse(
+                    data: response,
+                    message: "Token yenilendi",
+                    statusCode: 200
+                ));
+            }
+            catch (Exception ex)
+            {
+                _logService.LogError("Refresh token error", ex, "AuthController");
+                return StatusCode(500, ApiResponse<LoginResponseDto>.ErrorResponse(
+                    "Token yenileme işlemi sırasında bir hata oluştu",
+                    ex.Message,
+                    500
+                ));
+            }
+        }
+
+        [HttpPost("revoke-token")]
+        public async Task<ActionResult> RevokeToken([FromBody] RefreshTokenRequest request)
+        {
+            try
+            {
+                var refreshToken = await _context.RefreshTokens
+                    .FirstOrDefaultAsync(rt => rt.Token == request.RefreshToken);
+
+                if (refreshToken == null || !refreshToken.IsActive)
+                {
+                    return BadRequest(ApiResponse.ErrorResponse(
+                        "Geçersiz refresh token",
+                        "Token bulunamadı veya zaten iptal edilmiş",
+                        400
+                    ));
+                }
+
+                // Token'ı iptal et
+                refreshToken.RevokedAt = DateTime.UtcNow;
+                refreshToken.RevokedByIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+                refreshToken.ReasonRevoked = "Revoked by user";
+
+                await _context.SaveChangesAsync();
+
+                return Ok(ApiResponse.SuccessResponse(
+                    "Token başarıyla iptal edildi",
+                    200
+                ));
+            }
+            catch (Exception ex)
+            {
+                _logService.LogError("Revoke token error", ex, "AuthController");
+                return StatusCode(500, ApiResponse.ErrorResponse(
+                    "Token iptal işlemi sırasında bir hata oluştu",
+                    ex.Message,
+                    500
+                ));
+            }
+        }
+
         private string GenerateJwtToken(User user)
         {
             var claims = new List<Claim>
@@ -174,19 +315,42 @@ namespace ElectricityTrackerAPI.Controllers.Auth
                 new Claim("TenantId", user.TenantId.ToString())
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? "your-secret-key-here"));
+            var jwtKey = _configuration["Jwt:Key"];
+            if (string.IsNullOrEmpty(jwtKey))
+            {
+                throw new InvalidOperationException("JWT Key is not configured!");
+            }
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            
+            // Configuration'dan expiration süresini oku, varsayılan 24 saat
+            var expirationHours = _configuration.GetValue<int>("Jwt:ExpirationHours", 24);
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"] ?? "ElectricityTrackerAPI",
-                audience: _configuration["Jwt:Audience"] ?? "ElectricityTrackerAPI",
+                issuer: _configuration["Jwt:Issuer"],
+                audience: _configuration["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(24),
+                expires: DateTime.UtcNow.AddHours(expirationHours),
                 signingCredentials: credentials
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
+        private string GenerateRefreshToken()
+        {
+            var randomBytes = new byte[64];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomBytes);
+            return Convert.ToBase64String(randomBytes);
+        }
+    }
+
+    public class RefreshTokenRequest
+    {
+        [Required]
+        public string RefreshToken { get; set; } = string.Empty;
     }
 
     public class RegisterDto

@@ -598,6 +598,10 @@ namespace ElectricityTrackerAPI.Data
 
             // 14. Chatbot verilerini oluştur
             await ChatbotDataSeeder.SeedChatbotData(context);
+            
+            // 15. Help ve Settings verilerini oluştur
+            await SeedHelpData(context);
+            await SeedSettingsData(context);
 
             Console.WriteLine("✅ Demo veriler başarıyla oluşturuldu!");
             Console.WriteLine($"📊 Tenant: {tenants.Count} adet");
@@ -618,6 +622,252 @@ namespace ElectricityTrackerAPI.Data
             Console.WriteLine($"   Email: admin@demo-elektrik.com");
             Console.WriteLine($"   Şifre: password");
             Console.WriteLine($"   Diğer kullanıcılar: muhasebe@demo-elektrik.com, analist@demo-elektrik.com, operasyon@demo-elektrik.com, it@demo-elektrik.com");
+        }
+
+        private static async Task SeedHelpData(ApplicationDbContext context)
+        {
+            if (!context.HelpCategories.Any())
+            {
+                var categories = new List<HelpCategory>
+                {
+                    new HelpCategory
+                    {
+                        Name = "Kullanıcı Yönetimi",
+                        Description = "Kullanıcı hesapları ve yetkilendirme ile ilgili yardım",
+                        Icon = "UserOutlined",
+                        Color = "#1890ff",
+                        SortOrder = 1,
+                        IsActive = true,
+                        IsPublic = true,
+                        Slug = "kullanici-yonetimi"
+                    },
+                    new HelpCategory
+                    {
+                        Name = "Sistem",
+                        Description = "Sistem ayarları ve genel kullanım ile ilgili yardım",
+                        Icon = "SettingOutlined",
+                        Color = "#52c41a",
+                        SortOrder = 2,
+                        IsActive = true,
+                        IsPublic = true,
+                        Slug = "sistem"
+                    },
+                    new HelpCategory
+                    {
+                        Name = "API",
+                        Description = "API kullanımı ve entegrasyon ile ilgili yardım",
+                        Icon = "ApiOutlined",
+                        Color = "#722ed1",
+                        SortOrder = 3,
+                        IsActive = true,
+                        IsPublic = true,
+                        Slug = "api"
+                    },
+                    new HelpCategory
+                    {
+                        Name = "Raporlama",
+                        Description = "Rapor oluşturma ve analiz ile ilgili yardım",
+                        Icon = "BarChartOutlined",
+                        Color = "#faad14",
+                        SortOrder = 4,
+                        IsActive = true,
+                        IsPublic = true,
+                        Slug = "raporlama"
+                    },
+                    new HelpCategory
+                    {
+                        Name = "Güvenlik",
+                        Description = "Güvenlik ayarları ve güvenlik önlemleri ile ilgili yardım",
+                        Icon = "SecurityScanOutlined",
+                        Color = "#f5222d",
+                        SortOrder = 5,
+                        IsActive = true,
+                        IsPublic = true,
+                        Slug = "guvenlik"
+                    }
+                };
+
+                context.HelpCategories.AddRange(categories);
+                await context.SaveChangesAsync();
+
+                // Add sample help articles
+                var articles = new List<HelpArticle>
+                {
+                    new HelpArticle
+                    {
+                        Title = "Admin panelinde nasıl yeni kullanıcı ekleyebilirim?",
+                        Content = "Kullanıcı Yönetimi sayfasına gidin ve \"Yeni Kullanıcı Ekle\" butonuna tıklayın. Gerekli bilgileri doldurduktan sonra kaydedin.",
+                        CategoryId = categories[0].Id,
+                        Status = "published",
+                        IsActive = true,
+                        Slug = "admin-panelinde-nasil-yeni-kullanici-ekleyebilirim",
+                        AuthorId = 1,
+                        AuthorName = "Admin",
+                        ViewCount = 15,
+                        HelpfulCount = 12
+                    },
+                    new HelpArticle
+                    {
+                        Title = "Sistem loglarını nasıl görüntüleyebilirim?",
+                        Content = "Sistem Logları sayfasından tüm log kayıtlarını görüntüleyebilir, filtreleyebilir ve dışa aktarabilirsiniz.",
+                        CategoryId = categories[1].Id,
+                        Status = "published",
+                        IsActive = true,
+                        Slug = "sistem-loglarini-nasil-goruntuleyebilirim",
+                        AuthorId = 1,
+                        AuthorName = "Admin",
+                        ViewCount = 23,
+                        HelpfulCount = 18
+                    },
+                    new HelpArticle
+                    {
+                        Title = "API anahtarlarını nasıl yönetebilirim?",
+                        Content = "API Yönetimi sayfasından mevcut API anahtarlarını görüntüleyebilir, yeni anahtar oluşturabilir veya mevcut anahtarları silebilirsiniz.",
+                        CategoryId = categories[2].Id,
+                        Status = "published",
+                        IsActive = true,
+                        Slug = "api-anahtarlarini-nasil-yonetebilirim",
+                        AuthorId = 1,
+                        AuthorName = "Admin",
+                        ViewCount = 18,
+                        HelpfulCount = 14
+                    }
+                };
+
+                context.HelpArticles.AddRange(articles);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        private static async Task SeedSettingsData(ApplicationDbContext context)
+        {
+            if (!context.SystemSettings.Any())
+            {
+                var systemSettings = new SystemSettings
+                {
+                    SystemName = "Electricity Tracker",
+                    AdminEmail = "admin@electricitytracker.com",
+                    MaxUsers = 1000,
+                    MaxTenants = 100,
+                    BackupFrequency = "daily",
+                    BackupRetentionDays = "30",
+                    AutoBackup = true,
+                    BackupTime = "23:00",
+                    MaintenanceMode = false,
+                    EmailNotifications = true,
+                    SmsNotifications = false,
+                    PushNotifications = true,
+                    EmailProvider = "smtp",
+                    DefaultLanguage = "tr",
+                    DefaultCurrency = "TRY",
+                    TimeZone = "Europe/Istanbul",
+                    DateFormat = "dd/MM/yyyy",
+                    TimeFormat = "HH:mm:ss",
+                    RequireEmailVerification = true,
+                    RequirePhoneVerification = false,
+                    SessionTimeoutMinutes = 30,
+                    EnableAuditLog = true,
+                    CacheTimeoutMinutes = 15,
+                    EnableCompression = true,
+                    MaxFileUploadSizeMB = 10
+                };
+
+                context.SystemSettings.Add(systemSettings);
+                await context.SaveChangesAsync();
+            }
+
+            if (!context.EmailProviders.Any())
+            {
+                var emailProviders = new List<EmailProvider>
+                {
+                    new EmailProvider
+                    {
+                        Name = "smtp",
+                        Type = "smtp",
+                        DisplayName = "SMTP",
+                        Icon = "MailOutlined",
+                        IsActive = true,
+                        IsDefault = true,
+                        SortOrder = 1,
+                        SmtpHost = "smtp.gmail.com",
+                        SmtpPort = 587,
+                        SmtpUseSsl = true,
+                        MaxEmailsPerHour = 1000,
+                        MaxEmailsPerDay = 10000
+                    },
+                    new EmailProvider
+                    {
+                        Name = "sendgrid",
+                        Type = "sendgrid",
+                        DisplayName = "SendGrid",
+                        Icon = "MailOutlined",
+                        IsActive = true,
+                        IsDefault = false,
+                        SortOrder = 2,
+                        MaxEmailsPerHour = 1000,
+                        MaxEmailsPerDay = 10000
+                    },
+                    new EmailProvider
+                    {
+                        Name = "mailgun",
+                        Type = "mailgun",
+                        DisplayName = "Mailgun",
+                        Icon = "MailOutlined",
+                        IsActive = true,
+                        IsDefault = false,
+                        SortOrder = 3,
+                        MaxEmailsPerHour = 1000,
+                        MaxEmailsPerDay = 10000
+                    }
+                };
+
+                context.EmailProviders.AddRange(emailProviders);
+                await context.SaveChangesAsync();
+            }
+
+            if (!context.SmsProviders.Any())
+            {
+                var smsProviders = new List<SmsProvider>
+                {
+                    new SmsProvider
+                    {
+                        Name = "twilio",
+                        Type = "twilio",
+                        DisplayName = "Twilio",
+                        Icon = "MessageOutlined",
+                        IsActive = true,
+                        IsDefault = true,
+                        MaxSmsPerHour = 100,
+                        MaxSmsPerDay = 1000,
+                        CostPerSms = 0.01m,
+                        Currency = "TRY",
+                        SupportsUnicode = true,
+                        SupportsLongMessages = true,
+                        SupportsDeliveryReports = true,
+                        MaxMessageLength = 160
+                    },
+                    new SmsProvider
+                    {
+                        Name = "nexmo",
+                        Type = "nexmo",
+                        DisplayName = "Nexmo",
+                        Icon = "MessageOutlined",
+                        IsActive = true,
+                        IsDefault = false,
+                        MaxSmsPerHour = 100,
+                        MaxSmsPerDay = 1000,
+                        CostPerSms = 0.01m,
+                        Currency = "TRY",
+                        SupportsUnicode = true,
+                        SupportsLongMessages = true,
+                        SupportsDeliveryReports = true,
+                        MaxMessageLength = 160
+                    }
+                };
+
+                context.SmsProviders.AddRange(smsProviders);
+                await context.SaveChangesAsync();
+            }
         }
 
         private static void CreateDemoApiKeys(ApplicationDbContext context, List<Tenant> tenants)

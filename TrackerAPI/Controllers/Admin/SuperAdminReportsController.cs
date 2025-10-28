@@ -7,7 +7,7 @@ using ElectricityTrackerAPI.Services;
 namespace ElectricityTrackerAPI.Controllers.Admin
 {
     [ApiController]
-    [Route("api/admin/reports")]
+    [Route("api/superadmin/reports")]
     [Authorize(Roles = "SuperAdmin")]
     public class SuperAdminReportsController : Common.BaseController
     {

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using ElectricityTrackerAPI.Data;
+using ElectricityTrackerAPI.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace ElectricityTrackerAPI.Middleware
@@ -36,24 +37,50 @@ namespace ElectricityTrackerAPI.Middleware
                 return null;
             }
 
+            // Cache key
+            var cacheKey = $"tenant_{host}";
+            var cacheService = context.RequestServices.GetRequiredService<ICacheService>();
+
+            // Try to get from cache first
+            var cachedTenantId = cacheService.Get<int?>(cacheKey);
+            if (cachedTenantId.HasValue)
+            {
+                return cachedTenantId.Value;
+            }
+
+            // Not in cache, query database
+            int? tenantId = null;
+            var dbContext = context.RequestServices.GetRequiredService<ApplicationDbContext>();
+
             // Check for subdomain pattern (e.g., company1.electricitytracker.com)
             var subdomain = ExtractSubdomain(host);
             
             if (!string.IsNullOrEmpty(subdomain))
             {
-                var dbContext = context.RequestServices.GetRequiredService<ApplicationDbContext>();
                 var tenant = await dbContext.Tenants
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(t => t.Subdomain == subdomain && t.IsActive);
                 
-                return tenant?.Id;
+                tenantId = tenant?.Id;
             }
 
-            // Check for custom domain
-            var dbContext2 = context.RequestServices.GetRequiredService<ApplicationDbContext>();
-            var customTenant = await dbContext2.Tenants
-                .FirstOrDefaultAsync(t => t.CustomDomain == host && t.IsActive);
-            
-            return customTenant?.Id;
+            // Check for custom domain if subdomain not found
+            if (!tenantId.HasValue)
+            {
+                var customTenant = await dbContext.Tenants
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t => t.CustomDomain == host && t.IsActive);
+                
+                tenantId = customTenant?.Id;
+            }
+
+            // Cache the result (5 minutes)
+            if (tenantId.HasValue)
+            {
+                cacheService.Set(cacheKey, tenantId, TimeSpan.FromMinutes(5));
+            }
+
+            return tenantId;
         }
 
         private string? ExtractSubdomain(string host)

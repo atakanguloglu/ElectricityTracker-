@@ -18,7 +18,12 @@ namespace ElectricityTrackerAPI.Services
             _httpClient = httpClient;
             _configuration = configuration;
             _logger = logger;
-            _apiKey = _configuration["GeminiAPI:ApiKey"] ?? "AIzaSyCBjtmnsY2nEZHBEJkqR3p5pDWLA737T8I";
+            _apiKey = _configuration["GeminiAPI:ApiKey"] ?? string.Empty;
+            
+            if (string.IsNullOrEmpty(_apiKey))
+            {
+                _logger.LogWarning("Gemini API Key is not configured. AI features will not work properly.");
+            }
         }
 
         public async Task<string> GenerateContentAsync(string prompt, string? context = null)

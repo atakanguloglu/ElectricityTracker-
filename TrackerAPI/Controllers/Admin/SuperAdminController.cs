@@ -14,7 +14,7 @@ using System.Runtime.InteropServices;
 namespace ElectricityTrackerAPI.Controllers.Admin
 {
     [ApiController]
-    [Route("api/admin")]
+    [Route("api/superadmin")]
     [Authorize(Roles = "SuperAdmin")]
     public class SuperAdminController : Common.BaseController
     {

@@ -95,7 +95,7 @@ const { TextArea } = Input;
 const { Step } = Steps;
 
 // API base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api/superadmin';
 
 // Types
 interface SystemHealth {
@@ -608,7 +608,7 @@ export default function SystemMonitoringPage() {
   const fetchSystemHealth = async () => {
     try {
       console.log('Fetching system health...');
-      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/system-health`);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/system-health`);
       if (!response.ok) throw new Error('Sistem sağlığı alınamadı');
       const data = await response.json();
       console.log('System Health API Response:', data);
@@ -621,7 +621,7 @@ export default function SystemMonitoringPage() {
   const fetchPerformanceMetrics = async () => {
     try {
       console.log('Fetching performance metrics...');
-      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/performance-metrics`);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/performance-metrics`);
       if (!response.ok) throw new Error('Performans metrikleri alınamadı');
       const data = await response.json();
       console.log('Performance Metrics API Response:', data);
@@ -634,7 +634,7 @@ export default function SystemMonitoringPage() {
   const fetchMonitoringDashboard = async () => {
     try {
       console.log('Fetching monitoring dashboard...');
-      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/dashboard`);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/dashboard`);
       if (!response.ok) throw new Error('Monitoring dashboard alınamadı');
       const data = await response.json();
       console.log('Monitoring Dashboard API Response:', data);
@@ -647,7 +647,7 @@ export default function SystemMonitoringPage() {
   const fetchAlerts = async () => {
     try {
       console.log('Fetching alerts...');
-      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/alerts`);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/alerts`);
       if (!response.ok) throw new Error('Uyarılar alınamadı');
       const data = await response.json();
       console.log('Alerts API Response:', data);
@@ -660,7 +660,7 @@ export default function SystemMonitoringPage() {
   const fetchServers = async () => {
     try {
       console.log('Fetching servers...');
-      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/servers`);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/servers`);
       if (!response.ok) throw new Error('Sunucu bilgileri alınamadı');
       const data = await response.json();
       console.log('Servers API Response:', data);
@@ -673,7 +673,7 @@ export default function SystemMonitoringPage() {
   const fetchDatabaseMetrics = async () => {
     try {
       console.log('Fetching database metrics...');
-      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/database-metrics`);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/database-metrics`);
       if (!response.ok) throw new Error('Veritabanı metrikleri alınamadı');
       const data = await response.json();
       console.log('Database Metrics API Response:', data);
@@ -686,7 +686,7 @@ export default function SystemMonitoringPage() {
   const fetchCacheMetrics = async () => {
     try {
       console.log('Fetching cache metrics...');
-      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/cache-metrics`);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/cache-metrics`);
       if (!response.ok) throw new Error('Cache metrikleri alınamadı');
       const data = await response.json();
       console.log('Cache Metrics API Response:', data);
@@ -699,7 +699,7 @@ export default function SystemMonitoringPage() {
   const fetchBackgroundJobs = async () => {
     try {
       console.log('Fetching background jobs...');
-      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/background-jobs`);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/background-jobs`);
       if (!response.ok) throw new Error('Background job bilgileri alınamadı');
       const data = await response.json();
       console.log('Background Jobs API Response:', data);
@@ -712,7 +712,7 @@ export default function SystemMonitoringPage() {
   const fetchMicroservices = async () => {
     try {
       console.log('Fetching microservices...');
-      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/microservices`);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/microservices`);
       if (!response.ok) throw new Error('Mikroservis bilgileri alınamadı');
       const data = await response.json();
       console.log('Microservices API Response:', data);
@@ -1490,7 +1490,7 @@ export default function SystemMonitoringPage() {
       setServerDetailsLoading(true);
       setServerDetailsVisible(true);
       
-      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/servers/${serverId}`);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/servers/${serverId}`);
       if (!response.ok) throw new Error('Sunucu detayları alınamadı');
       
       const details: ServerDetails = await response.json();
@@ -1522,7 +1522,7 @@ export default function SystemMonitoringPage() {
       setAlertDetailsLoading(true);
       setAlertDetailsVisible(true);
       
-      const response = await apiRequest(`${API_BASE_URL}/admin/monitoring/alerts/${alertId}`);
+      const response = await apiRequest(`${API_BASE_URL}/monitoring/alerts/${alertId}`);
       if (!response.ok) throw new Error('Alarm detayları alınamadı');
       
       const details: AlertDetails = await response.json();

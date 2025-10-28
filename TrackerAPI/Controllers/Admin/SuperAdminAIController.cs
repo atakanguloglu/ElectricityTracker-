@@ -9,7 +9,7 @@ using ElectricityTrackerAPI.DTOs.Admin;
 namespace ElectricityTrackerAPI.Controllers.Admin
 {
     [ApiController]
-    [Route("api/admin/ai")]
+    [Route("api/superadmin/ai")]
     [Authorize(Roles = "SuperAdmin")]
     public class SuperAdminAIController : Common.BaseController
     {

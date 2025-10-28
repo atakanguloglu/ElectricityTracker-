@@ -52,7 +52,7 @@ const { TextArea } = Input
 const { Option } = Select
 
 // API base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api/superadmin'
 
 // Types
 interface SubscriptionPlan {
@@ -112,7 +112,7 @@ export default function AdminSubscriptionPlansPage() {
       setLoading(true)
       setError(null)
 
-      const response = await apiRequest(`${API_BASE_URL}/admin/subscription-plans`)
+      const response = await apiRequest(`${API_BASE_URL}/subscription-plans`)
       if (!response.ok) throw new Error('Abonelik planları alınamadı')
       
       const data = await response.json()
@@ -149,7 +149,7 @@ export default function AdminSubscriptionPlansPage() {
   // Fetch currencies
   const fetchCurrencies = async () => {
     try {
-      const response = await apiRequest(`${API_BASE_URL}/admin/currencies`)
+      const response = await apiRequest(`${API_BASE_URL}/currencies`)
       if (!response.ok) throw new Error('Para birimleri alınamadı')
       
       const data = await response.json()
@@ -228,8 +228,8 @@ export default function AdminSubscriptionPlansPage() {
          }
          
          console.log('Update request - planId:', planId)
-         console.log('Update request URL:', `${API_BASE_URL}/admin/subscription-plans-management/${planId}`)
-         const response = await apiRequest(`${API_BASE_URL}/admin/subscription-plans/${planId}`, {
+         console.log('Update request URL:', `${API_BASE_URL}/subscription-plans-management/${planId}`)
+         const response = await apiRequest(`${API_BASE_URL}/subscription-plans/${planId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'

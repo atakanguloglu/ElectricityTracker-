@@ -64,7 +64,7 @@ const { TabPane } = Tabs;
 const { Panel } = Collapse;
 
 // API base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api/superadmin';
 
 // Types
 interface Tenant {
@@ -216,7 +216,7 @@ export default function ApiManagementPage() {
       if (filters.status) params.append('status', filters.status);
       if (filters.hasWebhook !== undefined) params.append('hasWebhook', filters.hasWebhook.toString());
 
-      const response = await apiRequest(`${API_BASE_URL}/admin/api-keys?${params}`);
+      const response = await apiRequest(`${API_BASE_URL}/api-keys?${params}`);
       if (!response.ok) throw new Error('API anahtarları alınamadı');
       
       const data: PagedResult<ApiKey> = await response.json();
@@ -236,8 +236,8 @@ export default function ApiManagementPage() {
 
   const fetchTenants = async () => {
     try {
-      console.log('Fetching tenants from:', `${API_BASE_URL}/admin/tenants?pageSize=100`);
-      const response = await apiRequest(`${API_BASE_URL}/admin/tenants?pageSize=100`);
+      console.log('Fetching tenants from:', `${API_BASE_URL}/tenants?pageSize=100`);
+      const response = await apiRequest(`${API_BASE_URL}/tenants?pageSize=100`);
       if (!response.ok) throw new Error('Tenant listesi alınamadı');
       
       const data: PagedResult<Tenant> = await response.json();
@@ -251,7 +251,7 @@ export default function ApiManagementPage() {
 
   const fetchApiUsage = async (apiKeyId: number) => {
     try {
-      const response = await apiRequest(`${API_BASE_URL}/admin/api-keys/${apiKeyId}/usage-stats`);
+      const response = await apiRequest(`${API_BASE_URL}/api-keys/${apiKeyId}/usage-stats`);
       if (!response.ok) throw new Error('API kullanım istatistikleri alınamadı');
       
       const data: ApiUsageDto[] = await response.json();
@@ -439,7 +439,7 @@ export default function ApiManagementPage() {
 
   const handleRegenerate = async (apiKey: ApiKey) => {
     try {
-          const response = await apiRequest(`${API_BASE_URL}/admin/api-keys/${apiKey.id}/regenerate`, {
+          const response = await apiRequest(`${API_BASE_URL}/api-keys/${apiKey.id}/regenerate`, {
       method: 'POST'
     });
 
@@ -460,7 +460,7 @@ export default function ApiManagementPage() {
 
   const handleToggleStatus = async (apiKey: ApiKey) => {
     try {
-          const response = await apiRequest(`${API_BASE_URL}/admin/api-keys/${apiKey.id}/toggle-status`, {
+          const response = await apiRequest(`${API_BASE_URL}/api-keys/${apiKey.id}/toggle-status`, {
       method: 'POST'
     });
 
@@ -477,7 +477,7 @@ export default function ApiManagementPage() {
 
   const handleDelete = async (apiKeyId: number) => {
     try {
-          const response = await apiRequest(`${API_BASE_URL}/admin/api-keys/${apiKeyId}`, {
+          const response = await apiRequest(`${API_BASE_URL}/api-keys/${apiKeyId}`, {
       method: 'DELETE'
     });
 
@@ -501,7 +501,7 @@ export default function ApiManagementPage() {
           permissions: Array.isArray(values.permissions) ? values.permissions.join(',') : values.permissions
         };
 
-            const response = await apiRequest(`${API_BASE_URL}/admin/api-keys`, {
+            const response = await apiRequest(`${API_BASE_URL}/api-keys`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -520,7 +520,7 @@ export default function ApiManagementPage() {
           permissions: Array.isArray(values.permissions) ? values.permissions.join(',') : values.permissions
         };
 
-            const response = await apiRequest(`${API_BASE_URL}/admin/api-keys/${selectedApiKey.id}`, {
+            const response = await apiRequest(`${API_BASE_URL}/api-keys/${selectedApiKey.id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'

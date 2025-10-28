@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Typography, Space } from 'antd'
 import { LoginOutlined, UserAddOutlined, BankOutlined } from '@ant-design/icons'
+import { getUser } from '@/utils/auth'
 
 const { Title, Text } = Typography
 
@@ -14,7 +15,19 @@ export default function Home() {
   useEffect(() => {
     const token = localStorage.getItem('token')
     setIsAuthenticated(!!token)
-  }, [])
+    
+    // If authenticated, redirect based on user role
+    if (token) {
+      const user = getUser()
+      const userRole = user?.role || user?.Role
+      
+      if (userRole?.toLowerCase() === 'superadmin') {
+        router.push('/super-admin')
+      } else {
+        router.push('/tenant-dashboard')
+      }
+    }
+  }, [router])
 
   if (isAuthenticated === null) {
     return (
@@ -28,7 +41,6 @@ export default function Home() {
   }
 
   if (isAuthenticated) {
-    router.push('/dashboard')
     return null
   }
 

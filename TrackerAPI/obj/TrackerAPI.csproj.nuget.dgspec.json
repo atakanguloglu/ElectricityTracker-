@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\ataka\\Desktop\\ElectricityTracker\\TrackerAPI\\TrackerAPI.csproj": {}
+    "D:\\Yazilim Projeleri\\ElectricityTracker\\TrackerAPI\\TrackerAPI.csproj": {}
   },
   "projects": {
-    "C:\\Users\\ataka\\Desktop\\ElectricityTracker\\TrackerAPI\\TrackerAPI.csproj": {
+    "D:\\Yazilim Projeleri\\ElectricityTracker\\TrackerAPI\\TrackerAPI.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\ataka\\Desktop\\ElectricityTracker\\TrackerAPI\\TrackerAPI.csproj",
+        "projectUniqueName": "D:\\Yazilim Projeleri\\ElectricityTracker\\TrackerAPI\\TrackerAPI.csproj",
         "projectName": "TrackerAPI",
-        "projectPath": "C:\\Users\\ataka\\Desktop\\ElectricityTracker\\TrackerAPI\\TrackerAPI.csproj",
+        "projectPath": "D:\\Yazilim Projeleri\\ElectricityTracker\\TrackerAPI\\TrackerAPI.csproj",
         "packagesPath": "C:\\Users\\ataka\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\ataka\\Desktop\\ElectricityTracker\\TrackerAPI\\obj\\",
+        "outputPath": "D:\\Yazilim Projeleri\\ElectricityTracker\\TrackerAPI\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -51,6 +51,10 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "dependencies": {
+            "AspNetCore.HealthChecks.NpgSql": {
+              "target": "Package",
+              "version": "[8.0.1, )"
+            },
             "BCrypt.Net-Next": {
               "target": "Package",
               "version": "[4.0.3, )"
@@ -67,11 +71,11 @@
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
               "suppressParent": "All",
               "target": "Package",
-              "version": "[7.0.11, )"
+              "version": "[9.0.0, )"
             },
             "Npgsql.EntityFrameworkCore.PostgreSQL": {
               "target": "Package",
-              "version": "[7.0.11, )"
+              "version": "[9.0.0, )"
             },
             "Serilog.AspNetCore": {
               "target": "Package",

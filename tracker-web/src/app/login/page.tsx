@@ -14,8 +14,9 @@ import {
   RocketOutlined,
   SafetyOutlined
 } from '@ant-design/icons'
-import { setToken, setUser, isAuthenticated } from '@/utils/auth'
+import { setToken, setUser, isAuthenticated, getUser } from '@/utils/auth'
 import { logger } from '@/utils/logger'
+import { API_CONFIG, API_ENDPOINTS } from '@/config/api.config'
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -36,7 +37,15 @@ export default function LoginPage() {
   // Sayfa yüklendiğinde token kontrolü
   useEffect(() => {
     if (isAuthenticated()) {
-      router.push('/dashboard')
+      const user = getUser()
+      const userRole = user?.role || user?.Role
+      
+      // Kullanıcı rolüne göre yönlendir
+      if (userRole?.toLowerCase() === 'superadmin') {
+        router.push('/super-admin')
+      } else {
+        router.push('/tenant-dashboard')
+      }
     }
   }, [router])
 
@@ -48,7 +57,8 @@ export default function LoginPage() {
     logger.info('Login attempt', 'LoginPage', { email: values.email })
 
     try {
-      const response = await fetch('http://localhost:5143/api/auth/login', {
+      const apiUrl = `${API_CONFIG.BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`;
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,8 +71,6 @@ export default function LoginPage() {
       })
 
       const data = await response.json()
-      
-      // Debug completed - login working with PascalCase handling
 
       if (response.ok && (data.token || data.Token)) {
         const token = data.token || data.Token
@@ -84,16 +92,13 @@ export default function LoginPage() {
         
         // Kısa bir gecikme sonrası rol bazlı yönlendirme yap
         setTimeout(() => {
-          console.log('DEBUG - User role:', user.Role || user.role)
-          console.log('DEBUG - User object:', user)
+          const userRole = user.Role || user.role;
           
-          if ((user.Role || user.role) === 'SuperAdmin') {
-            console.log('DEBUG - Redirecting to /super-admin')
-            logger.info('Redirecting to SuperAdmin panel', 'LoginPage')
+          if (userRole === 'SuperAdmin') {
+            logger.info('Redirecting to SuperAdmin panel', 'LoginPage', { role: userRole })
             router.push('/super-admin')
           } else {
-            console.log('DEBUG - Redirecting to /tenant-dashboard')
-            logger.info('Redirecting to tenant dashboard', 'LoginPage')
+            logger.info('Redirecting to tenant dashboard', 'LoginPage', { role: userRole })
             router.push('/tenant-dashboard')
           }
         }, 1000)

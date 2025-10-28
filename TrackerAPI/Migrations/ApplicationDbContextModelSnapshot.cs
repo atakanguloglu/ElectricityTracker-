@@ -17,7 +17,7 @@ namespace TrackerAPI.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.11")
+                .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -466,6 +466,81 @@ namespace TrackerAPI.Migrations
                     b.ToTable("SubscriptionPlans");
                 });
 
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.BackupLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BackupLocation")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Checksum")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<int>("DurationSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FilePath")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsCompressed")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("RetentionPolicy")
+                        .HasColumnType("text");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("TenantId", "CreatedAt");
+
+                    b.ToTable("BackupLogs");
+                });
+
             modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.ChatbotConversation", b =>
                 {
                     b.Property<int>("Id")
@@ -555,6 +630,150 @@ namespace TrackerAPI.Migrations
                     b.ToTable("ChatbotMessages");
                 });
 
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.ContactRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AdditionalInfo")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AssignedTo")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int?>("AssignedToUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Attachments")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Company")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Department")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Feedback")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("FollowUpDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FollowUpNotes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("RequiresFollowUp")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ResolutionNotes")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RespondedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Response")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("ResponseTimeHours")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedToUserId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("ContactRequests");
+                });
+
             modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.Department", b =>
                 {
                     b.Property<int>("Id")
@@ -598,6 +817,136 @@ namespace TrackerAPI.Migrations
                         .IsUnique();
 
                     b.ToTable("Departments");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.EmailProvider", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ApiEndpoint")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ApiKey")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ApiSecret")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("ErrorCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FromEmail")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FromName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsHealthy")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LastErrorAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastHealthCheck")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MaxEmailsPerDay")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxEmailsPerHour")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("SmtpHost")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("SmtpPassword")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int?>("SmtpPort")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("SmtpUseSsl")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("SmtpUseTls")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SmtpUsername")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SuccessCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("Type");
+
+                    b.ToTable("EmailProviders");
                 });
 
             modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.Facility", b =>
@@ -647,6 +996,212 @@ namespace TrackerAPI.Migrations
                         .IsUnique();
 
                     b.ToTable("Facilities");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.HelpArticle", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AuthorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AuthorName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("HelpCategoryId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("HelpfulCount")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("NotHelpfulCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SeoDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("SeoKeywords")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("SeoTitle")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ViewCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("HelpCategoryId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("HelpArticles");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.HelpArticleInteraction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ArticleId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArticleId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Type");
+
+                    b.ToTable("HelpArticleInteractions");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.HelpCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ArticleCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("HelpfulCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int?>("ParentCategoryId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ViewCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentCategoryId");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("HelpCategories");
                 });
 
             modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.KnowledgeBaseArticle", b =>
@@ -757,6 +1312,345 @@ namespace TrackerAPI.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("QuickActions");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReasonRevoked")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReplacedByToken")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RevokedByIp")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "ExpiresAt");
+
+                    b.ToTable("RefreshTokens");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.SmsProvider", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccountSid")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ApiEndpoint")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ApiKey")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ApiSecret")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("AuthToken")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("CostPerSms")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Currency")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("ErrorCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FromName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FromNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsHealthy")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LastErrorAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastHealthCheck")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MaxMessageLength")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxSmsPerDay")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxSmsPerHour")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal>("RemainingBalance")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("RemainingCredits")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SenderId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SuccessCount")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("SupportsDeliveryReports")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("SupportsLongMessages")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("SupportsScheduling")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("SupportsUnicode")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("Type");
+
+                    b.ToTable("SmsProviders");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.SystemSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AdminEmail")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("AutoBackup")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("BackupFrequency")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BackupRetentionDays")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BackupTime")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("CacheTimeoutMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DateFormat")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DefaultCurrency")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DefaultLanguage")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("EmailNotifications")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("EmailProvider")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("EnableAuditLog")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("EnableCompression")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("MaintenanceEndTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MaintenanceMessage")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("MaintenanceMode")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("MaintenanceStartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MaxFileUploadSizeMB")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxTenants")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxUsers")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("PushNotifications")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RequireEmailVerification")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RequirePhoneVerification")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("SessionTimeoutMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SmsApiKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SmsApiSecret")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SmsFromNumber")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("SmsNotifications")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SmsProvider")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SmtpHost")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SmtpPassword")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("SmtpPort")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("SmtpUseSsl")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SmtpUsername")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SystemName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("TimeFormat")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SystemName")
+                        .IsUnique();
+
+                    b.ToTable("SystemSettings");
                 });
 
             modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.Tenant", b =>
@@ -1796,6 +2690,16 @@ namespace TrackerAPI.Migrations
                     b.Navigation("RecordedBy");
                 });
 
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.BackupLog", b =>
+                {
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.ChatbotConversation", b =>
                 {
                     b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
@@ -1826,6 +2730,21 @@ namespace TrackerAPI.Migrations
                     b.Navigation("Conversation");
                 });
 
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.ContactRequest", b =>
+                {
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.User", "AssignedToUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedToUserId");
+
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
+                    b.Navigation("AssignedToUser");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.Department", b =>
                 {
                     b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
@@ -1853,6 +2772,59 @@ namespace TrackerAPI.Migrations
                     b.Navigation("Department");
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.HelpArticle", b =>
+                {
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.HelpCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.HelpCategory", null)
+                        .WithMany("Articles")
+                        .HasForeignKey("HelpCategoryId");
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.HelpArticleInteraction", b =>
+                {
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.HelpArticle", "Article")
+                        .WithMany("Interactions")
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Article");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.HelpCategory", b =>
+                {
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.HelpCategory", "ParentCategory")
+                        .WithMany("SubCategories")
+                        .HasForeignKey("ParentCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId");
+
+                    b.Navigation("ParentCategory");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.RefreshToken", b =>
+                {
+                    b.HasOne("ElectricityTrackerAPI.Models.Core.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.User", b =>
@@ -2036,6 +3008,18 @@ namespace TrackerAPI.Migrations
             modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.Facility", b =>
                 {
                     b.Navigation("ElectricityMeters");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.HelpArticle", b =>
+                {
+                    b.Navigation("Interactions");
+                });
+
+            modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.HelpCategory", b =>
+                {
+                    b.Navigation("Articles");
+
+                    b.Navigation("SubCategories");
                 });
 
             modelBuilder.Entity("ElectricityTrackerAPI.Models.Core.Tenant", b =>

@@ -104,19 +104,19 @@ export default function AdminOverviewPage() {
       setError(null)
 
       // Fetch dashboard stats
-      const statsResponse = await apiRequest(`${API_BASE_URL}/admin/dashboard/stats`)
+      const statsResponse = await apiRequest(`${API_BASE_URL}/superadmin/dashboard/stats`)
       if (!statsResponse.ok) throw new Error('Dashboard istatistikleri alınamadı')
       const stats = await statsResponse.json()
       console.log('Dashboard stats response:', stats)
 
       // Fetch recent activities
-      const activitiesResponse = await apiRequest(`${API_BASE_URL}/admin/dashboard/recent-activities`)
+      const activitiesResponse = await apiRequest(`${API_BASE_URL}/superadmin/dashboard/recent-activities`)
       if (!activitiesResponse.ok) throw new Error('Son aktiviteler alınamadı')
       const activities = await activitiesResponse.json()
       console.log('Recent activities response:', activities)
 
       // Fetch system resources
-      const resourcesResponse = await apiRequest(`${API_BASE_URL}/admin/dashboard/system-resources`)
+      const resourcesResponse = await apiRequest(`${API_BASE_URL}/superadmin/dashboard/system-resources`)
       if (!resourcesResponse.ok) throw new Error('Sistem kaynakları alınamadı')
       const resources = await resourcesResponse.json()
       console.log('System resources response:', resources)

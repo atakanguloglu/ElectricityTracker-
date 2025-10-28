@@ -2,7 +2,46 @@
 
 Şirketlerin elektrik tüketimlerini takip etmek için geliştirilmiş modern web uygulaması.
 
-## 🚀 Hızlı Başlangıç
+## ⚡ HIZLI BAŞLANGIÇ (5 Dakika)
+
+### Gereksinimler
+- .NET 9.0 SDK
+- Node.js 18+
+- PostgreSQL 15+
+
+### 1. Veritabanı Oluştur
+```sql
+CREATE DATABASE ElectricityTrackerDB;
+```
+
+### 2. Backend'i Çalıştır
+```bash
+cd TrackerAPI
+dotnet restore
+dotnet ef database update
+dotnet run
+```
+✅ Backend: http://localhost:5143
+
+### 3. Frontend'i Çalıştır (Yeni Terminal)
+```bash
+cd tracker-web
+npm install
+npm run dev
+```
+✅ Frontend: http://localhost:3000
+
+### 4. Giriş Yap
+```
+Email: admin@demo-elektrik.com
+Şifre: password
+```
+
+📖 **Detaylı kurulum için:** [`GETTING_STARTED.md`](./GETTING_STARTED.md)
+
+---
+
+## 🚀 Alternatif: Otomatik Kurulum
 
 ### Otomatik Kurulum (Önerilen)
 
@@ -133,28 +172,77 @@ ElectricityTracker/
 
 ## 🚀 Deployment
 
+### Production Configuration
+
+#### Backend Ayarları
+
+**1. Production Settings Oluştur**
+```bash
+cd TrackerAPI
+cp appsettings.example.json appsettings.Production.json
+```
+
+**2. `appsettings.Production.json` Dosyasını Düzenle**
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=YOUR_HOST;Database=YOUR_DB;Username=YOUR_USER;Password=YOUR_STRONG_PASSWORD"
+  },
+  "Jwt": {
+    "Key": "YOUR_STRONG_JWT_KEY_MIN_32_CHARACTERS",
+    "Issuer": "ElectricityTrackerAPI",
+    "Audience": "ElectricityTrackerAPI"
+  },
+  "GeminiAPI": {
+    "ApiKey": "YOUR_GEMINI_API_KEY"
+  },
+  "Cors": {
+    "AllowedOrigins": [
+      "https://yourdomain.com"
+    ]
+  }
+}
+```
+
+⚠️ **ÖNEMLİ:** `appsettings.Production.json` dosyasını git'e **commit ETMEYİN**!
+
+#### Frontend Ayarları
+
+**1. Environment Dosyası Oluştur**
+```bash
+cd tracker-web
+```
+
+**2. `.env.local` Dosyası Oluştur (Development)**
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5143
+NEXT_PUBLIC_DEBUG=true
+NEXT_PUBLIC_ENV=development
+```
+
+**3. `.env.production` Dosyası Oluştur (Production)**
+```env
+NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+NEXT_PUBLIC_DEBUG=false
+NEXT_PUBLIC_ENV=production
+```
+
 ### Production Build
 ```bash
 # Backend
 cd TrackerAPI
-dotnet publish -c Release
+dotnet publish -c Release -o ./publish
 
 # Frontend
 cd tracker-web
+npm install
 npm run build
+npm start
 ```
 
-### Environment Variables
-```env
-# Backend
-ConnectionStrings__DefaultConnection=your_postgres_connection_string
-Jwt__Key=your_jwt_secret_key
-Jwt__Issuer=your_issuer
-Jwt__Audience=your_audience
-
-# Frontend
-NEXT_PUBLIC_API_URL=http://localhost:5143/api
-```
+### Detaylı Deployment Rehberi
+📖 Detaylı bilgi için [`DEPLOYMENT.md`](./DEPLOYMENT.md) dosyasına bakın.
+🔒 Güvenlik için [`SECURITY.md`](./SECURITY.md) dosyasını okuyun.
 
 ## 📝 Geliştirme
 

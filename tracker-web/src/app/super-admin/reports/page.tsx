@@ -86,7 +86,7 @@ import {
   CalculatorOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { apiRequest } from '@/utils/auth';
+import { reportsService, ReportTemplate, ReportExecution, ReportSchedule } from '../../../services/reportsService';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -95,9 +95,6 @@ const { Panel } = Collapse;
 const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 const { Step } = Steps;
-
-// API base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5143/api';
 
 // Types
 interface EnergyConsumptionReport {
@@ -203,6 +200,12 @@ export default function ReportsPage() {
   const [systemReport, setSystemReport] = useState<SystemUsageReport | null>(null);
   const [tenants, setTenants] = useState<any[]>([]);
   
+  // Reports service states
+  const [reportTemplates, setReportTemplates] = useState<ReportTemplate[]>([]);
+  const [reportExecutions, setReportExecutions] = useState<ReportExecution[]>([]);
+  const [reportSchedules, setReportSchedules] = useState<ReportSchedule[]>([]);
+  const [reportStats, setReportStats] = useState<any>(null);
+  
   // Filters state
   const [filters, setFilters] = useState({
     tenantId: undefined as number | undefined,
@@ -215,6 +218,7 @@ export default function ReportsPage() {
   useEffect(() => {
     fetchReports();
     fetchTenants();
+    fetchReportsServiceData();
   }, [filters]);
 
   const fetchReports = async () => {
@@ -229,28 +233,28 @@ export default function ReportsPage() {
       if (filters.resourceType) params.append('resourceType', filters.resourceType);
 
       // Fetch energy consumption report
-              const energyResponse = await apiRequest(`${API_BASE_URL}/admin/reports/energy/consumption?${params}`);
+      const energyResponse = await fetch(`/api/superadmin/reports/energy/consumption?${params}`);
       if (energyResponse.ok) {
         const energyData: EnergyConsumptionReport = await energyResponse.json();
         setEnergyReport(energyData);
       }
 
       // Fetch billing summary report
-              const billingResponse = await apiRequest(`${API_BASE_URL}/admin/reports/billing/summary?${params}`);
+      const billingResponse = await fetch(`/api/superadmin/reports/billing/summary?${params}`);
       if (billingResponse.ok) {
         const billingData: BillingSummaryReport = await billingResponse.json();
         setBillingReport(billingData);
       }
 
       // Fetch tenant performance report
-              const tenantResponse = await apiRequest(`${API_BASE_URL}/admin/reports/tenants/performance?${params}`);
+      const tenantResponse = await fetch(`/api/superadmin/reports/tenants/performance?${params}`);
       if (tenantResponse.ok) {
         const tenantData: TenantPerformanceReport[] = await tenantResponse.json();
         setTenantReport(tenantData);
       }
 
       // Fetch system usage report
-              const systemResponse = await apiRequest(`${API_BASE_URL}/admin/reports/system/usage?${params}`);
+      const systemResponse = await fetch(`/api/superadmin/reports/system/usage?${params}`);
       if (systemResponse.ok) {
         const systemData: SystemUsageReport = await systemResponse.json();
         setSystemReport(systemData);
@@ -263,9 +267,27 @@ export default function ReportsPage() {
     }
   };
 
+  const fetchReportsServiceData = async () => {
+    try {
+      const [templates, executions, schedules, stats] = await Promise.all([
+        reportsService.getReportTemplates(),
+        reportsService.getReportExecutions(),
+        reportsService.getReportSchedules(),
+        reportsService.getReportStats()
+      ]);
+
+      setReportTemplates(templates);
+      setReportExecutions(executions);
+      setReportSchedules(schedules);
+      setReportStats(stats);
+    } catch (err) {
+      console.error('Reports service data fetch error:', err);
+    }
+  };
+
   const fetchTenants = async () => {
     try {
-      const response = await apiRequest(`${API_BASE_URL}/admin/tenants?pageSize=100`);
+      const response = await fetch('/api/superadmin/tenants?pageSize=100');
       if (!response.ok) throw new Error('Tenant listesi alınamadı');
       
       const data = await response.json();
@@ -324,7 +346,7 @@ export default function ReportsPage() {
       if (filters.endDate) params.append('endDate', filters.endDate);
       params.append('format', format);
 
-              const response = await apiRequest(`${API_BASE_URL}/admin/reports/export/energy-consumption?${params}`);
+      const response = await fetch(`/api/superadmin/reports/export/energy-consumption?${params}`);
       if (!response.ok) throw new Error('Rapor indirilemedi');
 
       if (format === 'csv') {
@@ -880,6 +902,89 @@ export default function ReportsPage() {
               </>
             )}
           </Card>
+        </TabPane>
+
+        <TabPane
+          tab={
+            <span>
+              <SettingOutlined />
+              Rapor Yönetimi
+            </span>
+          }
+          key="management"
+        >
+          <Row gutter={[16, 16]}>
+            <Col xs={24} lg={12}>
+              <Card title="Rapor Şablonları" size="small">
+                <Table
+                  dataSource={reportTemplates}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                  columns={[
+                    {
+                      title: 'Ad',
+                      dataIndex: 'name',
+                      key: 'name'
+                    },
+                    {
+                      title: 'Kategori',
+                      dataIndex: 'category',
+                      key: 'category',
+                      render: (category) => <Tag color="blue">{category}</Tag>
+                    },
+                    {
+                      title: 'Durum',
+                      dataIndex: 'isActive',
+                      key: 'isActive',
+                      render: (active) => (
+                        <Tag color={active ? 'green' : 'red'}>
+                          {active ? 'Aktif' : 'Pasif'}
+                        </Tag>
+                      )
+                    }
+                  ]}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Card title="Son Çalıştırmalar" size="small">
+                <Table
+                  dataSource={reportExecutions.slice(0, 5)}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                  columns={[
+                    {
+                      title: 'Rapor',
+                      dataIndex: 'reportName',
+                      key: 'reportName'
+                    },
+                    {
+                      title: 'Durum',
+                      dataIndex: 'status',
+                      key: 'status',
+                      render: (status) => {
+                        const colors = {
+                          'running': 'blue',
+                          'completed': 'green',
+                          'failed': 'red',
+                          'cancelled': 'orange'
+                        };
+                        return <Tag color={colors[status as keyof typeof colors] || 'default'}>{status}</Tag>;
+                      }
+                    },
+                    {
+                      title: 'İlerleme',
+                      dataIndex: 'progress',
+                      key: 'progress',
+                      render: (progress) => <Progress percent={progress} size="small" />
+                    }
+                  ]}
+                />
+              </Card>
+            </Col>
+          </Row>
         </TabPane>
       </Tabs>
     </div>
